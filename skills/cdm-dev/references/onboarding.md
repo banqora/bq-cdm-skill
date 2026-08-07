@@ -108,6 +108,9 @@ version.
 
 Gotchas:
 
+- PyPI coverage begins in the 5.x line and covers only recent maintenance releases per major
+  version; for earlier CDM versions, download the matching `org.finos.cdm:cdm-python`
+  `.tar.gz` from Maven Central and install it directly.
 - Functions implemented natively in Java are represented by Python stubs and raise
   `NotImplementedError` unless an application registers a Python replacement.
 - Runtime code-list loading is one such native gap; applications that require it must supply an
@@ -121,8 +124,12 @@ Gotchas:
 
 ## TypeScript, JSON Schema, and Excel
 
-FINOS publishes all three as versioned artifacts; follow the links in [Choose an entry point](#choose-an-entry-point)
-or the [FINOS download page](https://cdm.finos.org/docs/download/).
+FINOS publishes all three as versioned artifacts for current releases; follow the links in
+[Choose an entry point](#choose-an-entry-point) or the
+[FINOS download page](https://cdm.finos.org/docs/download/). Note that the JSON Schema and
+Excel artifacts do not exist for the oldest supported lines (both start in the 5.x era), so
+on older versions derive schemas or workbooks from the Rune source or `cdm-java` artifact
+instead.
 
 - TypeScript contains the generated data model but not the complete executable function set.
   Treat it as generated source, not as an npm runtime unless a particular release explicitly
@@ -139,8 +146,9 @@ validation as CDM conformance.
 ## Other language generators
 
 The open-source [Rosetta code-generator repository](https://github.com/REGnosys/rosetta-code-generators)
-contains generators for C#, DAML, Go, Kotlin, Scala, and TypeScript in addition to the default
-Java generator.
+contains community generators for C#, DAML, Go, Kotlin, Scala, and TypeScript; the default
+Java generator is built into the [Rune DSL repository](https://github.com/finos/rune-dsl)
+itself, not this repo.
 
 A generator's presence does not establish that its current output is a complete, released, or
 behaviorally equivalent CDM runtime. Before adopting one, verify:

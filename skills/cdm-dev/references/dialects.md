@@ -51,13 +51,15 @@ documents without explaining the actual dialect mismatch.
 
 ## Derive paths from generated metadata
 
-Do not convert JSON pointers by eye. Along the complete getter route inspect:
-
-- `@RosettaAttribute`;
-- `@RuneAttribute`;
-- `@RuneMetaType`;
-- `@RuneChoiceType`;
-- key/reference metadata and list cardinality.
+Do not convert JSON pointers by eye. Along the complete getter route inspect whatever
+serialization metadata the active generated code actually carries, together with
+key/reference metadata and list cardinality. Recent releases annotate getters with
+`@RosettaAttribute` (legacy property name) and `@RuneAttribute` (Rune property name), mark
+hoisted metadata wrappers with `@RuneMetaType`, and — in newer releases only — mark flattened
+choices with `@RuneChoiceType`; a release can carry the first three without the fourth.
+Older generated code (for example the 4.x line) has no attribute-level annotations at all,
+only type-level markers such as `@RosettaClass`; there, derive paths from getter/field naming
+conventions and the version-matched `.rosetta` source instead.
 
 Metadata wrappers can disappear, choice alternatives can flatten, and reference objects can
 become marker keys. Derive paths from the active generated dependency or the consuming

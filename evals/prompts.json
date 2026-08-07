@@ -30,6 +30,21 @@
     "prompt": "In our codebase a PriceQuantity is built with builders from the generated model. What does the underlying Rosetta model say the cardinality and conditions on quantity are, and how should our code respect them?"
   },
   {
+    "id": "securities-financing-model",
+    "expect": "trigger",
+    "prompt": "We are adding a fixed-term repo to a CDM-based booking service. Help us model its cash economics and collateral, attach the GMRA evidence, and test the product and lifecycle qualifications without confusing it with securities lending."
+  },
+  {
+    "id": "drr-reporting",
+    "expect": "trigger",
+    "prompt": "We want to integrate ISDA Digital Regulatory Reporting for CFTC reporting into our CDM pipeline. How should we choose compatible CDM and DRR artifacts, provide enrichment and eligibility policy, and test the projected report?"
+  },
+  {
+    "id": "legal-agreement",
+    "expect": "trigger",
+    "prompt": "Our CDM trades need to link to their governing master agreement and collateral annex. Show us how to represent identifiers, parties, elections, provenance, and amendments without inventing missing legal terms."
+  },
+  {
     "id": "generic-java-npe",
     "expect": "no-trigger",
     "prompt": "My Spring Boot application throws a NullPointerException in a @PostConstruct method during startup. How do I debug this?"

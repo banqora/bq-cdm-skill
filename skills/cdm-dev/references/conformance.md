@@ -11,18 +11,25 @@ Inspect the supplied JAR:
 ```bash
 CDM_SOURCE=/path/to/cdm-dev/scripts/cdm-source
 JAR="$("$CDM_SOURCE" --jar path/to/cdm-java.jar jar)"
-zipinfo -1 "$JAR" | rg '^(functions|ingest|cdm)/'
+zipinfo -1 "$JAR" | rg '\.(json|xml)$' | cut -d/ -f1-2 | sort -u
 ```
 
-Resource layout and scenario coverage can change. Discover families and pair runnable inputs
-with their expected outputs. Require a minimum scenario count so a path or packaging change
-cannot turn the test green over an empty corpus.
+Resource layout and scenario coverage change across releases: recent releases ship
+`functions/` and `ingest/` at the top level; older ones ship `cdm-sample-files/` (function
+scenarios under `cdm-sample-files/functions/`), `result-json-files/`, and `ingestions/`. The
+`cdm/` prefix holds generated code, not scenario resources. Discover families and pair
+runnable inputs with their expected outputs. Require a minimum scenario count so a path or
+packaging change cannot turn the test green over an empty corpus.
 
-Extract only the family under test into a fresh temporary directory:
+Extract only the family under test into a fresh temporary directory. The prefix moves between
+releases, so discover it from the JAR and fail loudly if the extraction is empty:
 
 ```bash
 CDM_CORPUS_DIR="$(mktemp -d)"
-unzip -q "$JAR" 'functions/repo-and-bond/*' -d "$CDM_CORPUS_DIR"
+FAMILY_PREFIX="$(zipinfo -1 "$JAR" | rg 'functions/repo-and-bond/$' | head -1)"
+[ -n "$FAMILY_PREFIX" ] || { echo "repo-and-bond family not found in $JAR" >&2; exit 1; }
+unzip -q "$JAR" "${FAMILY_PREFIX}*" -d "$CDM_CORPUS_DIR"
+[ "$(find "$CDM_CORPUS_DIR" -type f | wc -l)" -gt 0 ] || { echo "empty corpus" >&2; exit 1; }
 ```
 
 Remove the temporary directory when finished.
@@ -42,8 +49,9 @@ Rune JSON deserialization
        -> qualification/taxonomy
 ```
 
-Inspect `org.finos.cdm.util.ResourcesUtils` and the relevant resource tests/classes in the
-active JAR when they exist. They are signposts for the release's mapper, dependency injection,
+Locate the release's `ResourcesUtils` helper (`zipinfo -1 "$JAR" | rg -i ResourcesUtils`) —
+its package moves between releases and it is absent from the oldest lines — and the relevant
+resource tests/classes in the active JAR when they exist. They are signposts for the release's mapper, dependency injection,
 reference configuration, enum conversion, and post-processing. Do not assume a pipeline from
 another version.
 

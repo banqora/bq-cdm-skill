@@ -44,7 +44,8 @@ reported version and JAR path in bug reports and upgrade evidence.
 For every field involved, record:
 
 - Rosetta name and declared type;
-- cardinality (`0..1`, `1..1`, `0..*`, or `1..*`);
+- cardinality — lower and upper bounds, commonly `0..1`, `1..1`, `0..*`, or `1..*`, but
+  arbitrary bounds such as `0..2` or `2..2` also occur;
 - inherited fields and parent conditions;
 - metadata such as `reference`, `key`, or `scheme`;
 - enclosing choice types and each applicable alternative;
@@ -63,17 +64,24 @@ Search existing compiled usage first. When necessary, inspect the dependency dir
 `jar`, `javap`, an IDE, or a small compile test. Generated APIs can change between releases;
 do not recall a builder or function signature from another version.
 
-Relevant annotations commonly include:
+Which annotations the generated code carries depends on the release; enumerate them from the
+active JAR instead of assuming. Older releases (4.x) generate only type-level annotations such
+as `@RosettaClass`, `@RosettaMeta`, and `@RosettaDataRule`; the legacy mapper derives wire
+names from bean naming conventions, so there is no per-attribute annotation to follow. Recent
+releases (5.x+) annotate attributes; relevant annotations include:
 
 - `@RosettaAttribute` for the legacy property name;
 - `@RuneAttribute` for the Rune property name;
 - `@RuneMetaType` where a metadata wrapper is represented at its parent;
-- `@RuneChoiceType` where alternatives flatten and use `@type`.
+- `@RuneChoiceType` where alternatives flatten and use `@type` (appears from 6.x, once the
+  model declares `choice` types).
 
-Follow annotations along the complete generated getter path. Lists, metadata wrappers,
-references, inheritance, and choices can all change the wire path. Do not hard-code a
-project-wide path resolver from this skill; use the project's implementation when it has one,
-or derive and test the path against the active generated classes.
+Where attribute annotations exist, follow them along the complete generated getter path;
+where they do not, derive the wire path from the mapper's conventions and confirm with a
+round-trip against representative documents. Lists, metadata wrappers, references,
+inheritance, and choices can all change the wire path. Do not hard-code a project-wide path
+resolver from this skill; use the project's implementation when it has one, or derive and
+test the path against the active generated classes.
 
 ## Read a function or qualifier
 

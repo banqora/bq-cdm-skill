@@ -1,6 +1,6 @@
 ---
 name: cdm-dev
-description: Adopt, develop, debug, test, upgrade, and review software that consumes the FINOS Common Domain Model, Rune DSL source, generated distributions, or Rune runtime. Use for choosing and onboarding a Java, Python, TypeScript, JSON Schema, or other CDM integration; mapping source data into CDM; building typed objects; tracing dropped fields; migrating JSON dialects; implementing lifecycle events; running functions; interpreting validation or qualification; testing against industry artefacts; and separating model behavior from application policy. Also use when an upgrade changes generated APIs, paths, serialization, or behavior, or when implementation needs dated ISDA, ISLA, or ICMA market-practice context. This skill is for engineering and technical adoption, not merely one-off CLI lookup.
+description: Develop, debug, test, upgrade, and review software using FINOS CDM, Rune DSL/source, generated distributions, or Rune runtime. Use for onboarding a Java, Python, TypeScript, JSON Schema, Excel, or other integration; modelling rates, credit, FX, equity, commodity, repo, securities-lending, bond, cash-security, digital-asset, or collateral products; mapping data; building typed objects; tracing dropped fields; migrating JSON dialects; implementing lifecycle events; running functions; diagnosing validation or qualification; testing industry artefacts; implementing DRR/regulatory reporting; or representing legal agreements, elections, clauses, and ISDA/ISLA/ICMA terms. Also use when upgrades alter generated APIs, serialization, paths, or behavior, or when separating CDM/DRR semantics, market practice, legal meaning, and application policy. This is engineering/adoption guidance, not one-off CLI lookup or legal advice.
 ---
 
 # Develop with CDM
@@ -50,6 +50,18 @@ object construction, lifecycle functions, validation, serialization, and upgrade
 
 ## Load only what the task needs
 
+- Product families: [interest rates](references/interest-rates.md),
+  [credit derivatives](references/credit-derivatives.md),
+  [equities](references/equities.md), [foreign exchange](references/foreign-exchange.md), and
+  [commodities](references/commodities.md).
+- [Securities financing](references/securities-financing.md): repo, buy/sell-back, securities
+  lending, collateral, qualification, and lifecycle traps.
+- [Transferable assets and cash securities](references/assets-and-cash-securities.md): cash,
+  bonds, loans, listed derivatives, money-market instruments, and digital-asset boundaries.
+- [Legal agreements and contracts](references/legal-contracts.md): identification, governing
+  relationships, elections, collateral documents, formation, amendment, provenance, and gaps.
+- [Digital regulatory reporting](references/regulatory-reporting.md): DRR acquisition and
+  compatibility, translate/enrich/transform/project, policy seams, regimes, evidence, and tests.
 - [Rosetta and generated code](references/rosetta.md): model declarations, generated APIs,
   metadata annotations, validators, functions, and qualifiers.
 - [Day-to-day workflows](references/workflows.md): locating the owning layer and making

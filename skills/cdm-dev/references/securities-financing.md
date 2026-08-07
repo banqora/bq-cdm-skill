@@ -1,0 +1,77 @@
+# Securities financing
+
+Load this reference for repurchase agreements, buy/sell-backs, securities lending, collateral,
+returns, billing, repricing, substitution, pair-off, shaping, partial delivery, and repo rolls.
+
+## Re-query the active release
+
+Research baseline: these anchors and runtime behaviors were checked against FINOS CDM 7.0.0 on
+2026-08-07. Re-run source queries and executable probes against the consuming project's exact
+dependency; this area has evolved materially between releases.
+
+```bash
+CDM_SOURCE=/path/to/cdm-dev/scripts/cdm-source
+"$CDM_SOURCE" --jar path/to/cdm-java.jar search '^type (AssetPayout|Collateral|CollateralPosition|CollateralPortfolio)\b'
+"$CDM_SOURCE" --jar path/to/cdm-java.jar search '^func Qualify_(RepurchaseAgreement|BuySellBack|SecurityLending)'
+"$CDM_SOURCE" --jar path/to/cdm-java.jar search '^func (Create_Return|Create_SecurityLendingInvoice|Qualify_(Reprice|Adjustment|Substitution|Renegotiation|PairOff|PartialDelivery))'
+```
+
+Follow `product-template-type.rosetta`, `product-collateral-type.rosetta`,
+`event-common-type.rosetta`, and both qualification sources. Also inspect the version-matched
+repo and securities-lending function examples; directory presence is not a scenario count.
+
+## Construct and qualify deliberately
+
+- In the 7.0.0 baseline, repo and buy/sell-back economics use a top-level
+  `InterestRatePayout` plus collateral positions whose nested product contains an `AssetPayout`;
+  `tradeType` distinguishes buy/sell-back. Securities lending uses a top-level `AssetPayout` for
+  the asset on loan plus cash or non-cash collateral structures.
+- `AssetPayout` must not be treated as a cash-underlier shortcut. Follow the `Asset`, `Product`,
+  collateral-position and reference choices exactly.
+- Preserve open/fixed term, purchase and repurchase dates/prices, quantity, direction, repo or
+  lending rate, haircut/margin and their units, collateral eligibility and identity, settlement,
+  party roles, and references. A valid, qualified trade can still omit economically essential
+  source terms.
+- The FINOS 7.0 securities-lending guide expresses a 10% haircut as `0.1` and a 105% margin as
+  `1.05`. Verify the active declaration and source-system convention; never apply one percentage
+  conversion blindly to both fields.
+- Qualifiers are not guaranteed to be mutually exclusive. Evaluate the complete result set and
+  assert both required and forbidden labels; do not route on the first result.
+
+## Lifecycle and application boundary
+
+CDM provides product predicates and lifecycle functions, but the application owns agreement and
+eligibility rules, authorised notices, market/reference data, substitutions, settlement status,
+inventory, dispute policy and operational sequencing.
+
+Do not assume a function's name predicts its event qualifier. In the 7.0.0 baseline, a tested
+collateral-substitution path can qualify as `Renegotiation` rather than `Substitution` after the
+event predicate inspects the produced primitives. Execute all relevant event qualifiers and keep
+an upgrade tripwire for the behavior your application relies on.
+
+## Non-vacuous tests
+
+- Assert every key economic leaf, its unit, the top-level and nested payout paths, collateral
+  references and terms, open/fixed termination behavior, and required plus forbidden qualifiers.
+- Exercise the production-equivalent function wiring. For each lifecycle step assert input
+  instruction, before/after economics, exact quantity or cash delta, transfers, lineage,
+  references, validation, classification, and deterministic rerun.
+- Add a nearby negative for missing/changed collateral, `tradeType`, rate, payout location or
+  termination terms. Demonstrate that the test fails for the plausible wrong representation.
+- Discover complete input/output pairs in version-matched examples and require a content floor;
+  do not hard-code a count from documentation or let an empty discovery set pass.
+
+See [Testing CDM code](testing.md) for the generic test protocol.
+
+## Official context and freshness
+
+- [FINOS securities-lending documentation](https://cdm.finos.org/docs/securities-lending/) and
+  [FINOS repo representation](https://cdm.finos.org/docs/repurchase-agreement-representation/)
+  are useful implementation guides; record their displayed version and confirm paths in source.
+- [ISLA's CDM hub](https://www.islagroup.org/common-domain-model/) provides dated
+  securities-lending coverage and adoption material.
+- [ICMA's CDM for repo and bonds hub](https://www.icmagroup.org/market-practice-and-regulatory-policy/repo-and-collateral-markets/fintech/common-domain-model-cdm/)
+  provides dated phase and implementation material.
+- Use the [ICMA ERCC Guide landing page](https://www.icmagroup.org/market-practice-and-regulatory-policy/repo-and-collateral-markets/icma-ercc-publications/icma-ercc-guide-to-best-practice-in-the-european-repo-market/)
+  to select the latest effective guide. Market practice and agreement terms are context, not
+  proof that the active CDM runtime enforces them.

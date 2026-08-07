@@ -15,6 +15,11 @@ TypeScript, JSON Schema, Excel, and community-generator options in
 material from ISDA, ISLA, and ICMA is routed separately through
 [`references/industry-bodies.md`](skills/cdm-dev/references/industry-bodies.md).
 
+On-demand domain guides cover the five executable derivative asset-class families, securities
+financing, transferable assets and cash securities, Digital Regulatory Reporting, and legal
+agreements. Each guide records its research baseline, points back to version-matched Rune source,
+and separates CDM or DRR behavior from application policy and legal interpretation.
+
 ## Install
 
 The distributable skill is the `skills/cdm-dev/` directory; everything outside it is
@@ -78,7 +83,7 @@ scripts/check-links
 The checker follows redirects and fails on definitive broken responses such as `404` or
 `410`. It reports `401` and `403` as access warnings because some official association pages
 are member-only or reject CI user agents. The GitHub workflow runs this live check on every
-push and pull request and in the weekly drift sweep.
+push to main, every pull request, and in the weekly drift sweep.
 
 Run vendor trigger evals against a headless agent CLI (paid API usage):
 
@@ -92,22 +97,23 @@ and release checks.
 
 ## Supported CDM versions
 
-The skill embeds no version-specific model facts; it reads the model from the JAR the
-project supplies. CI proves the live contract on the latest release of every supported
-major — currently 4.3.0, 5.40.0, 6.24.0, and 7.0.0 — and a weekly canary runs the same
-contract against the newest published build (including dev builds) as early warning
-before the next release enters the matrix.
+The core workflow reads model truth from the JAR the project supplies. Domain references include
+clearly dated CDM 7.0.0 observations where a concrete trap is useful, but require agents to rerun
+the supplied source queries against the consuming project's version. CI proves the live helper
+contract on the latest release of every supported major — currently 4.3.0, 5.40.0, 6.24.0, and
+7.0.0 — and a weekly canary runs it against the newest published build (including dev builds) as
+early warning before the next release enters the matrix.
 
 ## Layout
 
 ```text
 skills/cdm-dev/          the distributable skill — everything an install ships
   SKILL.md               lean workflow and reference router
-  references/            onboarding, industry, Rune, workflow, dialect, test, and conformance guidance
+  references/            onboarding, product-family, legal, DRR, industry, Rune, workflow, and test guidance
   scripts/cdm-source     query source embedded in an active cdm-java dependency
 scripts/check-skill      static and live drift gates (repository tooling)
 scripts/check-links      verify external documentation links and redirects
-tests/run                hermetic test suite for the helper and gates
+tests/                   hermetic per-tool suites (driver: tests/run; shared lib.sh, fixtures.sh)
 evals/                   vendor trigger evals and behavioral-drift baseline
 .github/                 lint, static, test, CDM release matrix, canary, and eval jobs
 ```

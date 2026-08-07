@@ -39,8 +39,10 @@ The project may omit, combine, or rename stages. Describe its real path.
    semantics. Plausible numeric conversions are the most dangerous mapping errors.
 3. Locate the target type and field in the active Rosetta source. Check cardinality,
    conditions, metadata, choices, and documented convention.
-4. Inspect the generated builder and Rune annotations. Confirm the actual typed route instead
-   of copying a JSON pointer from an example.
+4. Inspect the generated builder and its serialization annotations in the active dependency
+   (Rosetta-era markers such as `@RosettaClass` on 4.x, where attribute-level wire annotations
+   are absent; `@RosettaAttribute` plus the `@Rune*` family from 5.x onward). Confirm the
+   actual typed route instead of copying a JSON pointer from an example.
 5. Keep source-specific selection and conversion in the application's mapping layer. Do not
    present it as an ISDA rule.
 6. Assert the typed economic leaf, canonical serialization, validation, expected

@@ -103,6 +103,28 @@ if missing:
     raise SystemExit("check-skill: missing Markdown references:\n  " + "\n  ".join(missing))
 
 references = set((skill_dir / "references").rglob("*.md"))
+required_reference_names = {
+    "assets-and-cash-securities.md",
+    "commodities.md",
+    "conformance.md",
+    "credit-derivatives.md",
+    "dialects.md",
+    "equities.md",
+    "foreign-exchange.md",
+    "industry-bodies.md",
+    "interest-rates.md",
+    "legal-contracts.md",
+    "onboarding.md",
+    "regulatory-reporting.md",
+    "rosetta.md",
+    "securities-financing.md",
+    "testing.md",
+    "workflows.md",
+}
+missing_required = sorted(required_reference_names - {path.name for path in references})
+if missing_required:
+    raise SystemExit("check-skill: required domain references are missing:\n  " +
+                     "\n  ".join(missing_required))
 linked_references = set()
 pending = [skill]
 visited = set()
@@ -178,5 +200,12 @@ source_count="$(rg '^cdm/rosetta/.*\.rosetta$' <<<"$jar_entries" | wc -l | tr -d
 
 "$source_helper" --jar "$jar" search '^type TradeState:' >/dev/null
 "$source_helper" --jar "$jar" search 'func Qualify_' >/dev/null
+
+# The conformance reference depends on this corpus being discoverable; its
+# prefix moves between releases, so match the family path anywhere in the JAR.
+rg 'functions/repo-and-bond/' <<<"$jar_entries" >/dev/null || {
+  echo "check-skill: no discoverable repo-and-bond functions corpus in $jar" >&2
+  exit 1
+}
 
 echo "check-skill: live contract passed against $jar ($source_count Rosetta sources)"

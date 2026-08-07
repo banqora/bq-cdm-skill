@@ -30,9 +30,9 @@ jobs:
           chmod +x "$HOME/.local/bin/shfmt"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: shellcheck
-        run: shellcheck skills/cdm-dev/scripts/cdm-source scripts/check-skill tests/run evals/run-triggers
+        run: shellcheck -x skills/cdm-dev/scripts/cdm-source scripts/check-skill tests/run tests/*.sh evals/run-triggers
       - name: shfmt
-        run: shfmt -d -i 2 -ci skills/cdm-dev/scripts/cdm-source scripts/check-skill tests/run evals/run-triggers
+        run: shfmt -d -i 2 -ci skills/cdm-dev/scripts/cdm-source scripts/check-skill tests/run tests/*.sh evals/run-triggers
 
   static:
     runs-on: ubuntu-latest
