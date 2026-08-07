@@ -48,6 +48,12 @@ The helper never downloads a replacement.
 Use `search` to locate a declaration before opening a consolidated model file. Record the
 reported version and JAR path in bug reports and upgrade evidence.
 
+Bound the evidence pass before opening generated sources. Inspect the owning declaration, its
+inheritance chain, its conditions and direct function callees, the generated interface/builder,
+then the type's `Meta` registry and only the validators or functions registered there. Batch
+independent reads and stop once each reported claim maps to an authoritative artefact; do not
+inventory neighboring generated classes without a question they can answer.
+
 ## Read a type
 
 For every field involved, record:

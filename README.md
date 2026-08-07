@@ -20,6 +20,31 @@ financing, transferable assets and cash securities, Digital Regulatory Reporting
 agreements. Each guide records its research baseline, points back to version-matched Rune source,
 and separates CDM or DRR behavior from application policy and legal interpretation.
 
+## Why use this skill?
+
+A capable general agent can eventually reconstruct CDM behavior from raw distributions. This
+skill provides a shorter, repeatable route: identify the owning layer, query version-matched Rune
+source, inspect only the generated API/runtime evidence that applies, and turn the finding into a
+meaningful positive test plus a close negative control.
+
+A context-isolated A/B forward test on 2026-08-07 gave two fresh agents the same CDM 7.0.0 binary
+and source JARs and the same `PriceQuantity.quantity` investigation. One agent used `cdm-dev`; the
+control could not read the skill, repository documentation, eval rubric, or prior results.
+
+| Measure | With `cdm-dev` | Without skill | Difference |
+|---|---:|---:|---:|
+| Reviewed quality checks | 7/7 | 7/7 | Tie |
+| Tool-call batches | 12 | 42 | 71% fewer with the skill |
+| Individual tool calls | 31 | 42 | 26% fewer |
+| Shell commands | 33 | 84 | 61% fewer |
+| Distinct files inspected | 31 | 35 | 11% fewer |
+
+Both agents reached the correct answer in this single run. The measured benefit was efficiency:
+the control needed 3.5 times as many tool-use rounds and more than twice as many shell commands to
+reconstruct the workflow supplied by the skill. Counts were self-reported by the agents, so treat
+this as a transparent forward-test result rather than a broad performance claim. The local eval
+suite below provides the reproducible task and grading foundation for broader trials.
+
 ## Install
 
 The distributable skill is the `skills/cdm-dev/` directory; everything outside it is
