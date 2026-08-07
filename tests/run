@@ -2,9 +2,11 @@
 set -uo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-skill_root="$(cd -- "$script_dir/.." && pwd)"
-cdm_source="$skill_root/scripts/cdm-source"
-check_skill="$skill_root/scripts/check-skill"
+repo_root="$(cd -- "$script_dir/.." && pwd)"
+skill_dir="$repo_root/skills/cdm-dev"
+cdm_source="$skill_dir/scripts/cdm-source"
+check_skill="$repo_root/scripts/check-skill"
+check_links="$repo_root/scripts/check-links"
 
 for required_tool in python3 rg zipinfo unzip; do
   command -v "$required_tool" >/dev/null || {
@@ -14,7 +16,14 @@ for required_tool in python3 rg zipinfo unzip; do
 done
 
 work="$(mktemp -d "${TMPDIR:-/tmp}/cdm-skill-tests.XXXXXX")"
-cleanup() { rm -rf -- "$work"; }
+link_server_pid=""
+cleanup() {
+  if [[ -n "$link_server_pid" ]]; then
+    kill "$link_server_pid" 2>/dev/null || true
+    wait "$link_server_pid" 2>/dev/null || true
+  fi
+  rm -rf -- "$work"
+}
 trap cleanup EXIT
 
 passed=0
@@ -110,18 +119,71 @@ PY
 fixture_jar="$work/cdm-java-9.9.9.jar"
 no_rosetta_jar="$work/no-rosetta.jar"
 
+# A local HTTP fixture makes link-check behavior hermetic. It includes a
+# redirect, an access-controlled endpoint, and a definitively broken link.
+link_port_file="$work/link-port"
+python3 - "$link_port_file" <<'PY' &
+import sys
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+
+
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == "/ok":
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"ok")
+        elif self.path == "/redirect":
+            self.send_response(302)
+            self.send_header("Location", "/ok")
+            self.end_headers()
+        elif self.path == "/restricted":
+            self.send_response(403)
+            self.end_headers()
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def log_message(self, _format, *_args):
+        pass
+
+
+server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+Path(sys.argv[1]).write_text(str(server.server_address[1]))
+server.serve_forever()
+PY
+link_server_pid=$!
+for _ in $(seq 1 50); do
+  [[ -s "$link_port_file" ]] && break
+  sleep 0.05
+done
+if [[ ! -s "$link_port_file" ]]; then
+  echo "tests/run: local link fixture did not start" >&2
+  exit 1
+fi
+link_port="$(<"$link_port_file")"
+
+links_ok="$work/links-ok.md"
+printf '%s\n' \
+  "[working](http://127.0.0.1:$link_port/ok)" \
+  "[redirect](http://127.0.0.1:$link_port/redirect)" \
+  "[restricted](http://127.0.0.1:$link_port/restricted)" >"$links_ok"
+links_broken="$work/links-broken.md"
+printf '%s\n' "[missing](http://127.0.0.1:$link_port/missing)" >"$links_broken"
+
 # A discovery sandbox shaped like a built project.
 project="$work/project"
 mkdir -p "$project/.git" "$project/lib"
 cp "$fixture_jar" "$project/lib/cdm-java-9.9.9.jar"
 
-# A mutable copy of the skill for static-gate negative tests.
+# A mutable copy of the repo shape for static-gate negative tests.
 fresh_copy() {
   local copy="$work/copy-$1"
   rm -rf -- "$copy"
-  mkdir -p "$copy"
-  cp -R "$skill_root/SKILL.md" "$skill_root/README.md" \
-    "$skill_root/references" "$skill_root/scripts" "$copy/"
+  mkdir -p "$copy/skills"
+  cp -R "$repo_root/README.md" "$repo_root/scripts" "$copy/"
+  cp -R "$skill_dir" "$copy/skills/cdm-dev"
   printf '%s\n' "$copy"
 }
 
@@ -198,31 +260,31 @@ expect_ok "static gate passes on this repository" \
   "$check_skill" --static
 
 copy="$(fresh_copy broken-link)"
-printf '\nSee [missing](references/absent.md).\n' >>"$copy/SKILL.md"
+printf '\nSee [missing](references/absent.md).\n' >>"$copy/skills/cdm-dev/SKILL.md"
 expect_fail "static gate catches a broken reference link" \
   --stderr "missing Markdown references" -- \
   "$copy/scripts/check-skill" --static
 
 copy="$(fresh_copy orphan)"
-printf '# Orphan\n\n1\n2\n3\n4\n5\n6\n7\n8\n' >"$copy/references/orphan.md"
+printf '# Orphan\n\n1\n2\n3\n4\n5\n6\n7\n8\n' >"$copy/skills/cdm-dev/references/orphan.md"
 expect_fail "static gate catches an orphan reference" \
   --stderr "orphan references" -- \
   "$copy/scripts/check-skill" --static
 
 copy="$(fresh_copy forbidden-path)"
-printf '\nDebug notes live in /Users/example/notes.md.\n' >>"$copy/references/testing.md"
+printf '\nDebug notes live in /Users/example/notes.md.\n' >>"$copy/skills/cdm-dev/references/testing.md"
 expect_fail "static gate catches an absolute user path" \
   --stderr "absolute user path" -- \
   "$copy/scripts/check-skill" --static
 
 copy="$(fresh_copy pinned-jar)"
-printf '\nTested against cdm-java-9.9.9.jar only.\n' >>"$copy/references/testing.md"
+printf '\nTested against cdm-java-9.9.9.jar only.\n' >>"$copy/skills/cdm-dev/references/testing.md"
 expect_fail "static gate catches a hard-coded cdm-java release" \
   --stderr "hard-codes a released cdm-java filename" -- \
   "$copy/scripts/check-skill" --static
 
 copy="$(fresh_copy long-description)"
-python3 - "$copy" <<'PY'
+python3 - "$copy/skills/cdm-dev" <<'PY'
 import sys
 from pathlib import Path
 
@@ -239,7 +301,7 @@ expect_fail "static gate enforces the 1024-character description cap" \
   "$copy/scripts/check-skill" --static
 
 copy="$(fresh_copy oversized)"
-for _ in $(seq 60); do printf 'Padding line to inflate the always-loaded skill.\n' >>"$copy/SKILL.md"; done
+for _ in $(seq 60); do printf 'Padding line to inflate the always-loaded skill.\n' >>"$copy/skills/cdm-dev/SKILL.md"; done
 expect_fail "static gate enforces the SKILL.md line budget" \
   --stderr "move detail to references" -- \
   "$copy/scripts/check-skill" --static
@@ -250,6 +312,20 @@ expect_ok "live gate passes against the fixture JAR" \
 
 expect_fail "live gate rejects a JAR without Rosetta sources" -- \
   "$check_skill" --jar "$no_rosetta_jar"
+
+# --- check-links --------------------------------------------------------------
+
+expect_ok "link checker follows redirects and reports restricted sources" \
+  --stdout '0 broken, 1 access/rate warnings' -- \
+  "$check_links" --retries 0 "$links_ok"
+
+expect_fail "link checker rejects a definitive 404" \
+  --stderr 'BROKEN.*HTTP 404' -- \
+  "$check_links" --retries 0 "$links_broken"
+
+expect_fail "link checker can make restricted sources fatal" \
+  --stderr 'restricted.*HTTP 403' -- \
+  "$check_links" --retries 0 --strict-restricted "$links_ok"
 
 # ------------------------------------------------------------------------------
 

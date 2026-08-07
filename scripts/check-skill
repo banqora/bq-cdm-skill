@@ -2,7 +2,8 @@
 set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-skill_root="$(cd -- "$script_dir/.." && pwd)"
+repo_root="$(cd -- "$script_dir/.." && pwd)"
+skill_root="$repo_root/skills/cdm-dev"
 
 usage() {
   cat >&2 <<'USAGE'
@@ -43,9 +44,10 @@ case "$mode" in
 esac
 
 bash -n "$skill_root/scripts/cdm-source"
-bash -n "$skill_root/scripts/check-skill"
+bash -n "$repo_root/scripts/check-skill"
 
-python3 - "$skill_root" <<'PY'
+python3 - "$skill_root" "$repo_root" <<'PY'
+import ast
 import os
 import re
 import sys
@@ -53,10 +55,11 @@ from pathlib import Path
 
 # Resolve eagerly: the skill may be reached through a symlinked install path,
 # and later link checks compare resolved targets against paths rooted here.
-root = Path(sys.argv[1]).resolve()
-skill = root / "SKILL.md"
+skill_dir = Path(sys.argv[1]).resolve()
+repo_root = Path(sys.argv[2]).resolve()
+skill = skill_dir / "SKILL.md"
 if not skill.is_file():
-    raise SystemExit("check-skill: SKILL.md is missing")
+    raise SystemExit("check-skill: skills/cdm-dev/SKILL.md is missing")
 
 text = skill.read_text()
 lines = text.splitlines()
@@ -73,6 +76,9 @@ if keys != ["name", "description"]:
     raise SystemExit(f"check-skill: frontmatter keys must be name, description; got {keys}")
 if "name: cdm-dev" not in frontmatter:
     raise SystemExit("check-skill: skill name is not cdm-dev")
+if skill_dir.name != "cdm-dev":
+    raise SystemExit("check-skill: the Agent Skills spec requires the directory containing "
+                     f"SKILL.md to be named cdm-dev; got {skill_dir.name}")
 description = next((line.split(":", 1)[1].strip() for line in frontmatter
                     if line.startswith("description:")), "")
 if len(description) < 80:
@@ -83,19 +89,20 @@ if len(description) > 1024:
 if len(lines) > 120:
     raise SystemExit(f"check-skill: SKILL.md has {len(lines)} lines; move detail to references")
 
+readme = repo_root / "README.md"
 link_re = re.compile(r"\]\(([^)#]+\.md)(?:#[^)]*)?\)")
 missing = []
-for markdown in root.rglob("*.md"):
+for markdown in [*skill_dir.rglob("*.md"), readme]:
     for link in link_re.findall(markdown.read_text()):
         if "://" in link:
             continue
         target = (markdown.parent / link).resolve()
         if not target.is_file():
-            missing.append(f"{markdown.relative_to(root)} -> {link}")
+            missing.append(f"{markdown.relative_to(repo_root)} -> {link}")
 if missing:
     raise SystemExit("check-skill: missing Markdown references:\n  " + "\n  ".join(missing))
 
-references = set((root / "references").rglob("*.md"))
+references = set((skill_dir / "references").rglob("*.md"))
 linked_references = set()
 pending = [skill]
 visited = set()
@@ -107,29 +114,33 @@ while pending:
     for link in link_re.findall(markdown.read_text()):
         target = (markdown.parent / link).resolve()
         try:
-            target.relative_to((root / "references").resolve())
+            target.relative_to((skill_dir / "references").resolve())
         except ValueError:
             continue
         if target.is_file() and target not in linked_references:
             linked_references.add(target)
             pending.append(target)
-orphans = sorted(path.relative_to(root) for path in references - linked_references)
+orphans = sorted(path.relative_to(skill_dir) for path in references - linked_references)
 if orphans:
     raise SystemExit("check-skill: orphan references not reachable from SKILL.md:\n  " +
                      "\n  ".join(map(str, orphans)))
 
 for reference in references:
     if len(reference.read_text().strip().splitlines()) < 8:
-        raise SystemExit(f"check-skill: reference is an empty stub: {reference.relative_to(root)}")
+        raise SystemExit(f"check-skill: reference is an empty stub: {reference.relative_to(skill_dir)}")
 
-source_helper = root / "scripts" / "cdm-source"
-checker = root / "scripts" / "check-skill"
-for script in (source_helper, checker):
+source_helper = skill_dir / "scripts" / "cdm-source"
+checker = repo_root / "scripts" / "check-skill"
+link_checker = repo_root / "scripts" / "check-links"
+for script in (source_helper, checker, link_checker):
     if not script.is_file() or not os.access(script, os.X_OK):
-        raise SystemExit(f"check-skill: {script.relative_to(root)} is missing or not executable")
+        raise SystemExit(f"check-skill: {script.relative_to(repo_root)} is missing or not executable")
+try:
+    ast.parse(link_checker.read_text(), filename=str(link_checker))
+except SyntaxError as error:
+    raise SystemExit(f"check-skill: scripts/check-links has invalid Python: {error}")
 
-readme = root / "README.md"
-portable_resources = [skill, readme, source_helper, *sorted(references)]
+portable_resources = [skill, readme, source_helper, link_checker, *sorted(references)]
 resource_text = "\n".join(path.read_text() for path in portable_resources)
 forbidden = {
     "absolute user path": r"/Users/",

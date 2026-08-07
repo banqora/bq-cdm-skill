@@ -1,39 +1,44 @@
 # cdm-dev
 
-A portable agent skill for day-to-day engineering with the ISDA Common Domain Model,
-Rosetta source, generated `cdm-java` APIs, and the Rune runtime.
+A portable agent skill for day-to-day engineering with the FINOS Common Domain Model,
+Rune source, released language distributions, generated APIs, and the Rune runtime.
 
 The skill is deliberately application-neutral. It discovers the active project's structure,
-uses that project's tests and build commands, and reads model truth from the exact
-`cdm-java` JAR supplied by the project. It does not require a particular repository,
-framework, mapping layer, or service architecture.
+uses that project's tests and build commands, and reads model truth from version-matched Rune
+source. The included helper can use the corresponding `cdm-java` JAR as a source container;
+that does not make Java part of a Python, schema, or other application architecture. The skill
+does not require a particular repository, framework, mapping layer, or service architecture.
+
+For a new integration, the skill routes the agent through the available Java, Python,
+TypeScript, JSON Schema, Excel, and community-generator options in
+[`references/onboarding.md`](skills/cdm-dev/references/onboarding.md). Dated market-practice
+material from ISDA, ISLA, and ICMA is routed separately through
+[`references/industry-bodies.md`](skills/cdm-dev/references/industry-bodies.md).
 
 ## Install
 
-Place or symlink this repository where your agent discovers a skill named `cdm-dev`. The
-repository root is the skill root, so the discovered path should end with:
-
-```text
-cdm-dev/SKILL.md
-```
-
-For a project-local skill directory, for example:
+The distributable skill is the `skills/cdm-dev/` directory; everything outside it is
+repository tooling. Place or symlink that directory where your agent discovers skills:
 
 ```bash
 mkdir -p .claude/skills
-ln -s /absolute/path/to/this/repository .claude/skills/cdm-dev
+ln -s /absolute/path/to/this/repository/skills/cdm-dev .claude/skills/cdm-dev
 ```
 
-Use the equivalent user-level or project-level skill directory for other compatible agents.
+Use the equivalent location for other compatible agents (for Codex CLI, `.agents/skills/`).
+Skill installers that understand the conventional `skills/<name>/` container — such as
+`npx skills add <this repository's GitHub URL>` or the Codex `$skill-installer` given the
+GitHub tree URL of `skills/cdm-dev` — discover the skill directly.
 
 ## Inspect the active CDM model
 
-The helper reads `.rosetta` files directly from a released `cdm-java` JAR:
+The helper reads `.rosetta` files directly from a released `cdm-java` JAR, including when that
+JAR is used only as the source container for a non-Java integration:
 
 ```bash
-scripts/cdm-source --jar path/to/cdm-java.jar version
-scripts/cdm-source --jar path/to/cdm-java.jar search '^type TradeState:'
-scripts/cdm-source --jar path/to/cdm-java.jar list 'event.*func'
+skills/cdm-dev/scripts/cdm-source --jar path/to/cdm-java.jar version
+skills/cdm-dev/scripts/cdm-source --jar path/to/cdm-java.jar search '^type TradeState:'
+skills/cdm-dev/scripts/cdm-source --jar path/to/cdm-java.jar list 'event.*func'
 ```
 
 `CDM_JAVA_JAR` can supply the path instead. Without either, the helper searches common
@@ -64,6 +69,17 @@ Run the script test suite (hermetic; builds its own fixture JARs):
 tests/run
 ```
 
+Check every external link in the Markdown resources:
+
+```bash
+scripts/check-links
+```
+
+The checker follows redirects and fails on definitive broken responses such as `404` or
+`410`. It reports `401` and `403` as access warnings because some official association pages
+are member-only or reject CI user agents. The GitHub workflow runs this live check on every
+push and pull request and in the weekly drift sweep.
+
 Run vendor trigger evals against a headless agent CLI (paid API usage):
 
 ```bash
@@ -71,7 +87,8 @@ evals/run-triggers --vendor claude --runs 3
 evals/run-triggers --vendor codex --runs 3
 ```
 
-Requirements: Bash, Python 3, `rg`, `zipinfo`, and `unzip`.
+Requirements: Bash, Python 3, `rg`, `zipinfo`, and `unzip`; network access for the live link
+and release checks.
 
 ## Supported CDM versions
 
@@ -84,10 +101,13 @@ before the next release enters the matrix.
 ## Layout
 
 ```text
-SKILL.md                 lean workflow and reference router
-references/              Rosetta, workflow, dialect, testing, and conformance guidance
-scripts/cdm-source       query source embedded in an active cdm-java dependency
-scripts/check-skill      static and live drift gates
-tests/run                hermetic test suite for both scripts
+skills/cdm-dev/          the distributable skill — everything an install ships
+  SKILL.md               lean workflow and reference router
+  references/            onboarding, industry, Rune, workflow, dialect, test, and conformance guidance
+  scripts/cdm-source     query source embedded in an active cdm-java dependency
+scripts/check-skill      static and live drift gates (repository tooling)
+scripts/check-links      verify external documentation links and redirects
+tests/run                hermetic test suite for the helper and gates
 evals/                   vendor trigger evals and behavioral-drift baseline
+.github/                 lint, static, test, CDM release matrix, canary, and eval jobs
 ```
