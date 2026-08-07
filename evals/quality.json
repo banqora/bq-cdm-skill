@@ -1,0 +1,86 @@
+[
+  {
+    "id": "price-quantity-model-api",
+    "artifact_version": "7.0.0",
+    "prompt": "Use $cdm-dev to answer this engineering question from the version installed in this project: We build PriceQuantity objects. What does the exact Rune/Rosetta model say about the quantity field's cardinality and applicable conditions, including inherited constraints on the quantity type; what does the generated Java API expose; and which focused positive and negative tests should our integration add? The exact binary and matching sources JAR are available under lib/. Include the concrete source and generated-artifact evidence you used. Do not modify the project.",
+    "minimum_words": 220,
+    "checks": [
+      {
+        "id": "exact-cardinality",
+        "description": "states the exact quantity type and cardinality",
+        "all": [
+          "NonNegativeQuantitySchedule",
+          "0\\.\\.1"
+        ]
+      },
+      {
+        "id": "generated-api",
+        "description": "distinguishes the metadata wrapper and scalar builder API",
+        "all": [
+          "FieldWithMetaNonNegativeQuantitySchedule",
+          "setQuantityValue|getOrCreateQuantity"
+        ],
+        "any": [
+          "not (?:a )?list",
+          "no (?:List|addQuantity)",
+          "scalar",
+          "singleton"
+        ]
+      },
+      {
+        "id": "price-quantity-rules",
+        "description": "reads the owning conditions and called function",
+        "all": [
+          "NonCurrencyQuantities",
+          "PriceQuantityTriangulation",
+          "ArithmeticOperator",
+          "InterestRateObservable"
+        ]
+      },
+      {
+        "id": "commodity-cardinality-trap",
+        "description": "notices that a second commodity quantity is not representable",
+        "all": [
+          "commodit|NonCurrencyQuantities"
+        ],
+        "any": [
+          "(?:cannot|can't|not) (?:be )?represent",
+          "unrepresentable",
+          "redundant",
+          "(?:always|automatically) (?:passes|satisfied|true)",
+          "vacuous",
+          "cannot fail",
+          "unfalsifiable"
+        ]
+      },
+      {
+        "id": "nested-validation",
+        "description": "follows inherited quantity constraints",
+        "all": [
+          "unit",
+          "non[- ]?negativ(?:e|ity)|minimum (?:of )?0|zero is valid",
+          "datedValue|dated value|ScheduleValueExists"
+        ]
+      },
+      {
+        "id": "non-vacuous-tests",
+        "description": "proposes meaningful positive and close negative tests",
+        "all": [
+          "positive",
+          "negative",
+          "derived quantity|derivedQuantity",
+          "recursive|fully wired|runtime wiring|nested (?:type|validator)|PriceQuantityMeta"
+        ]
+      },
+      {
+        "id": "versioned-evidence",
+        "description": "records the version and concrete source/generated evidence",
+        "all": [
+          "7\\.0\\.0",
+          "observable-asset-type\\.rosetta|cdm-source",
+          "generated|javap|PriceQuantity\\.java"
+        ]
+      }
+    ]
+  }
+]

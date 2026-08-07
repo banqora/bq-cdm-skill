@@ -3,6 +3,15 @@
 Use this reference when a task depends on what CDM declares, what the generated Java API
 exposes, or what the runtime actually does.
 
+## Contents
+
+- [Keep four artefacts distinct](#keep-four-artefacts-distinct)
+- [Query the exact dependency](#query-the-exact-dependency)
+- [Read a type](#read-a-type)
+- [Inspect generated APIs and wire metadata](#inspect-generated-apis-and-wire-metadata)
+- [Read a function or qualifier](#read-a-function-or-qualifier)
+- [Turn uncertainty into a focused probe](#turn-uncertainty-into-a-focused-probe)
+
 ## Keep four artefacts distinct
 
 1. The **Rosetta DSL** declares types, inheritance, fields, cardinalities, conditions, enums,

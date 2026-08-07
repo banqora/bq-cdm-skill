@@ -85,15 +85,20 @@ The checker follows redirects and fails on definitive broken responses such as `
 are member-only or reject CI user agents. The GitHub workflow runs this live check on every
 push to main, every pull request, and in the weekly drift sweep.
 
-Run vendor trigger evals against a headless agent CLI (paid API usage):
+Run trigger and reviewed answer-quality evals locally through existing Claude Code and Codex
+subscription logins:
 
 ```bash
-evals/run-triggers --vendor claude --runs 3
-evals/run-triggers --vendor codex --runs 3
+evals/run-local --vendor all --check-auth
+evals/run-local --vendor all --quality-only --case price-quantity-model-api
 ```
 
+The local runner deliberately ignores API-key environment variables. Live model evals do not run
+in GitHub Actions and require no repository secrets. See [Local skill evaluations](evals/README.md)
+for authentication, focused commands, fixture caching, result review, and baseline promotion.
+
 Requirements: Bash, Python 3, `rg`, `zipinfo`, and `unzip`; network access for the live link
-and release checks.
+and release checks; local Claude Code and Codex CLIs for live model evals.
 
 ## Supported CDM versions
 
@@ -114,6 +119,6 @@ skills/cdm-dev/          the distributable skill — everything an install ships
 scripts/check-skill      static and live drift gates (repository tooling)
 scripts/check-links      verify external documentation links and redirects
 tests/                   hermetic per-tool suites (driver: tests/run; shared lib.sh, fixtures.sh)
-evals/                   vendor trigger evals and behavioral-drift baseline
-.github/                 lint, static, test, CDM release matrix, canary, and eval jobs
+evals/                   local subscription runners, trigger/quality cases, graders, and baselines
+.github/                 hermetic lint/tests, CDM release matrix, links, and upstream canary
 ```

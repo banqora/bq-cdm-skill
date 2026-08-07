@@ -68,8 +68,9 @@ make_project_sandbox() {
 fresh_copy() {
   local copy="$work/copy-$1"
   rm -rf -- "$copy"
-  mkdir -p "$copy/skills"
+  mkdir -p "$copy/skills" "$copy/evals"
   cp -R "$repo_root/README.md" "$repo_root/scripts" "$copy/"
+  cp "$repo_root/evals/README.md" "$copy/evals/README.md"
   cp -R "$skill_dir" "$copy/skills/cdm-dev"
   printf '%s\n' "$copy"
 }

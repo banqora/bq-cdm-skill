@@ -1,5 +1,5 @@
 {
-  "_note": "Thresholds for evals/run-triggers. The original 11-prompt suite measured 2026-08-07 with claude at trigger_rate 1.00 / false_trigger_rate 0.00 (1 run each); asset, DRR, and legal cases were added afterward and need a fresh reviewed measurement. Limits leave headroom for single flaky runs at --runs 3. No codex entry yet: codex detection is a proxy signal, so scheduled runs record results until a reviewed baseline is promoted here.",
+  "_note": "Thresholds for evals/run-triggers. Claude measured trigger_rate 1.00 / false_trigger_rate 0.00 on the original 11-prompt corpus on 2026-08-07 (1 run each). The corpus now has 13 positive and 16 negative cases, including asset, DRR, legal, onboarding, Rune-only, and adversarial acronym/near-miss coverage; it needs a fresh reviewed local-subscription measurement. The existing limits remain provisional and leave headroom for one flaky prompt at --runs 3. No Codex threshold is promoted because its file-touch detection remains a proxy signal.",
   "claude": {
     "min_trigger_rate": 0.85,
     "max_false_trigger_rate": 0.1

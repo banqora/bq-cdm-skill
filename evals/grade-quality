@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+"""Deterministically grade a cdm-dev answer against a reviewed quality case."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--cases", type=Path, default=Path(__file__).with_name("quality.json"))
+    parser.add_argument("--case", required=True, dest="case_id")
+    parser.add_argument("--answer", required=True, type=Path)
+    parser.add_argument("--vendor", default="fixture")
+    parser.add_argument("--results", type=Path)
+    return parser.parse_args()
+
+
+def load_case(path: Path, case_id: str) -> dict:
+    cases = json.loads(path.read_text(encoding="utf-8"))
+    matches = [case for case in cases if case.get("id") == case_id]
+    if len(matches) != 1:
+        raise ValueError(f"expected exactly one quality case named {case_id!r}")
+    return matches[0]
+
+
+def matches(pattern: str, answer: str) -> bool:
+    return re.search(pattern, answer, flags=re.IGNORECASE | re.DOTALL) is not None
+
+
+def grade(case: dict, answer: str, vendor: str) -> dict:
+    checks = []
+    for check in case.get("checks", []):
+        all_patterns = check.get("all", [])
+        any_patterns = check.get("any", [])
+        missing = [pattern for pattern in all_patterns if not matches(pattern, answer)]
+        any_ok = not any_patterns or any(matches(pattern, answer) for pattern in any_patterns)
+        passed = not missing and any_ok
+        checks.append(
+            {
+                "id": check["id"],
+                "description": check["description"],
+                "passed": passed,
+                "missing_all": missing,
+                "matched_any": any_ok,
+            }
+        )
+
+    word_count = len(re.findall(r"\b\w+\b", answer))
+    minimum_words = int(case.get("minimum_words", 0))
+    length_ok = word_count >= minimum_words
+    return {
+        "vendor": vendor,
+        "case": case["id"],
+        "artifact_version": case.get("artifact_version"),
+        "passed": length_ok and all(check["passed"] for check in checks),
+        "word_count": word_count,
+        "minimum_words": minimum_words,
+        "length_passed": length_ok,
+        "checks": checks,
+        "answer": answer,
+    }
+
+
+def main() -> int:
+    args = parse_args()
+    try:
+        case = load_case(args.cases, args.case_id)
+        answer = args.answer.read_text(encoding="utf-8")
+        result = grade(case, answer, args.vendor)
+    except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as error:
+        print(f"grade-quality: {error}", file=sys.stderr)
+        return 2
+
+    for check in result["checks"]:
+        marker = "ok  " if check["passed"] else "FAIL"
+        print(f"{marker} {check['id']}: {check['description']}")
+    length_marker = "ok  " if result["length_passed"] else "FAIL"
+    print(
+        f"{length_marker} minimum-length: {result['word_count']}/"
+        f"{result['minimum_words']} words"
+    )
+    print(
+        f"grade-quality: {result['vendor']} {result['case']} -> "
+        f"{'passed' if result['passed'] else 'failed'}"
+    )
+
+    if args.results:
+        args.results.parent.mkdir(parents=True, exist_ok=True)
+        args.results.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
+    return 0 if result["passed"] else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

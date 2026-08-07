@@ -3,74 +3,266 @@ set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 skill_root="$(cd -- "$script_dir/../skills/cdm-dev" && pwd)"
+prompts_file="$script_dir/prompts.json"
+baseline_file="$script_dir/baseline.json"
 
 usage() {
   cat >&2 <<'USAGE'
 Usage:
   run-triggers --vendor <claude|codex> [--runs <n>] [--results <file>]
+  run-triggers --vendor <claude|codex> --check-auth
+  run-triggers --vendor <claude|codex> --dry-run [--runs <n>]
+  run-triggers --vendor <claude|codex> --fixture <observations.tsv> \
+    [--runs <n>] [--results <file>]
 
-Runs every prompt in evals/prompts.json against the vendor's headless CLI in a
-clean workspace where this skill is the only one installed, detects whether the
-skill was used, and scores trigger rates against evals/baseline.json.
+Runs every prompt in evals/prompts.json against an already-authenticated local
+Claude Code or Codex CLI, detects whether cdm-dev was used, and scores trigger
+rates against evals/baseline.json. Credential environment overrides are removed
+from child CLI processes so an existing subscription login is used.
 
-Vendors:
-  claude  needs the claude CLI and ANTHROPIC_API_KEY (or a logged-in CLI)
-  codex   needs the codex CLI and CODEX_API_KEY (or a logged-in CLI)
+Modes that do not make model calls:
+  --check-auth  Verify that the selected CLI has a local login.
+  --dry-run     Validate inputs and print the planned prompt runs.
+  --fixture     Score a TSV fixture instead of invoking a CLI. Each non-empty
+                line must be: PROMPT_ID<TAB>triggered|quiet. Supply exactly
+                --runs observations for every prompt.
 
-Detection is exact for claude (a Skill tool call naming cdm-dev). For codex no
-skill-activation event exists in the JSONL stream, so use is inferred from the
-stream touching this skill's files; treat codex rates as a proxy signal.
+Detection is exact for Claude (a Skill tool call naming cdm-dev). Codex does
+not expose a stable skill-activation event, so its result is inferred from the
+JSONL stream touching cdm-dev resources and remains a proxy signal.
 
 Without a baseline entry for the vendor, results are recorded but not judged.
 USAGE
 }
 
+die() {
+  echo "run-triggers: $*" >&2
+  exit 1
+}
+
+need_value() {
+  local option="$1" value="${2:-}"
+  [[ -n "$value" ]] || die "$option needs a value"
+}
+
 vendor=""
 runs=1
+runs_set=0
 results_file=""
+results_set=0
+fixture_file=""
+dry_run=0
+check_auth=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --vendor)
-      vendor="${2:?--vendor needs a value}"
+      need_value "$1" "${2:-}"
+      vendor="$2"
       shift 2
       ;;
     --runs)
-      runs="${2:?--runs needs a value}"
+      need_value "$1" "${2:-}"
+      runs="$2"
+      runs_set=1
       shift 2
       ;;
     --results)
-      results_file="${2:?--results needs a value}"
+      need_value "$1" "${2:-}"
+      results_file="$2"
+      results_set=1
       shift 2
+      ;;
+    --fixture)
+      need_value "$1" "${2:-}"
+      fixture_file="$2"
+      shift 2
+      ;;
+    --dry-run)
+      dry_run=1
+      shift
+      ;;
+    --check-auth)
+      check_auth=1
+      shift
       ;;
     -h | --help | help)
       usage
       exit 0
       ;;
     *)
-      echo "run-triggers: unknown option '$1'" >&2
-      usage
-      exit 1
+      die "unknown option '$1'"
       ;;
   esac
 done
 
 case "$vendor" in
   claude | codex) ;;
+  "")
+    die "--vendor is required (claude or codex)"
+    ;;
   *)
-    usage
-    exit 1
+    die "unsupported vendor '$vendor' (expected claude or codex)"
     ;;
 esac
-[[ "$runs" =~ ^[1-9][0-9]*$ ]] || {
-  echo "run-triggers: --runs must be a positive integer" >&2
-  exit 1
-}
-command -v "$vendor" >/dev/null || {
-  echo "run-triggers: the '$vendor' CLI is not installed" >&2
-  exit 1
-}
-results_file="${results_file:-$script_dir/results-$vendor.json}"
+[[ "$runs" =~ ^[1-9][0-9]*$ ]] || die "--runs must be a positive integer"
 
+fixture_mode=0
+[[ -n "$fixture_file" ]] && fixture_mode=1
+mode_count=$((dry_run + check_auth + fixture_mode))
+((mode_count <= 1)) || die "--dry-run, --check-auth, and --fixture are mutually exclusive"
+if ((check_auth)); then
+  ((runs_set == 0)) || die "--runs cannot be used with --check-auth"
+  ((results_set == 0)) || die "--results cannot be used with --check-auth"
+fi
+if ((dry_run)); then
+  ((results_set == 0)) || die "--results cannot be used with --dry-run"
+fi
+if ((fixture_mode)); then
+  [[ -r "$fixture_file" ]] || die "fixture is not readable: $fixture_file"
+fi
+
+command -v python3 >/dev/null || die "python3 is not installed"
+
+config_summary="$(
+  python3 - "$prompts_file" "$baseline_file" <<'PY'
+import json
+import re
+import sys
+from pathlib import Path
+
+prompts_path, baseline_path = map(Path, sys.argv[1:3])
+
+try:
+    prompts = json.loads(prompts_path.read_text())
+except (OSError, json.JSONDecodeError) as exc:
+    raise SystemExit(f"run-triggers: cannot read prompt corpus: {exc}")
+
+if not isinstance(prompts, list) or not prompts:
+    raise SystemExit("run-triggers: prompts.json must be a non-empty JSON array")
+
+ids = set()
+counts = {"trigger": 0, "no-trigger": 0}
+for index, entry in enumerate(prompts):
+    if not isinstance(entry, dict):
+        raise SystemExit(f"run-triggers: prompt {index} must be an object")
+    prompt_id = entry.get("id")
+    expect = entry.get("expect")
+    prompt = entry.get("prompt")
+    if not isinstance(prompt_id, str) or not re.fullmatch(r"[a-z0-9][a-z0-9-]*", prompt_id):
+        raise SystemExit(f"run-triggers: prompt {index} has an invalid id")
+    if prompt_id in ids:
+        raise SystemExit(f"run-triggers: duplicate prompt id: {prompt_id}")
+    ids.add(prompt_id)
+    if expect not in counts:
+        raise SystemExit(f"run-triggers: {prompt_id} has invalid expect value: {expect!r}")
+    counts[expect] += 1
+    if not isinstance(prompt, str) or not prompt.strip():
+        raise SystemExit(f"run-triggers: {prompt_id} has an empty prompt")
+
+if not all(counts.values()):
+    raise SystemExit("run-triggers: prompt corpus needs trigger and no-trigger cases")
+
+try:
+    baseline = json.loads(baseline_path.read_text())
+except (OSError, json.JSONDecodeError) as exc:
+    raise SystemExit(f"run-triggers: cannot read baseline: {exc}")
+
+if not isinstance(baseline, dict):
+    raise SystemExit("run-triggers: baseline.json must be an object")
+for vendor, thresholds in baseline.items():
+    if vendor.startswith("_"):
+        continue
+    if not isinstance(thresholds, dict):
+        raise SystemExit(f"run-triggers: baseline for {vendor} must be an object")
+    for key in ("min_trigger_rate", "max_false_trigger_rate"):
+        value = thresholds.get(key)
+        if not isinstance(value, (int, float)) or isinstance(value, bool) or not 0 <= value <= 1:
+            raise SystemExit(f"run-triggers: baseline {vendor}.{key} must be between 0 and 1")
+
+print(len(prompts), counts["trigger"], counts["no-trigger"])
+PY
+)"
+read -r prompt_count positive_count negative_count <<<"$config_summary"
+
+if ((dry_run)); then
+  echo "run-triggers: valid corpus: $prompt_count prompts ($positive_count trigger, $negative_count no-trigger)"
+  python3 - "$prompts_file" "$runs" <<'PY'
+import json
+import sys
+
+prompts = json.load(open(sys.argv[1]))
+runs = int(sys.argv[2])
+for entry in prompts:
+    marker = "+" if entry["expect"] == "trigger" else "-"
+    print(f"  {marker} {entry['id']:<28} {runs} run(s)")
+PY
+  echo "run-triggers: dry run only; no CLI, authentication, or model call was used"
+  exit 0
+fi
+
+# Deliberately remove credential/provider overrides. The eval lane is for
+# developers using their already-authenticated local CLI subscription.
+session_cli() {
+  case "$vendor" in
+    claude)
+      env \
+        -u ANTHROPIC_API_KEY \
+        -u ANTHROPIC_AUTH_TOKEN \
+        -u CLAUDE_CODE_OAUTH_TOKEN \
+        -u ANTHROPIC_BASE_URL \
+        -u CLAUDE_CODE_USE_BEDROCK \
+        -u CLAUDE_CODE_USE_VERTEX \
+        -u CLAUDE_CODE_USE_FOUNDRY \
+        "$@"
+      ;;
+    codex)
+      env \
+        -u OPENAI_API_KEY \
+        -u CODEX_API_KEY \
+        -u CODEX_ACCESS_TOKEN \
+        -u OPENAI_BASE_URL \
+        "$@"
+      ;;
+  esac
+}
+
+preflight_auth() {
+  local auth_output=""
+  command -v "$vendor" >/dev/null || die "the '$vendor' CLI is not installed"
+
+  case "$vendor" in
+    claude)
+      if ! auth_output="$(session_cli claude auth status --json 2>&1)"; then
+        die "Claude Code is not using a Claude.ai subscription; run 'claude auth login' (API credentials are not supported by this runner)"
+      fi
+      if ! python3 -c \
+        'import json,sys; d=json.load(sys.stdin); s=d.get("subscriptionType"); raise SystemExit(0 if d.get("loggedIn") is True and d.get("authMethod") == "claude.ai" and isinstance(s, str) and s.strip() else 1)' \
+        <<<"$auth_output"; then
+        die "Claude Code is not using a Claude.ai subscription; run 'claude auth login' (API credentials are not supported by this runner)"
+      fi
+      ;;
+    codex)
+      if ! auth_output="$(session_cli codex login status 2>&1)"; then
+        die "Codex is not using a ChatGPT subscription; run 'codex login' (API credentials are not supported by this runner)"
+      fi
+      if ! grep -Fq 'Logged in using ChatGPT' <<<"$auth_output"; then
+        die "Codex is not using a ChatGPT subscription; run 'codex login' (API credentials are not supported by this runner)"
+      fi
+      ;;
+  esac
+}
+
+if ((check_auth)); then
+  preflight_auth
+  echo "run-triggers: $vendor local subscription login is ready; no model call was made"
+  exit 0
+fi
+
+if ((!fixture_mode)); then
+  preflight_auth
+fi
+
+results_file="${results_file:-$script_dir/results-$vendor.json}"
 workspace="$(mktemp -d "${TMPDIR:-/tmp}/cdm-dev-evals.XXXXXX")"
 cleanup() { rm -rf -- "$workspace"; }
 trap cleanup EXIT
@@ -86,100 +278,276 @@ case "$vendor" in
     ;;
 esac
 
+detect_claude_trigger() {
+  local stream_file="$1"
+  python3 - "$stream_file" <<'PY'
+import json
+import sys
+
+parsed = 0
+triggered = False
+
+def invalid(message):
+    print(message, file=sys.stderr)
+    raise SystemExit(2)
+
+def strings(value):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for child in value.values():
+            yield from strings(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from strings(child)
+
+def walk(value):
+    global triggered
+    if isinstance(value, dict):
+        if value.get("name") == "Skill":
+            arguments = value.get("input", value.get("arguments", {}))
+            names = {item.lstrip("/") for item in strings(arguments)}
+            if "cdm-dev" in names:
+                triggered = True
+        for child in value.values():
+            walk(child)
+    elif isinstance(value, list):
+        for child in value:
+            walk(child)
+
+with open(sys.argv[1]) as stream:
+    for number, line in enumerate(stream, 1):
+        if not line.strip():
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError as exc:
+            invalid(f"invalid Claude JSONL at line {number}: {exc}")
+        parsed += 1
+        walk(event)
+
+if not parsed:
+    invalid("Claude returned an empty JSONL stream")
+raise SystemExit(0 if triggered else 1)
+PY
+}
+
+detect_codex_trigger() {
+  local stream_file="$1"
+  python3 - "$stream_file" <<'PY'
+import json
+import re
+import sys
+
+parsed = 0
+values = []
+
+def invalid(message):
+    print(message, file=sys.stderr)
+    raise SystemExit(2)
+
+def strings(value):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for child in value.values():
+            yield from strings(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from strings(child)
+
+with open(sys.argv[1]) as stream:
+    for number, line in enumerate(stream, 1):
+        if not line.strip():
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError as exc:
+            invalid(f"invalid Codex JSONL at line {number}: {exc}")
+        parsed += 1
+        values.extend(strings(event))
+
+if not parsed:
+    invalid("Codex returned an empty JSONL stream")
+text = "\n".join(values)
+skill_path = re.search(r"(?:^|\n|[\\/.])cdm-dev(?:[\\/]|\n|$)", text)
+resource = re.search(r"SKILL\.md|scripts[\\/]cdm-source|references[\\/]", text)
+raise SystemExit(0 if skill_path and resource else 1)
+PY
+}
+
 run_prompt() {
-  local prompt="$1" stream=""
+  local prompt_id="$1" prompt="$2" attempt="$3"
+  local stream_file="$workspace/$prompt_id-$attempt.jsonl"
+  local error_file="$workspace/$prompt_id-$attempt.stderr"
+  local command_status=0 detect_status=0
+
   case "$vendor" in
     claude)
-      stream="$(
-        cd "$workspace" &&
-          claude -p "$prompt" \
-            --output-format stream-json --verbose \
-            --max-turns 2 \
-            --strict-mcp-config --mcp-config '{"mcpServers":{}}' \
-            2>/dev/null
-      )" || true
-      if grep -q '"name":[[:space:]]*"Skill"' <<<"$stream" &&
-        grep -q 'cdm-dev' <<<"$stream"; then
-        echo triggered
+      if (
+        cd "$workspace"
+        session_cli claude -p "$prompt" \
+          --output-format stream-json --verbose \
+          --max-turns 2 --no-session-persistence \
+          --permission-mode dontAsk \
+          --tools Skill,Read,Glob,Grep \
+          --setting-sources project \
+          --strict-mcp-config --mcp-config '{"mcpServers":{}}'
+      ) >"$stream_file" 2>"$error_file"; then
+        command_status=0
       else
-        echo quiet
+        command_status=$?
       fi
       ;;
     codex)
-      stream="$(
-        cd "$workspace" &&
-          codex exec --json --sandbox read-only --skip-git-repo-check \
-            "$prompt" 2>/dev/null
-      )" || true
-      if grep -q 'cdm-dev' <<<"$stream" &&
-        grep -qE 'SKILL\.md|cdm-source|references/' <<<"$stream"; then
-        echo triggered
+      if (
+        cd "$workspace"
+        session_cli codex exec --json --sandbox read-only \
+          --skip-git-repo-check --ephemeral --ignore-user-config --ignore-rules \
+          "$prompt"
+      ) >"$stream_file" 2>"$error_file"; then
+        command_status=0
       else
-        echo quiet
+        command_status=$?
       fi
       ;;
   esac
+
+  if ((command_status != 0)); then
+    echo "run-triggers: $vendor invocation failed for $prompt_id (exit $command_status)" >&2
+    tail -n 20 "$error_file" | sed 's/^/  /' >&2
+    return 1
+  fi
+
+  case "$vendor" in
+    claude)
+      if detect_claude_trigger "$stream_file"; then
+        echo triggered
+        return
+      else
+        detect_status=$?
+      fi
+      ;;
+    codex)
+      if detect_codex_trigger "$stream_file"; then
+        echo triggered
+        return
+      else
+        detect_status=$?
+      fi
+      ;;
+  esac
+
+  if ((detect_status == 1)); then
+    echo quiet
+    return
+  fi
+  echo "run-triggers: could not parse $vendor JSONL for $prompt_id" >&2
+  return 1
 }
 
-prompt_count="$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))))' "$script_dir/prompts.json")"
 observations="$workspace/observations.tsv"
-: >"$observations"
-
-for ((index = 0; index < prompt_count; index++)); do
-  prompt_id="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[int(sys.argv[2])]["id"])' "$script_dir/prompts.json" "$index")"
-  prompt_text="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[int(sys.argv[2])]["prompt"])' "$script_dir/prompts.json" "$index")"
-  for ((attempt = 1; attempt <= runs; attempt++)); do
-    verdict="$(run_prompt "$prompt_text")"
-    printf '%s\t%s\n' "$prompt_id" "$verdict" >>"$observations"
-    echo "run-triggers: $vendor $prompt_id run $attempt/$runs -> $verdict" >&2
+if ((fixture_mode)); then
+  cp -- "$fixture_file" "$observations"
+  echo "run-triggers: scoring fixture $fixture_file; no CLI, authentication, or model call was used" >&2
+else
+  : >"$observations"
+  for ((index = 0; index < prompt_count; index++)); do
+    prompt_id="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[int(sys.argv[2])]["id"])' "$prompts_file" "$index")"
+    prompt_text="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[int(sys.argv[2])]["prompt"])' "$prompts_file" "$index")"
+    for ((attempt = 1; attempt <= runs; attempt++)); do
+      if ! verdict="$(run_prompt "$prompt_id" "$prompt_text" "$attempt")"; then
+        exit 1
+      fi
+      printf '%s\t%s\n' "$prompt_id" "$verdict" >>"$observations"
+      echo "run-triggers: $vendor $prompt_id run $attempt/$runs -> $verdict" >&2
+    done
   done
-done
+fi
 
-python3 - "$script_dir/prompts.json" "$observations" "$script_dir/baseline.json" \
-  "$vendor" "$results_file" <<'PY'
+python3 - "$prompts_file" "$observations" "$baseline_file" \
+  "$vendor" "$results_file" "$runs" <<'PY'
 import json
 import sys
 from pathlib import Path
 
-prompts_path, observations_path, baseline_path, vendor, results_path = sys.argv[1:6]
-prompts = {entry["id"]: entry for entry in json.load(open(prompts_path))}
+prompts_path, observations_path, baseline_path, vendor, results_path, expected_runs = sys.argv[1:7]
+prompt_entries = json.load(open(prompts_path))
+prompts = {entry["id"]: entry for entry in prompt_entries}
+expected_runs = int(expected_runs)
 
 counts = {prompt_id: [0, 0] for prompt_id in prompts}
-for line in Path(observations_path).read_text().splitlines():
-    prompt_id, verdict = line.split("\t")
+for number, line in enumerate(Path(observations_path).read_text().splitlines(), 1):
+    if not line.strip():
+        continue
+    fields = line.split("\t")
+    if len(fields) != 2:
+        raise SystemExit(f"run-triggers: invalid observation at line {number}: expected two tab-separated fields")
+    prompt_id, verdict = fields
+    if prompt_id not in counts:
+        raise SystemExit(f"run-triggers: unknown prompt id in observations at line {number}: {prompt_id}")
+    if verdict not in {"triggered", "quiet"}:
+        raise SystemExit(f"run-triggers: invalid verdict at line {number}: {verdict}")
     counts[prompt_id][0] += 1
     if verdict == "triggered":
         counts[prompt_id][1] += 1
 
+wrong_counts = [
+    f"{prompt_id}={total}"
+    for prompt_id, (total, _) in counts.items()
+    if total != expected_runs
+]
+if wrong_counts:
+    raise SystemExit(
+        f"run-triggers: observations need exactly {expected_runs} run(s) per prompt; got "
+        + ", ".join(wrong_counts)
+    )
+
 rows = []
-for prompt_id, entry in prompts.items():
+correct = 0
+for entry in prompt_entries:
+    prompt_id = entry["id"]
     total, triggered = counts[prompt_id]
+    quiet = total - triggered
+    correct += triggered if entry["expect"] == "trigger" else quiet
     rows.append({
         "id": prompt_id,
         "expect": entry["expect"],
         "runs": total,
         "triggered": triggered,
-        "rate": triggered / total if total else 0.0,
+        "rate": triggered / total,
     })
 
 positives = [row for row in rows if row["expect"] == "trigger"]
 negatives = [row for row in rows if row["expect"] == "no-trigger"]
 summary = {
     "vendor": vendor,
+    "runs_per_prompt": expected_runs,
     "trigger_rate": sum(r["rate"] for r in positives) / len(positives),
     "false_trigger_rate": sum(r["rate"] for r in negatives) / len(negatives),
+    "accuracy": correct / (len(rows) * expected_runs),
+    "counts": {
+        "prompts": len(rows),
+        "trigger_prompts": len(positives),
+        "no_trigger_prompts": len(negatives),
+    },
     "prompts": rows,
 }
-Path(results_path).write_text(json.dumps(summary, indent=2) + "\n")
+output = Path(results_path).expanduser()
+output.parent.mkdir(parents=True, exist_ok=True)
+output.write_text(json.dumps(summary, indent=2) + "\n")
 
 for row in rows:
     marker = "+" if row["expect"] == "trigger" else "-"
-    print(f"  {marker} {row['id']:<24} {row['triggered']}/{row['runs']}")
-print(f"run-triggers: {vendor} trigger_rate={summary['trigger_rate']:.2f} "
-      f"false_trigger_rate={summary['false_trigger_rate']:.2f} -> {results_path}")
+    print(f"  {marker} {row['id']:<28} {row['triggered']}/{row['runs']}")
+print(
+    f"run-triggers: {vendor} trigger_rate={summary['trigger_rate']:.2f} "
+    f"false_trigger_rate={summary['false_trigger_rate']:.2f} "
+    f"accuracy={summary['accuracy']:.2f} -> {output}"
+)
 
-baseline_file = Path(baseline_path)
-baseline = json.loads(baseline_file.read_text()) if baseline_file.is_file() else {}
+baseline_path = Path(baseline_path)
+baseline = json.loads(baseline_path.read_text()) if baseline_path.is_file() else {}
 if vendor not in baseline:
     print(f"run-triggers: no baseline for {vendor}; recorded results only")
     raise SystemExit(0)
@@ -189,13 +557,14 @@ problems = []
 if summary["trigger_rate"] < expected["min_trigger_rate"]:
     problems.append(
         f"trigger_rate {summary['trigger_rate']:.2f} fell below "
-        f"baseline {expected['min_trigger_rate']:.2f}")
+        f"baseline {expected['min_trigger_rate']:.2f}"
+    )
 if summary["false_trigger_rate"] > expected["max_false_trigger_rate"]:
     problems.append(
         f"false_trigger_rate {summary['false_trigger_rate']:.2f} exceeded "
-        f"baseline {expected['max_false_trigger_rate']:.2f}")
+        f"baseline {expected['max_false_trigger_rate']:.2f}"
+    )
 if problems:
-    raise SystemExit("run-triggers: behavioral drift detected:\n  " +
-                     "\n  ".join(problems))
+    raise SystemExit("run-triggers: behavioral drift detected:\n  " + "\n  ".join(problems))
 print(f"run-triggers: {vendor} within baseline")
 PY

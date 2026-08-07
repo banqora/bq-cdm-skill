@@ -45,6 +45,26 @@
     "prompt": "Our CDM trades need to link to their governing master agreement and collateral annex. Show us how to represent identifiers, parties, elections, provenance, and amendments without inventing missing legal terms."
   },
   {
+    "id": "python-onboarding",
+    "expect": "trigger",
+    "prompt": "A new Python post-trade service needs to consume and validate FINOS Common Domain Model documents, but the team has not selected a distribution or runtime yet. Help us choose compatible artifacts, pin a CDM version, and build an installation smoke test."
+  },
+  {
+    "id": "typescript-generated-api",
+    "expect": "trigger",
+    "prompt": "Review this TypeScript integration with the generated CDM model: a choice field is accepted by the compiler but disappears when we serialize it. I need to compare the Rune declaration, generated type metadata, and wire JSON before changing the mapper."
+  },
+  {
+    "id": "rune-runtime-function",
+    "expect": "trigger",
+    "prompt": "Our .rosetta function compiles, but the generated Rune runtime implementation returns an empty result for one valid choice branch. Help me inspect the function and conditions, reproduce it with typed inputs, and add a close negative test."
+  },
+  {
+    "id": "isda-conformance",
+    "expect": "trigger",
+    "prompt": "Our application claims CDM lifecycle conformance. Show me how to find the version-matched ISDA scenarios shipped with the distribution and compare our function inputs and after-state with their reference output."
+  },
+  {
     "id": "generic-java-npe",
     "expect": "no-trigger",
     "prompt": "My Spring Boot application throws a NullPointerException in a @PostConstruct method during startup. How do I debug this?"
@@ -68,5 +88,60 @@
     "id": "protobuf-schema",
     "expect": "no-trigger",
     "prompt": "Design a protobuf schema for a customer orders service and explain how to evolve it without breaking old readers."
+  },
+  {
+    "id": "microsoft-cdm",
+    "expect": "no-trigger",
+    "prompt": "Our Azure Data Lake export uses Microsoft's Common Data Model. How should I extend the Customer entity and keep Synapse readers compatible with the new CDM manifest?"
+  },
+  {
+    "id": "omop-cdm",
+    "expect": "no-trigger",
+    "prompt": "Map our hospital encounter feed into the OMOP CDM visit_occurrence and condition_occurrence tables, including the vocabulary concept IDs."
+  },
+  {
+    "id": "customer-data-model",
+    "expect": "no-trigger",
+    "prompt": "The analytics team calls its warehouse schema the customer data model, or CDM. Design slowly changing customer and household dimensions in BigQuery."
+  },
+  {
+    "id": "go-runes",
+    "expect": "no-trigger",
+    "prompt": "This Go function corrupts emoji because it indexes a string by byte. Rewrite it to iterate over Unicode runes and explain the allocation tradeoffs."
+  },
+  {
+    "id": "runescape-runes",
+    "expect": "no-trigger",
+    "prompt": "Build a small RuneScape calculator that tells a player how many elemental runes they need for a selected list of spells."
+  },
+  {
+    "id": "isda-legal-advice",
+    "expect": "no-trigger",
+    "prompt": "Under the 2002 ISDA Master Agreement, would this force-majeure clause let us terminate our counterparty's trades today? Give me a definitive legal interpretation."
+  },
+  {
+    "id": "generic-repo-explanation",
+    "expect": "no-trigger",
+    "prompt": "Explain to a treasury graduate how repo interest, haircuts, margin calls, and settlement work. Include a simple numerical example but no software implementation."
+  },
+  {
+    "id": "generic-bond-pricer",
+    "expect": "no-trigger",
+    "prompt": "Implement a plain Python bond pricer from coupon, yield, maturity, and payment frequency, and calculate duration and convexity."
+  },
+  {
+    "id": "disaster-recovery-drr",
+    "expect": "no-trigger",
+    "prompt": "Write a DRR for our Kubernetes platform covering disaster recovery roles, backup restoration, regional failover, and the quarterly recovery rehearsal."
+  },
+  {
+    "id": "generic-reg-reporting",
+    "expect": "no-trigger",
+    "prompt": "Design a data pipeline that sends our bank's existing EMIR transaction rows to a trade repository, with retries and operational dashboards. We are not changing the source schema."
+  },
+  {
+    "id": "fpml-element-lookup",
+    "expect": "no-trigger",
+    "prompt": "Which FpML 5.x element contains the trade date? I only need the schema element name and a link to its definition."
   }
 ]

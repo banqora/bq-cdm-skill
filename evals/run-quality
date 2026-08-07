@@ -1,0 +1,337 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+skill_root="$(cd -- "$script_dir/../skills/cdm-dev" && pwd)"
+source_helper="$skill_root/scripts/cdm-source"
+
+usage() {
+  cat >&2 <<'USAGE'
+Usage:
+  run-quality --vendor <claude|codex> --jar <cdm-java.jar>
+              --sources-jar <cdm-java-sources.jar>
+              [--case <id>] [--results <file>]
+
+Runs reviewed answer-quality cases with cdm-dev explicitly invoked. The runner
+uses the CLI's saved local login and deliberately removes API-key environment
+variables from child processes. It never uploads credentials or calls from CI.
+USAGE
+}
+
+vendor=""
+jar_path=""
+sources_jar_path=""
+case_filter=""
+results_file=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --vendor)
+      vendor="${2:?--vendor needs a value}"
+      shift 2
+      ;;
+    --jar)
+      jar_path="${2:?--jar needs a value}"
+      shift 2
+      ;;
+    --sources-jar)
+      sources_jar_path="${2:?--sources-jar needs a value}"
+      shift 2
+      ;;
+    --case)
+      case_filter="${2:?--case needs a value}"
+      shift 2
+      ;;
+    --results)
+      results_file="${2:?--results needs a value}"
+      shift 2
+      ;;
+    -h | --help | help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "run-quality: unknown option '$1'" >&2
+      usage
+      exit 2
+      ;;
+  esac
+done
+
+case "$vendor" in
+  claude | codex) ;;
+  *)
+    usage
+    exit 2
+    ;;
+esac
+[[ -n "$jar_path" ]] || {
+  usage
+  exit 2
+}
+[[ -n "$sources_jar_path" ]] || {
+  echo "run-quality: --sources-jar is required for reviewed generated-API evidence" >&2
+  usage
+  exit 2
+}
+command -v "$vendor" >/dev/null || {
+  echo "run-quality: the '$vendor' CLI is not installed" >&2
+  exit 2
+}
+"$script_dir/run-local" --vendor "$vendor" --check-auth >/dev/null
+
+canonical_dir="$(cd -- "$(dirname -- "$jar_path")" 2>/dev/null && pwd -P)" || {
+  echo "run-quality: JAR directory does not exist: $jar_path" >&2
+  exit 2
+}
+jar="$canonical_dir/$(basename -- "$jar_path")"
+[[ -f "$jar" ]] || {
+  echo "run-quality: JAR does not exist: $jar" >&2
+  exit 2
+}
+version="$($source_helper --jar "$jar" version | sed -n 's/^version=//p')"
+
+sources_dir="$(cd -- "$(dirname -- "$sources_jar_path")" 2>/dev/null && pwd -P)" || {
+  echo "run-quality: sources JAR directory does not exist: $sources_jar_path" >&2
+  exit 2
+}
+sources_jar="$sources_dir/$(basename -- "$sources_jar_path")"
+[[ -f "$sources_jar" ]] || {
+  echo "run-quality: sources JAR does not exist: $sources_jar" >&2
+  exit 2
+}
+
+case_summary="$(
+  python3 - "$script_dir/quality.json" "$case_filter" <<'PY'
+import json, sys
+cases = json.load(open(sys.argv[1]))
+selected = [c for c in cases if not sys.argv[2] or c["id"] == sys.argv[2]]
+versions = {c.get("artifact_version") for c in selected}
+if len(versions) > 1:
+    raise SystemExit("run-quality: selected cases require different artifact versions")
+print(len(selected), next(iter(versions), ""))
+PY
+)"
+read -r case_count expected_case_version <<<"$case_summary"
+[[ "$case_count" -gt 0 ]] || {
+  echo "run-quality: no quality case matches '$case_filter'" >&2
+  exit 2
+}
+[[ "$version" == "$expected_case_version" ]] || {
+  echo "run-quality: selected cases need cdm-java $expected_case_version; got $version" >&2
+  exit 2
+}
+
+workspace="$(mktemp -d "${TMPDIR:-/tmp}/cdm-dev-quality.XXXXXX")"
+# shellcheck disable=SC2329  # invoked by the EXIT trap
+cleanup() { rm -rf -- "$workspace"; }
+trap cleanup EXIT
+mkdir -p "$workspace/lib" "$workspace/results"
+ln -s "$jar" "$workspace/lib/cdm-java-$version.jar"
+ln -s "$sources_jar" "$workspace/lib/cdm-java-$version-sources.jar"
+
+# Give the agent a small, exact evidence surface instead of making every run rediscover
+# entries across two large ZIPs. These files are extracted from the caller-supplied,
+# version-checked artifacts; they are not hand-authored expected answers.
+model_evidence=(
+  cdm/rosetta/base-math-type.rosetta
+  cdm/rosetta/observable-asset-type.rosetta
+  cdm/rosetta/observable-common-func.rosetta
+)
+mkdir -p "$workspace/evidence/model"
+if ! unzip -q "$jar" "${model_evidence[@]}" -d "$workspace/evidence/model"; then
+  echo "run-quality: binary JAR is missing required model evidence for $version" >&2
+  exit 2
+fi
+for entry in "${model_evidence[@]}"; do
+  if ! rg -Fq "version \"$version\"" "$workspace/evidence/model/$entry"; then
+    echo "run-quality: binary JAR model evidence does not match version $version" >&2
+    exit 2
+  fi
+done
+
+generated_evidence=(
+  cdm/observable/asset/PriceQuantity.java
+  cdm/observable/asset/meta/PriceQuantityMeta.java
+  cdm/observable/asset/functions/InterestRateObservableCondition.java
+  cdm/observable/asset/validation/PriceQuantityTypeFormatValidator.java
+  cdm/observable/asset/validation/PriceQuantityValidator.java
+  cdm/observable/asset/validation/datarule/PriceQuantityArithmeticOperator.java
+  cdm/observable/asset/validation/datarule/PriceQuantityInterestRateObservable.java
+  cdm/observable/asset/validation/datarule/PriceQuantityNonCurrencyQuantities.java
+  cdm/observable/asset/validation/datarule/PriceQuantityPriceQuantityTriangulation.java
+  cdm/observable/common/functions/PriceQuantityTriangulation.java
+  cdm/base/math/Schedule.java
+  cdm/base/math/QuantitySchedule.java
+  cdm/base/math/NonNegativeQuantitySchedule.java
+  cdm/base/math/meta/NonNegativeQuantityScheduleMeta.java
+  cdm/base/math/metafields/FieldWithMetaNonNegativeQuantitySchedule.java
+  cdm/base/math/validation/ScheduleTypeFormatValidator.java
+  cdm/base/math/validation/QuantityScheduleTypeFormatValidator.java
+  cdm/base/math/validation/NonNegativeQuantityScheduleTypeFormatValidator.java
+  cdm/base/math/validation/NonNegativeQuantityScheduleValidator.java
+  cdm/base/math/validation/datarule/ScheduleValueExists.java
+)
+mkdir -p "$workspace/evidence/generated"
+if ! unzip -q "$sources_jar" "${generated_evidence[@]}" -d "$workspace/evidence/generated"; then
+  echo "run-quality: sources JAR is missing required generated evidence for $version" >&2
+  exit 2
+fi
+if ! rg -Fq "version=\"$version\"" \
+  "$workspace/evidence/generated/cdm/observable/asset/PriceQuantity.java"; then
+  echo "run-quality: sources JAR generated evidence does not match version $version" >&2
+  exit 2
+fi
+
+case "$vendor" in
+  claude)
+    mkdir -p "$workspace/.claude/skills"
+    cp -R "$skill_root" "$workspace/.claude/skills/cdm-dev"
+    ;;
+  codex)
+    mkdir -p "$workspace/.agents/skills"
+    cp -R "$skill_root" "$workspace/.agents/skills/cdm-dev"
+    ;;
+esac
+
+status=0
+for ((index = 0; index < case_count; index++)); do
+  case_data="$(
+    python3 - "$script_dir/quality.json" "$case_filter" "$index" <<'PY'
+import json, sys
+cases = json.load(open(sys.argv[1]))
+selected = [c for c in cases if not sys.argv[2] or c["id"] == sys.argv[2]]
+case = selected[int(sys.argv[3])]
+print(case["id"])
+print(case["artifact_version"])
+print(case["prompt"])
+PY
+  )"
+  case_id="$(sed -n '1p' <<<"$case_data")"
+  expected_version="$(sed -n '2p' <<<"$case_data")"
+  prompt="$(sed -n '3,$p' <<<"$case_data")"
+  prompt+=$'\n\nA complete, version-derived evidence bundle for this reviewed case was extracted from those exact JARs under evidence/. Use only that bundle for artifact inspection; do not unpack lib/ or inspect unrelated guides.'
+  [[ "$version" == "$expected_version" ]] || {
+    echo "run-quality: $case_id needs cdm-java $expected_version; got $version" >&2
+    exit 2
+  }
+
+  answer="$workspace/results/$case_id.md"
+  stream="$workspace/results/$case_id.jsonl"
+  error_log="$workspace/results/$case_id.stderr"
+  echo "run-quality: $vendor $case_id" >&2
+  case "$vendor" in
+    claude)
+      if ! (
+        cd "$workspace" &&
+          env \
+            -u ANTHROPIC_API_KEY \
+            -u ANTHROPIC_AUTH_TOKEN \
+            -u CLAUDE_CODE_OAUTH_TOKEN \
+            -u ANTHROPIC_BASE_URL \
+            -u CLAUDE_CODE_USE_BEDROCK \
+            -u CLAUDE_CODE_USE_VERTEX \
+            -u CLAUDE_CODE_USE_FOUNDRY \
+            claude -p "$prompt" \
+            --output-format stream-json \
+            --max-turns 24 \
+            --no-session-persistence \
+            --verbose \
+            --setting-sources project \
+            --permission-mode dontAsk \
+            --tools "Read,Grep,Glob,Skill" \
+            --allowedTools "Read,Grep,Glob,Skill" \
+            --strict-mcp-config --mcp-config '{"mcpServers":{}}'
+      ) >"$stream" 2>"$error_log"; then
+        echo "run-quality: claude failed while running $case_id" >&2
+        tail -n 20 "$error_log" | sed 's/^/  /' >&2
+        python3 - "$stream" <<'PY' >&2 || true
+import json, sys
+
+actions = []
+
+def walk(value):
+    if isinstance(value, dict):
+        if value.get("type") == "tool_use":
+            details = value.get("input", {})
+            summary = details.get("command") or details.get("pattern") or details.get("file_path") or details
+            summary = " ".join(str(summary).split())[:180]
+            actions.append(f"{value.get('name', 'tool')}: {summary}")
+        for child in value.values():
+            walk(child)
+    elif isinstance(value, list):
+        for child in value:
+            walk(child)
+
+try:
+    with open(sys.argv[1], encoding="utf-8") as handle:
+        for line in handle:
+            if line.strip():
+                walk(json.loads(line))
+except (OSError, json.JSONDecodeError) as error:
+    print(f"  trace unavailable: {error}")
+else:
+    for action in actions[-10:]:
+        print(f"  action: {action}")
+PY
+        exit 2
+      fi
+      if ! python3 - "$stream" "$answer" <<'PY'; then
+import json, sys
+from pathlib import Path
+
+result = None
+with open(sys.argv[1], encoding="utf-8") as handle:
+    for number, line in enumerate(handle, 1):
+        if not line.strip():
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError as error:
+            raise SystemExit(f"run-quality: invalid Claude JSONL at line {number}: {error}")
+        if event.get("type") == "result":
+            result = event
+if result is None:
+    raise SystemExit("run-quality: Claude stream has no result event")
+answer = result.get("result")
+if result.get("is_error") or not isinstance(answer, str) or not answer.strip():
+    raise SystemExit(f"run-quality: Claude result was not successful: {result.get('subtype', 'unknown')}")
+Path(sys.argv[2]).write_text(answer.rstrip() + "\n", encoding="utf-8")
+PY
+        exit 2
+      fi
+      ;;
+    codex)
+      if ! (
+        cd "$workspace" &&
+          env -u OPENAI_API_KEY -u CODEX_API_KEY -u CODEX_ACCESS_TOKEN -u OPENAI_BASE_URL \
+            codex exec --ephemeral --sandbox read-only --skip-git-repo-check \
+            --ignore-user-config --ignore-rules "$prompt"
+      ) >"$answer" 2>"$error_log"; then
+        echo "run-quality: codex failed while running $case_id" >&2
+        tail -n 20 "$error_log" | sed 's/^/  /' >&2
+        tail -n 20 "$answer" | sed 's/^/  /' >&2
+        exit 2
+      fi
+      ;;
+  esac
+
+  if ! "$script_dir/grade-quality" \
+    --case "$case_id" --answer "$answer" --vendor "$vendor" \
+    --results "$workspace/results/$case_id.json"; then
+    status=1
+  fi
+done
+
+results_file="${results_file:-$script_dir/results-quality-$vendor.json}"
+python3 - "$workspace/results" "$vendor" "$results_file" <<'PY'
+import json, sys
+from pathlib import Path
+
+result_dir, vendor, output = Path(sys.argv[1]), sys.argv[2], Path(sys.argv[3])
+cases = [json.loads(path.read_text()) for path in sorted(result_dir.glob("*.json"))]
+summary = {"vendor": vendor, "passed": all(case["passed"] for case in cases), "cases": cases}
+output.parent.mkdir(parents=True, exist_ok=True)
+output.write_text(json.dumps(summary, indent=2) + "\n")
+print(f"run-quality: {vendor} {sum(c['passed'] for c in cases)}/{len(cases)} cases passed -> {output}")
+PY
+exit "$status"

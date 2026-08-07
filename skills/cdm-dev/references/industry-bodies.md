@@ -3,6 +3,14 @@
 Use this reference for market practice, agreement, adoption, collateral, and reporting context.
 Use FINOS CDM source and runtime artefacts—not association prose—for the technical contract.
 
+## Contents
+
+- [Apply a freshness and evidence rule](#apply-a-freshness-and-evidence-rule)
+- [ISDA: derivatives, collateral, reporting, and FpML](#isda-derivatives-collateral-reporting-and-fpml)
+- [ISLA: securities lending, GMSLA, and operational practice](#isla-securities-lending-gmsla-and-operational-practice)
+- [ICMA: repo, bonds, GMRA, and repo practice](#icma-repo-bonds-gmra-and-repo-practice)
+- [Access and reuse boundary](#access-and-reuse-boundary)
+
 ## Apply a freshness and evidence rule
 
 Association guidance can lag the active CDM release, even when a page labels a handbook or

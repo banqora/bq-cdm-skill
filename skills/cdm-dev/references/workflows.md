@@ -3,6 +3,17 @@
 Use this reference to find the owning layer and the tests that should travel with an ordinary
 CDM change. Project names differ, but the evidence path is stable.
 
+## Contents
+
+- [Orient in an unfamiliar project](#orient-in-an-unfamiliar-project)
+- [Add or change an input mapping](#add-or-change-an-input-mapping)
+- [Build or change a CDM document](#build-or-change-a-cdm-document)
+- [Implement or change a lifecycle event](#implement-or-change-a-lifecycle-event)
+- [Debug a dropped or changed value](#debug-a-dropped-or-changed-value)
+- [Change validation or qualification handling](#change-validation-or-qualification-handling)
+- [Upgrade the CDM dependency](#upgrade-the-cdm-dependency)
+- [Review or report a finding](#review-or-report-a-finding)
+
 ## Orient in an unfamiliar project
 
 Start from the user-visible behavior, failing test, endpoint, event, or field. Read project

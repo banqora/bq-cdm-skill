@@ -48,6 +48,7 @@ bash -n "$repo_root/scripts/check-skill"
 
 python3 - "$skill_root" "$repo_root" <<'PY'
 import ast
+import json
 import os
 import re
 import sys
@@ -88,6 +89,43 @@ if len(description) > 1024:
                      "spec caps it at 1024 and Codex truncates long descriptions first")
 if len(lines) > 120:
     raise SystemExit(f"check-skill: SKILL.md has {len(lines)} lines; move detail to references")
+
+ui_metadata = skill_dir / "agents" / "openai.yaml"
+if not ui_metadata.is_file():
+    raise SystemExit("check-skill: agents/openai.yaml is missing")
+ui_lines = [line for line in ui_metadata.read_text().splitlines() if line.strip()]
+if not ui_lines or ui_lines[0] != "interface:":
+    raise SystemExit("check-skill: agents/openai.yaml must contain an interface mapping")
+interface = {}
+interface_line = re.compile(r'  ([a-z_]+): ("(?:[^"\\]|\\.)*")')
+for line in ui_lines[1:]:
+    match = interface_line.fullmatch(line)
+    if not match:
+        raise SystemExit("check-skill: agents/openai.yaml interface values must be quoted "
+                         f"strings with two-space indentation; got {line!r}")
+    key, encoded_value = match.groups()
+    if key in interface:
+        raise SystemExit(f"check-skill: agents/openai.yaml repeats interface.{key}")
+    try:
+        interface[key] = json.loads(encoded_value)
+    except json.JSONDecodeError as error:
+        raise SystemExit(f"check-skill: agents/openai.yaml has invalid interface.{key}: "
+                         f"{error.msg}")
+required_interface_keys = ["display_name", "short_description", "default_prompt"]
+if list(interface) != required_interface_keys:
+    raise SystemExit("check-skill: agents/openai.yaml interface keys must be "
+                     f"{', '.join(required_interface_keys)}; got {', '.join(interface)}")
+if not interface["display_name"].strip():
+    raise SystemExit("check-skill: agents/openai.yaml display_name must not be empty")
+short_description = interface["short_description"].strip()
+if not 25 <= len(short_description) <= 64:
+    raise SystemExit("check-skill: agents/openai.yaml short_description must be 25-64 "
+                     f"characters; got {len(short_description)}")
+default_prompt = interface["default_prompt"].strip()
+if "$cdm-dev" not in default_prompt:
+    raise SystemExit("check-skill: agents/openai.yaml default_prompt must mention $cdm-dev")
+if not re.fullmatch(r"[^.!?]+[.!?]", default_prompt):
+    raise SystemExit("check-skill: agents/openai.yaml default_prompt must be one sentence")
 
 readme = repo_root / "README.md"
 link_re = re.compile(r"\]\(([^)#]+\.md)(?:#[^)]*)?\)")
@@ -148,8 +186,50 @@ if orphans:
                      "\n  ".join(map(str, orphans)))
 
 for reference in references:
-    if len(reference.read_text().strip().splitlines()) < 8:
+    reference_lines = reference.read_text().strip().splitlines()
+    if len(reference_lines) < 8:
         raise SystemExit(f"check-skill: reference is an empty stub: {reference.relative_to(skill_dir)}")
+    if len(reference_lines) <= 100:
+        continue
+
+    contents_indices = [index for index, line in enumerate(reference_lines)
+                        if line == "## Contents"]
+    relative_reference = reference.relative_to(skill_dir)
+    if len(contents_indices) != 1:
+        raise SystemExit("check-skill: references over 100 lines need one ## Contents "
+                         f"section: {relative_reference}")
+    contents_index = contents_indices[0]
+    h2_indices = [index for index, line in enumerate(reference_lines)
+                  if line.startswith("## ")]
+    if not h2_indices or contents_index != h2_indices[0]:
+        raise SystemExit("check-skill: ## Contents must be the first level-two section in "
+                         f"{relative_reference}")
+    next_h2 = next((index for index in h2_indices if index > contents_index),
+                   len(reference_lines))
+    toc_lines = [line for line in reference_lines[contents_index + 1:next_h2]
+                 if line.strip()]
+    toc_link_re = re.compile(r"- \[[^]]+\]\(#([a-z0-9-]+)\)")
+    toc_targets = []
+    for line in toc_lines:
+        match = toc_link_re.fullmatch(line)
+        if not match:
+            raise SystemExit("check-skill: invalid Contents entry in "
+                             f"{relative_reference}: {line!r}")
+        toc_targets.append(match.group(1))
+
+    anchor_counts = {}
+    expected_targets = []
+    for index in h2_indices[1:]:
+        heading = reference_lines[index][3:].strip().lower()
+        base_anchor = re.sub(r"[^a-z0-9 _-]", "", heading)
+        base_anchor = re.sub(r"[ _]+", "-", base_anchor).strip("-")
+        duplicate = anchor_counts.get(base_anchor, 0)
+        anchor_counts[base_anchor] = duplicate + 1
+        expected_targets.append(base_anchor if duplicate == 0
+                                else f"{base_anchor}-{duplicate}")
+    if toc_targets != expected_targets:
+        raise SystemExit("check-skill: Contents targets do not match level-two headings in "
+                         f"{relative_reference}; expected {expected_targets}, got {toc_targets}")
 
 source_helper = skill_dir / "scripts" / "cdm-source"
 checker = repo_root / "scripts" / "check-skill"
@@ -162,7 +242,8 @@ try:
 except SyntaxError as error:
     raise SystemExit(f"check-skill: scripts/check-links has invalid Python: {error}")
 
-portable_resources = [skill, readme, source_helper, link_checker, *sorted(references)]
+portable_resources = [skill, ui_metadata, readme, source_helper, link_checker,
+                      *sorted(references)]
 resource_text = "\n".join(path.read_text() for path in portable_resources)
 forbidden = {
     "absolute user path": r"/Users/",
@@ -180,7 +261,7 @@ if re.search(r"cdm-java-\d+\.\d+(?:\.\d+)?\.jar", resource_text):
 
 print(
     f"check-skill: static contract passed "
-    f"({len(lines)} SKILL.md lines, {len(references)} reachable references)"
+    f"({len(lines)} SKILL.md lines, {len(references)} reachable references, valid UI metadata)"
 )
 PY
 

@@ -1,6 +1,6 @@
 ---
 name: cdm-dev
-description: Develop, debug, test, upgrade, and review software using FINOS CDM, Rune DSL/source, generated distributions, or Rune runtime. Use for onboarding a Java, Python, TypeScript, JSON Schema, Excel, or other integration; modelling rates, credit, FX, equity, commodity, repo, securities-lending, bond, cash-security, digital-asset, or collateral products; mapping data; building typed objects; tracing dropped fields; migrating JSON dialects; implementing lifecycle events; running functions; diagnosing validation or qualification; testing industry artefacts; implementing DRR/regulatory reporting; or representing legal agreements, elections, clauses, and ISDA/ISLA/ICMA terms. Also use when upgrades alter generated APIs, serialization, paths, or behavior, or when separating CDM/DRR semantics, market practice, legal meaning, and application policy. This is engineering/adoption guidance, not one-off CLI lookup or legal advice.
+description: Develop, debug, test, upgrade, and review FINOS Common Domain Model (CDM) software, Rune source/DSL, generated distributions, and Rune runtimes. Use for CDM onboarding or generated-API upgrades; Java, Python, TypeScript, JSON Schema, or Excel integration; FpML/data mapping, typed objects, dropped fields, serialization, and JSON dialects; lifecycle events, validation, qualification, and functions; derivatives, securities financing, collateral, DRR/regulatory reporting, or legal-agreement representation; and separating CDM semantics from application policy or ISDA/ISLA/ICMA guidance. Exclude unrelated meanings of "CDM" or "Rune", generic build debugging, CLI lookups, and legal advice.
 ---
 
 # Develop with CDM
@@ -87,8 +87,8 @@ object construction, lifecycle functions, validation, serialization, and upgrade
   concept is absent.
 - A qualifier's existence does not prove reachability. Read its predicate and execute positive
   and negative cases.
-- Optional cardinality does not override conditional rules, and an empty failure message does
-  not mean no validation failure occurred. Preserve structured finding fields.
+- Optional cardinality does not override conditional or inherited base-type rules, and an empty
+  failure message does not mean no validation failure occurred. Preserve structured finding fields.
 - Lifecycle legality is not implied by document validity. Keep application transition guards
   distinct from generated CDM validation.
 - Record the exact CDM version with every durable finding. Re-query the active JAR during an

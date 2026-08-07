@@ -4,6 +4,14 @@ Use the scenarios and examples embedded in the active `cdm-java` dependency when
 provides them. They are stronger evidence than copied documentation because they travel with
 the generated code being evaluated.
 
+## Contents
+
+- [Discover, do not hard-code, the corpus](#discover-do-not-hard-code-the-corpus)
+- [Reproduce the release's execution pipeline](#reproduce-the-releases-execution-pipeline)
+- [Compare semantics before allowing exclusions](#compare-semantics-before-allowing-exclusions)
+- [Treat ingest corpora separately](#treat-ingest-corpora-separately)
+- [Report the result precisely](#report-the-result-precisely)
+
 ## Discover, do not hard-code, the corpus
 
 Inspect the supplied JAR:

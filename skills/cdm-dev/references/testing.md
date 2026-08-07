@@ -4,6 +4,18 @@ The most dangerous CDM test is green while exercising an empty object, stale fix
 dialect, hidden function error, or unchanged build artefact. Build tests around evidence that
 the intended content and code path were actually used.
 
+## Contents
+
+- [Prove meaningful input arrived](#prove-meaningful-input-arrived)
+- [Assert economics as well as structure](#assert-economics-as-well-as-structure)
+- [Use positive and negative controls](#use-positive-and-negative-controls)
+- [Discover open populations](#discover-open-populations)
+- [Declare external data as build inputs](#declare-external-data-as-build-inputs)
+- [Test typed round trips and references](#test-typed-round-trips-and-references)
+- [Test functions through real wiring](#test-functions-through-real-wiring)
+- [Separate offline and live checks](#separate-offline-and-live-checks)
+- [Upgrade tests](#upgrade-tests)
+
 ## Prove meaningful input arrived
 
 Every deserialize/round-trip/function test should assert:

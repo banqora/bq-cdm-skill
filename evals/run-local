@@ -1,0 +1,252 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+usage() {
+  cat >&2 <<'USAGE'
+Usage:
+  run-local [--vendor <claude|codex|all>] [--runs <n>] [--jar <cdm-java.jar>]
+            [--sources-jar <cdm-java-sources.jar>]
+            [--triggers-only | --quality-only] [--case <quality-case-id>]
+            [--check-auth]
+
+Runs live skill evals through saved local Claude Code and Codex subscription
+logins. API credential environment variables are deliberately removed before
+the CLIs run. Without --jar, the pinned quality fixture is downloaded once to
+the user's cache and verified by SHA-256. Custom quality fixtures require both
+--jar and --sources-jar.
+USAGE
+}
+
+vendor="all"
+runs=1
+jar=""
+sources_jar=""
+mode="all"
+case_filter=""
+check_auth_only=false
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --vendor)
+      vendor="${2:?--vendor needs a value}"
+      shift 2
+      ;;
+    --runs)
+      runs="${2:?--runs needs a value}"
+      shift 2
+      ;;
+    --jar)
+      jar="${2:?--jar needs a value}"
+      shift 2
+      ;;
+    --sources-jar)
+      sources_jar="${2:?--sources-jar needs a value}"
+      shift 2
+      ;;
+    --triggers-only)
+      [[ "$mode" == all ]] || {
+        echo "run-local: choose only one eval mode" >&2
+        exit 2
+      }
+      mode="triggers"
+      shift
+      ;;
+    --quality-only)
+      [[ "$mode" == all ]] || {
+        echo "run-local: choose only one eval mode" >&2
+        exit 2
+      }
+      mode="quality"
+      shift
+      ;;
+    --case)
+      case_filter="${2:?--case needs a value}"
+      shift 2
+      ;;
+    --check-auth)
+      check_auth_only=true
+      shift
+      ;;
+    -h | --help | help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "run-local: unknown option '$1'" >&2
+      usage
+      exit 2
+      ;;
+  esac
+done
+
+case "$vendor" in
+  claude | codex | all) ;;
+  *)
+    usage
+    exit 2
+    ;;
+esac
+[[ "$runs" =~ ^[1-9][0-9]*$ ]] || {
+  echo "run-local: --runs must be a positive integer" >&2
+  exit 2
+}
+[[ -z "$case_filter" || "$mode" != triggers ]] || {
+  echo "run-local: --case applies only to quality evals" >&2
+  exit 2
+}
+if [[ "$mode" != triggers && -n "$jar" && -z "$sources_jar" ]]; then
+  echo "run-local: custom quality fixtures require --jar and --sources-jar together" >&2
+  exit 2
+fi
+if [[ "$mode" != triggers && -z "$jar" && -n "$sources_jar" ]]; then
+  echo "run-local: custom quality fixtures require --jar and --sources-jar together" >&2
+  exit 2
+fi
+
+vendors=()
+if [[ "$vendor" == all ]]; then
+  vendors=(claude codex)
+else
+  vendors=("$vendor")
+fi
+
+check_subscription_auth() {
+  local selected="$1" status
+  command -v "$selected" >/dev/null || {
+    echo "run-local: the '$selected' CLI is not installed" >&2
+    return 1
+  }
+  case "$selected" in
+    claude)
+      status="$(
+        env -u ANTHROPIC_API_KEY -u ANTHROPIC_AUTH_TOKEN -u CLAUDE_CODE_OAUTH_TOKEN -u ANTHROPIC_BASE_URL \
+          -u CLAUDE_CODE_USE_BEDROCK -u CLAUDE_CODE_USE_VERTEX -u CLAUDE_CODE_USE_FOUNDRY \
+          claude auth status --json
+      )" || {
+        echo "run-local: Claude Code is not logged in; run 'claude auth login'" >&2
+        return 1
+      }
+      python3 - "$status" <<'PY' || {
+import json, sys
+status = json.loads(sys.argv[1])
+if not status.get("loggedIn") or status.get("authMethod") != "claude.ai":
+    raise SystemExit(1)
+if not status.get("subscriptionType"):
+    raise SystemExit(1)
+PY
+        echo "run-local: Claude Code is not using a Claude subscription; run 'claude auth login' without --console" >&2
+        return 1
+      }
+      echo "run-local: claude subscription login verified"
+      ;;
+    codex)
+      status="$(env -u OPENAI_API_KEY -u CODEX_API_KEY -u CODEX_ACCESS_TOKEN -u OPENAI_BASE_URL codex login status 2>&1)" || {
+        echo "run-local: Codex is not logged in; run 'codex login'" >&2
+        return 1
+      }
+      grep -q 'Logged in using ChatGPT' <<<"$status" || {
+        echo "run-local: Codex is not using ChatGPT subscription auth; run 'codex login'" >&2
+        return 1
+      }
+      echo "run-local: codex ChatGPT login verified"
+      ;;
+  esac
+}
+
+for selected in "${vendors[@]}"; do
+  check_subscription_auth "$selected"
+done
+[[ "$check_auth_only" == true ]] && exit 0
+
+sha256_file() {
+  local path="$1"
+  if command -v sha256sum >/dev/null; then
+    sha256sum "$path" | awk '{print $1}'
+  elif command -v shasum >/dev/null; then
+    shasum -a 256 "$path" | awk '{print $1}'
+  else
+    echo "run-local: sha256sum or shasum is required" >&2
+    return 1
+  fi
+}
+
+if [[ "$mode" != triggers && -z "$jar" ]]; then
+  fixture_version="7.0.0"
+  fixture_sha256="904b6d328584751c3e576994b16c3a2f3e85a7a6cf431134ae5df4275e538342"
+  sources_sha256="18525245186d4888a88726e62b011938300f61077260235b332ef6c47bec93dc"
+  cache_base="${CDM_DEV_EVAL_CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/cdm-dev-evals}"
+  jar="$cache_base/cdm-java-$fixture_version.jar"
+  sources_jar="$cache_base/cdm-java-$fixture_version-sources.jar"
+  mkdir -p "$cache_base"
+  if [[ ! -f "$jar" || ! -f "$sources_jar" ]]; then
+    command -v curl >/dev/null || {
+      echo "run-local: curl is required to download the pinned quality fixtures" >&2
+      exit 2
+    }
+    download="$cache_base/cdm-java-$fixture_version.download.$$"
+    sources_download="$cache_base/cdm-java-$fixture_version-sources.download.$$"
+    # shellcheck disable=SC2329  # invoked by the EXIT trap
+    cleanup_download() {
+      [[ ! -f "$download" ]] || rm -f -- "$download"
+      [[ ! -f "$sources_download" ]] || rm -f -- "$sources_download"
+    }
+    trap cleanup_download EXIT
+    echo "run-local: downloading pinned cdm-java $fixture_version quality fixture" >&2
+    if [[ ! -f "$jar" ]]; then
+      curl -fsSL --retry 3 -o "$download" \
+        "https://repo1.maven.org/maven2/org/finos/cdm/cdm-java/$fixture_version/cdm-java-$fixture_version.jar"
+      actual_sha256="$(sha256_file "$download")"
+      [[ "$actual_sha256" == "$fixture_sha256" ]] || {
+        echo "run-local: downloaded binary fixture checksum mismatch" >&2
+        exit 2
+      }
+      mv "$download" "$jar"
+    fi
+    if [[ ! -f "$sources_jar" ]]; then
+      curl -fsSL --retry 3 -o "$sources_download" \
+        "https://repo1.maven.org/maven2/org/finos/cdm/cdm-java/$fixture_version/cdm-java-$fixture_version-sources.jar"
+      actual_sha256="$(sha256_file "$sources_download")"
+      [[ "$actual_sha256" == "$sources_sha256" ]] || {
+        echo "run-local: downloaded sources fixture checksum mismatch" >&2
+        exit 2
+      }
+      mv "$sources_download" "$sources_jar"
+    fi
+    trap - EXIT
+  fi
+  actual_sha256="$(sha256_file "$jar")"
+  [[ "$actual_sha256" == "$fixture_sha256" ]] || {
+    echo "run-local: cached fixture checksum mismatch: $jar" >&2
+    exit 2
+  }
+  actual_sha256="$(sha256_file "$sources_jar")"
+  [[ "$actual_sha256" == "$sources_sha256" ]] || {
+    echo "run-local: cached sources fixture checksum mismatch: $sources_jar" >&2
+    exit 2
+  }
+fi
+
+overall_status=0
+for selected in "${vendors[@]}"; do
+  if [[ "$mode" != quality ]]; then
+    if ! "$script_dir/run-triggers" \
+      --vendor "$selected" --runs "$runs" \
+      --results "$script_dir/results-triggers-$selected.json"; then
+      overall_status=1
+    fi
+  fi
+  if [[ "$mode" != triggers ]]; then
+    quality_args=(
+      --vendor "$selected"
+      --jar "$jar"
+      --results "$script_dir/results-quality-$selected.json"
+    )
+    [[ -z "$sources_jar" ]] || quality_args+=(--sources-jar "$sources_jar")
+    [[ -z "$case_filter" ]] || quality_args+=(--case "$case_filter")
+    if ! "$script_dir/run-quality" "${quality_args[@]}"; then
+      overall_status=1
+    fi
+  fi
+done
+exit "$overall_status"

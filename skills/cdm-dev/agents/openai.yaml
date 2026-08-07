@@ -1,0 +1,4 @@
+interface:
+  display_name: "FINOS CDM Development"
+  short_description: "Build and debug FINOS CDM integrations"
+  default_prompt: "Use $cdm-dev to build, debug, or review this FINOS CDM integration."

@@ -5,6 +5,15 @@ Use this reference before reading, writing, migrating, or comparing CDM JSON. Co
 serialization. Verify the classes and annotations in the active dependency; names and details
 can move between releases.
 
+## Contents
+
+- [Identify the document before selecting a mapper](#identify-the-document-before-selecting-a-mapper)
+- [Make the silent failure impossible](#make-the-silent-failure-impossible)
+- [Derive paths from generated metadata](#derive-paths-from-generated-metadata)
+- [Account for pruning](#account-for-pruning)
+- [Migrate a corpus safely](#migrate-a-corpus-safely)
+- [Diagnose without hiding loss](#diagnose-without-hiding-loss)
+
 ## Identify the document before selecting a mapper
 
 Common distinguishing markers are:

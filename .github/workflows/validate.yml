@@ -5,14 +5,9 @@ on:
     branches: [main]
   pull_request:
   schedule:
-    # Weekly drift sweep: docs links, CDM release matrix, upstream canary, vendor evals.
+    # Weekly drift sweep: docs links, CDM release matrix, and upstream canary.
     - cron: "17 6 * * 1"
   workflow_dispatch:
-    inputs:
-      evals:
-        description: Run vendor trigger evals (needs API key secrets)
-        type: boolean
-        default: false
 
 env:
   SHFMT_VERSION: v3.13.1
@@ -30,9 +25,9 @@ jobs:
           chmod +x "$HOME/.local/bin/shfmt"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: shellcheck
-        run: shellcheck -x skills/cdm-dev/scripts/cdm-source scripts/check-skill tests/run tests/*.sh evals/run-triggers
+        run: shellcheck -x skills/cdm-dev/scripts/cdm-source scripts/check-skill tests/run tests/*.sh evals/run-triggers evals/run-quality evals/run-local
       - name: shfmt
-        run: shfmt -d -i 2 -ci skills/cdm-dev/scripts/cdm-source scripts/check-skill tests/run tests/*.sh evals/run-triggers
+        run: shfmt -d -i 2 -ci skills/cdm-dev/scripts/cdm-source scripts/check-skill tests/run tests/*.sh evals/run-triggers evals/run-quality evals/run-local
 
   static:
     runs-on: ubuntu-latest
@@ -117,38 +112,3 @@ jobs:
             echo "Canary FAILED against ${{ steps.newest.outputs.version }} — the skill's model assumptions drift on the next CDM release." >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
-
-  trigger-evals:
-    # Behavioral drift: do the vendors still route the right prompts to the
-    # skill? Paid API usage, so scheduled/dispatched only, and each vendor leg
-    # skips itself when its key is not configured.
-    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.evals)
-    runs-on: ubuntu-latest
-    env:
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Claude trigger evals
-        run: |
-          if [ -z "$ANTHROPIC_API_KEY" ]; then
-            echo "ANTHROPIC_API_KEY not configured; skipping claude evals" >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-          npm install -g @anthropic-ai/claude-code
-          evals/run-triggers --vendor claude --runs 3 --results /tmp/results-claude.json
-      - name: Codex trigger evals
-        run: |
-          if [ -z "$CODEX_API_KEY" ]; then
-            echo "CODEX_API_KEY not configured; skipping codex evals" >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-          npm install -g @openai/codex
-          evals/run-triggers --vendor codex --runs 3 --results /tmp/results-codex.json
-      - name: Upload results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: trigger-eval-results
-          path: /tmp/results-*.json
-          if-no-files-found: ignore
