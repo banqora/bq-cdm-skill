@@ -1,0 +1,152 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly drift sweep: CDM release matrix, upstream canary, vendor evals.
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      evals:
+        description: Run vendor trigger evals (needs API key secrets)
+        type: boolean
+        default: false
+
+env:
+  SHFMT_VERSION: v3.13.1
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shfmt
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL --retry 3 -o "$HOME/.local/bin/shfmt" \
+            "https://github.com/mvdan/sh/releases/download/${SHFMT_VERSION}/shfmt_${SHFMT_VERSION}_linux_amd64"
+          chmod +x "$HOME/.local/bin/shfmt"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: shellcheck
+        run: shellcheck scripts/cdm-source scripts/check-skill tests/run evals/run-triggers
+      - name: shfmt
+        run: shfmt -d -i 2 -ci scripts/cdm-source scripts/check-skill tests/run evals/run-triggers
+
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ripgrep
+        run: sudo apt-get update -q && sudo apt-get install -y -q ripgrep
+      - name: Static gate through the documented symlinked install shape
+        # The Agent Skills spec requires the discovered directory name to match
+        # the skill name, and installs are symlinks; validate exactly that shape.
+        run: |
+          mkdir -p "$RUNNER_TEMP/skills"
+          ln -s "$GITHUB_WORKSPACE" "$RUNNER_TEMP/skills/cdm-dev"
+          "$RUNNER_TEMP/skills/cdm-dev/scripts/check-skill" --static
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ripgrep
+        run: sudo apt-get update -q && sudo apt-get install -y -q ripgrep
+      - name: Script test suite
+        run: tests/run
+
+  cdm-matrix:
+    # Proves the live contract on the latest release of every supported major,
+    # so a skill edit that only holds on recent CDM fails here immediately.
+    needs: [static, test]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        cdm-version: ["4.3.0", "5.40.0", "6.24.0", "7.0.0"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ripgrep
+        run: sudo apt-get update -q && sudo apt-get install -y -q ripgrep
+      - name: Cache cdm-java ${{ matrix.cdm-version }}
+        id: cache-jar
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/cdm/cdm-java-${{ matrix.cdm-version }}.jar
+          key: cdm-java-${{ matrix.cdm-version }}
+      - name: Download cdm-java ${{ matrix.cdm-version }}
+        if: steps.cache-jar.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/.cache/cdm
+          curl -fsSL --retry 3 -o ~/.cache/cdm/cdm-java-${{ matrix.cdm-version }}.jar \
+            "https://repo1.maven.org/maven2/org/finos/cdm/cdm-java/${{ matrix.cdm-version }}/cdm-java-${{ matrix.cdm-version }}.jar"
+      - name: Live gate against cdm-java ${{ matrix.cdm-version }}
+        run: scripts/check-skill --jar ~/.cache/cdm/cdm-java-${{ matrix.cdm-version }}.jar
+
+  upstream-canary:
+    # Early warning, not a merge gate: run the live contract against the newest
+    # published cdm-java (including dev builds) and surface breakage in the
+    # run summary before the release lands in the supported matrix.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ripgrep
+        run: sudo apt-get update -q && sudo apt-get install -y -q ripgrep
+      - name: Resolve newest published cdm-java
+        id: newest
+        run: |
+          version="$(curl -fsSL --retry 3 \
+            https://repo1.maven.org/maven2/org/finos/cdm/cdm-java/maven-metadata.xml |
+            grep -oE '<latest>[^<]+</latest>' | sed 's/<[^>]*>//g')"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Newest published cdm-java: $version" >> "$GITHUB_STEP_SUMMARY"
+      - name: Live gate against ${{ steps.newest.outputs.version }}
+        run: |
+          curl -fsSL --retry 3 -o /tmp/cdm-java-canary.jar \
+            "https://repo1.maven.org/maven2/org/finos/cdm/cdm-java/${{ steps.newest.outputs.version }}/cdm-java-${{ steps.newest.outputs.version }}.jar"
+          if scripts/check-skill --jar /tmp/cdm-java-canary.jar; then
+            echo "Canary passed against ${{ steps.newest.outputs.version }}." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::skill contract drifted against upcoming cdm-java ${{ steps.newest.outputs.version }}"
+            echo "Canary FAILED against ${{ steps.newest.outputs.version }} — the skill's model assumptions drift on the next CDM release." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+  trigger-evals:
+    # Behavioral drift: do the vendors still route the right prompts to the
+    # skill? Paid API usage, so scheduled/dispatched only, and each vendor leg
+    # skips itself when its key is not configured.
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.evals)
+    runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Claude trigger evals
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "ANTHROPIC_API_KEY not configured; skipping claude evals" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          npm install -g @anthropic-ai/claude-code
+          evals/run-triggers --vendor claude --runs 3 --results /tmp/results-claude.json
+      - name: Codex trigger evals
+        run: |
+          if [ -z "$CODEX_API_KEY" ]; then
+            echo "CODEX_API_KEY not configured; skipping codex evals" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          npm install -g @openai/codex
+          evals/run-triggers --vendor codex --runs 3 --results /tmp/results-codex.json
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trigger-eval-results
+          path: /tmp/results-*.json
+          if-no-files-found: ignore

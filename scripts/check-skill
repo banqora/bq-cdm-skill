@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+skill_root="$(cd -- "$script_dir/.." && pwd)"
+
+usage() {
+  cat >&2 <<'USAGE'
+Usage:
+  check-skill --static
+  check-skill --jar <cdm-java.jar>
+
+--static validates the portable skill structure, references, and scripts.
+--jar also validates the helper and model assumptions against the supplied dependency.
+USAGE
+}
+
+mode="${1:-}"
+jar_path=""
+case "$mode" in
+  --static)
+    [[ $# -eq 1 ]] || {
+      usage
+      exit 1
+    }
+    ;;
+  --jar)
+    [[ $# -eq 2 ]] || {
+      usage
+      exit 1
+    }
+    jar_path="$2"
+    ;;
+  -h | --help | help | '')
+    usage
+    exit 0
+    ;;
+  *)
+    echo "check-skill: unknown option '$mode'" >&2
+    usage
+    exit 1
+    ;;
+esac
+
+bash -n "$skill_root/scripts/cdm-source"
+bash -n "$skill_root/scripts/check-skill"
+
+python3 - "$skill_root" <<'PY'
+import os
+import re
+import sys
+from pathlib import Path
+
+# Resolve eagerly: the skill may be reached through a symlinked install path,
+# and later link checks compare resolved targets against paths rooted here.
+root = Path(sys.argv[1]).resolve()
+skill = root / "SKILL.md"
+if not skill.is_file():
+    raise SystemExit("check-skill: SKILL.md is missing")
+
+text = skill.read_text()
+lines = text.splitlines()
+if not lines or lines[0] != "---":
+    raise SystemExit("check-skill: SKILL.md has no YAML frontmatter")
+try:
+    closing = lines[1:].index("---") + 1
+except ValueError:
+    raise SystemExit("check-skill: SKILL.md frontmatter is not closed")
+
+frontmatter = lines[1:closing]
+keys = [line.split(":", 1)[0] for line in frontmatter if line.strip()]
+if keys != ["name", "description"]:
+    raise SystemExit(f"check-skill: frontmatter keys must be name, description; got {keys}")
+if "name: cdm-dev" not in frontmatter:
+    raise SystemExit("check-skill: skill name is not cdm-dev")
+description = next((line.split(":", 1)[1].strip() for line in frontmatter
+                    if line.startswith("description:")), "")
+if len(description) < 80:
+    raise SystemExit("check-skill: description is too weak to route development tasks")
+if len(description) > 1024:
+    raise SystemExit(f"check-skill: description is {len(description)} chars; the Agent Skills "
+                     "spec caps it at 1024 and Codex truncates long descriptions first")
+if len(lines) > 120:
+    raise SystemExit(f"check-skill: SKILL.md has {len(lines)} lines; move detail to references")
+
+link_re = re.compile(r"\]\(([^)#]+\.md)(?:#[^)]*)?\)")
+missing = []
+for markdown in root.rglob("*.md"):
+    for link in link_re.findall(markdown.read_text()):
+        if "://" in link:
+            continue
+        target = (markdown.parent / link).resolve()
+        if not target.is_file():
+            missing.append(f"{markdown.relative_to(root)} -> {link}")
+if missing:
+    raise SystemExit("check-skill: missing Markdown references:\n  " + "\n  ".join(missing))
+
+references = set((root / "references").rglob("*.md"))
+linked_references = set()
+pending = [skill]
+visited = set()
+while pending:
+    markdown = pending.pop()
+    if markdown in visited:
+        continue
+    visited.add(markdown)
+    for link in link_re.findall(markdown.read_text()):
+        target = (markdown.parent / link).resolve()
+        try:
+            target.relative_to((root / "references").resolve())
+        except ValueError:
+            continue
+        if target.is_file() and target not in linked_references:
+            linked_references.add(target)
+            pending.append(target)
+orphans = sorted(path.relative_to(root) for path in references - linked_references)
+if orphans:
+    raise SystemExit("check-skill: orphan references not reachable from SKILL.md:\n  " +
+                     "\n  ".join(map(str, orphans)))
+
+for reference in references:
+    if len(reference.read_text().strip().splitlines()) < 8:
+        raise SystemExit(f"check-skill: reference is an empty stub: {reference.relative_to(root)}")
+
+source_helper = root / "scripts" / "cdm-source"
+checker = root / "scripts" / "check-skill"
+for script in (source_helper, checker):
+    if not script.is_file() or not os.access(script, os.X_OK):
+        raise SystemExit(f"check-skill: {script.relative_to(root)} is missing or not executable")
+
+readme = root / "README.md"
+portable_resources = [skill, readme, source_helper, *sorted(references)]
+resource_text = "\n".join(path.read_text() for path in portable_resources)
+forbidden = {
+    "absolute user path": r"/Users/",
+    "source repository name": r"bq-cdm",
+    "application package": r"com\.banqora",
+    "application build wrapper": r"docker/gradle\.sh",
+    "application path helper": r"\b(?:CdmPathModel|ModelShape|ShapeBuilder|LifecycleService)\b",
+    "old repository selector": r"(?:CDM_REPO|--repo)",
+}
+for label, pattern in forbidden.items():
+    if re.search(pattern, resource_text, flags=re.IGNORECASE):
+        raise SystemExit(f"check-skill: repository resources contain {label}; keep the skill generic")
+if re.search(r"cdm-java-\d+\.\d+(?:\.\d+)?\.jar", resource_text):
+    raise SystemExit("check-skill: an agent resource hard-codes a released cdm-java filename")
+
+print(
+    f"check-skill: static contract passed "
+    f"({len(lines)} SKILL.md lines, {len(references)} reachable references)"
+)
+PY
+
+if [[ "$mode" == "--static" ]]; then
+  exit 0
+fi
+
+source_helper="$skill_root/scripts/cdm-source"
+jar="$("$source_helper" --jar "$jar_path" jar)"
+jar_entries="$(zipinfo -1 "$jar")"
+source_count="$(rg '^cdm/rosetta/.*\.rosetta$' <<<"$jar_entries" | wc -l | tr -d ' ')"
+# Supported releases range from 86 sources (cdm-java 4.x/5.x) to 187+ (6.x/7.x).
+[[ "$source_count" -ge 50 ]] || {
+  echo "check-skill: cdm-java exposes only $source_count Rosetta sources" >&2
+  exit 1
+}
+
+"$source_helper" --jar "$jar" search '^type TradeState:' >/dev/null
+"$source_helper" --jar "$jar" search 'func Qualify_' >/dev/null
+
+echo "check-skill: live contract passed against $jar ($source_count Rosetta sources)"

@@ -1,0 +1,227 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat >&2 <<'USAGE'
+Usage:
+  cdm-source [--jar <cdm-java.jar>] version
+  cdm-source [--jar <cdm-java.jar>] jar
+  cdm-source [--jar <cdm-java.jar>] list [regex]
+  cdm-source [--jar <cdm-java.jar>] search <regex>
+  cdm-source [--jar <cdm-java.jar>] show <cdm/rosetta/file.rosetta>
+
+The JAR is selected in this order:
+  1. --jar
+  2. CDM_JAVA_JAR
+  3. an unambiguous cdm-java JAR in a common build layout under the active project
+
+The helper never downloads or substitutes a CDM release.
+USAGE
+}
+
+jar_override=""
+if [[ "${1:-}" == "--jar" ]]; then
+  [[ $# -ge 3 ]] || {
+    echo "cdm-source: --jar needs a path and a command" >&2
+    exit 1
+  }
+  jar_override="$2"
+  shift 2
+fi
+
+command="${1:-}"
+if [[ -z "$command" || "$command" == "-h" || "$command" == "--help" || "$command" == "help" ]]; then
+  usage
+  exit 0
+fi
+
+for required_tool in zipinfo unzip rg; do
+  command -v "$required_tool" >/dev/null || {
+    echo "cdm-source: required command is not installed: $required_tool" >&2
+    exit 1
+  }
+done
+
+canonical_file() {
+  local requested="$1"
+  local directory
+  local filename
+  directory="$(cd -- "$(dirname -- "$requested")" 2>/dev/null && pwd -P)" || return 1
+  filename="$(basename -- "$requested")"
+  [[ -f "$directory/$filename" ]] || return 1
+  printf '%s/%s\n' "$directory" "$filename"
+}
+
+project_root() {
+  local candidate="$PWD"
+  while :; do
+    if [[ -d "$candidate/.git" ||
+      -f "$candidate/settings.gradle" ||
+      -f "$candidate/settings.gradle.kts" ||
+      -f "$candidate/pom.xml" ||
+      -f "$candidate/build.gradle" ||
+      -f "$candidate/build.gradle.kts" ]]; then
+      printf '%s\n' "$candidate"
+      return
+    fi
+    local parent
+    parent="$(dirname -- "$candidate")"
+    [[ "$parent" != "$candidate" ]] || break
+    candidate="$parent"
+  done
+  printf '%s\n' "$PWD"
+}
+
+discover_jar() {
+  local root
+  root="$(project_root)"
+  local candidates=()
+  local candidate
+  local canonical
+
+  while IFS= read -r candidate; do
+    if [[ "$candidate" == *"/.git/"* ||
+      "$candidate" == *"/.claude/"* ||
+      "$candidate" == *"/.codex/"* ||
+      "$candidate" == *"/node_modules/"* ]]; then
+      continue
+    fi
+    if [[ "$candidate" != *"/build/install/"*"/lib/cdm-java-"*.jar &&
+      "$candidate" != *"/build/distributions/"*"/lib/cdm-java-"*.jar &&
+      "$candidate" != *"/target/dependency/cdm-java-"*.jar &&
+      "$candidate" != *"/target/lib/cdm-java-"*.jar &&
+      "$candidate" != *"/lib/cdm-java-"*.jar ]]; then
+      continue
+    fi
+    case "$(basename -- "$candidate")" in
+      *-sources.jar | *-javadoc.jar | *-tests.jar)
+        continue
+        ;;
+    esac
+    canonical="$(canonical_file "$candidate")" || continue
+    local duplicate=false
+    local existing
+    for existing in "${candidates[@]:-}"; do
+      if [[ "$existing" == "$canonical" ]]; then
+        duplicate=true
+        break
+      fi
+    done
+    [[ "$duplicate" == true ]] || candidates+=("$canonical")
+  done < <(
+    find "$root" \
+      \( -type d \( -name .git -o -name .claude -o -name .codex -o -name node_modules \) -prune \) -o \
+      \( -type f -name 'cdm-java-*.jar' -print \) 2>/dev/null |
+      sort
+  )
+
+  if [[ ${#candidates[@]} -eq 0 ]]; then
+    echo "cdm-source: no cdm-java JAR found under $root" >&2
+    echo "cdm-source: build or copy the project's dependency, then pass --jar or set CDM_JAVA_JAR" >&2
+    return 1
+  fi
+  if [[ ${#candidates[@]} -gt 1 ]]; then
+    echo "cdm-source: multiple cdm-java JARs found; choose the project's active dependency with --jar:" >&2
+    printf '  %s\n' "${candidates[@]}" >&2
+    return 1
+  fi
+  printf '%s\n' "${candidates[0]}"
+}
+
+requested_jar="${jar_override:-${CDM_JAVA_JAR:-}}"
+if [[ -n "$requested_jar" ]]; then
+  jar="$(canonical_file "$requested_jar")" || {
+    echo "cdm-source: JAR does not exist: $requested_jar" >&2
+    exit 1
+  }
+else
+  jar="$(discover_jar)"
+fi
+
+if ! jar_entries="$(zipinfo -1 "$jar" 2>/dev/null)"; then
+  echo "cdm-source: not a readable JAR/ZIP: $jar" >&2
+  exit 1
+fi
+if ! rg '^cdm/rosetta/.*\.rosetta$' <<<"$jar_entries" >/dev/null; then
+  echo "cdm-source: JAR contains no embedded cdm/rosetta sources: $jar" >&2
+  exit 1
+fi
+
+jar_name="$(basename -- "$jar")"
+if [[ "$jar_name" == cdm-java-*.jar ]]; then
+  cdm_version="${jar_name#cdm-java-}"
+  cdm_version="${cdm_version%.jar}"
+else
+  cdm_version="$(
+    (unzip -p "$jar" META-INF/MANIFEST.MF 2>/dev/null || true) |
+      tr -d '\r' |
+      sed -n 's/^Implementation-Version: //p' |
+      head -n 1
+  )"
+  cdm_version="${cdm_version:-unknown}"
+fi
+
+case "$command" in
+  version)
+    [[ $# -eq 1 ]] || {
+      usage
+      exit 1
+    }
+    printf 'version=%s\njar=%s\n' "$cdm_version" "$jar"
+    ;;
+
+  jar)
+    [[ $# -eq 1 ]] || {
+      usage
+      exit 1
+    }
+    printf '%s\n' "$jar"
+    ;;
+
+  list)
+    [[ $# -le 2 ]] || {
+      usage
+      exit 1
+    }
+    pattern="${2:-.}"
+    rg '^cdm/rosetta/.*\.rosetta$' <<<"$jar_entries" | rg -- "$pattern"
+    ;;
+
+  search)
+    [[ $# -eq 2 ]] || {
+      usage
+      exit 1
+    }
+    pattern="$2"
+    source_dir="$(mktemp -d "${TMPDIR:-/tmp}/cdm-source.XXXXXX")"
+    cleanup() {
+      [[ -n "${source_dir:-}" && -d "$source_dir" ]] && rm -rf -- "$source_dir"
+    }
+    trap cleanup EXIT
+    unzip -q "$jar" 'cdm/rosetta/*.rosetta' -d "$source_dir"
+    (
+      cd "$source_dir"
+      rg -n -C 3 --glob '*.rosetta' -- "$pattern" cdm/rosetta
+    )
+    ;;
+
+  show)
+    [[ $# -eq 2 ]] || {
+      usage
+      exit 1
+    }
+    entry="$2"
+    if ! rg -Fx -- "$entry" <<<"$jar_entries" >/dev/null; then
+      echo "cdm-source: '$entry' is not a Rosetta source in $jar" >&2
+      echo "cdm-source: use 'cdm-source list <regex>' to locate it" >&2
+      exit 2
+    fi
+    unzip -p "$jar" "$entry"
+    ;;
+
+  *)
+    echo "cdm-source: unknown command '$command'" >&2
+    usage
+    exit 1
+    ;;
+esac

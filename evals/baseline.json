@@ -1,0 +1,7 @@
+{
+  "_note": "Thresholds for evals/run-triggers. Measured 2026-08-07 with claude at trigger_rate 1.00 / false_trigger_rate 0.00 (11 prompts, 1 run each); limits leave headroom for single flaky runs at --runs 3. No codex entry yet: codex detection is a proxy signal, so scheduled runs record results until a reviewed baseline is promoted here.",
+  "claude": {
+    "min_trigger_rate": 0.85,
+    "max_false_trigger_rate": 0.1
+  }
+}

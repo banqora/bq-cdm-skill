@@ -1,0 +1,176 @@
+#!/usr/bin/env python3
+"""Check external links in the skill's Markdown resources."""
+
+from __future__ import annotations
+
+import argparse
+import concurrent.futures
+import re
+import sys
+import time
+import urllib.error
+import urllib.request
+from dataclasses import dataclass
+from pathlib import Path
+
+
+URL_RE = re.compile(r"https?://[^\s<>\]\)\"']+")
+SKIP_DIRECTORIES = {".git", ".venv", "node_modules", "target", "build"}
+RESTRICTED_STATUSES = {401, 403}
+RATE_LIMIT_STATUSES = {429}
+USER_AGENT = "Mozilla/5.0 (compatible; cdm-dev-link-check/1.0; +https://github.com/finos/common-domain-model)"
+
+
+@dataclass(frozen=True)
+class LinkResult:
+    url: str
+    outcome: str
+    detail: str
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Check HTTP(S) links in Markdown files and fail on broken targets."
+    )
+    parser.add_argument(
+        "paths",
+        nargs="*",
+        type=Path,
+        help="Markdown files or directories; defaults to every Markdown file in the skill",
+    )
+    parser.add_argument("--jobs", type=int, default=6, help="concurrent requests (default: 6)")
+    parser.add_argument("--timeout", type=float, default=20.0, help="seconds per request")
+    parser.add_argument("--retries", type=int, default=2, help="retries for transient failures")
+    parser.add_argument(
+        "--strict-restricted",
+        action="store_true",
+        help="fail on HTTP 401/403 instead of reporting an access-controlled warning",
+    )
+    args = parser.parse_args()
+    if args.jobs < 1 or args.timeout <= 0 or args.retries < 0:
+        parser.error("--jobs and --timeout must be positive; --retries cannot be negative")
+    return args
+
+
+def discover_markdown(root: Path, requested: list[Path]) -> list[Path]:
+    candidates: set[Path] = set()
+    paths = requested or [root]
+    for requested_path in paths:
+        path = requested_path if requested_path.is_absolute() else Path.cwd() / requested_path
+        path = path.resolve()
+        if path.is_file():
+            if path.suffix.lower() != ".md":
+                raise ValueError(f"not a Markdown file: {requested_path}")
+            candidates.add(path)
+            continue
+        if not path.is_dir():
+            raise ValueError(f"path does not exist: {requested_path}")
+        for markdown in path.rglob("*.md"):
+            relative_parts = markdown.relative_to(path).parts
+            if not any(part in SKIP_DIRECTORIES for part in relative_parts):
+                candidates.add(markdown.resolve())
+    return sorted(candidates)
+
+
+def extract_links(markdown_files: list[Path]) -> dict[str, list[str]]:
+    links: dict[str, list[str]] = {}
+    for markdown in markdown_files:
+        for line_number, line in enumerate(markdown.read_text(encoding="utf-8").splitlines(), 1):
+            for match in URL_RE.finditer(line):
+                url = match.group(0).rstrip(".,;")
+                links.setdefault(url, []).append(f"{markdown}:{line_number}")
+    return links
+
+
+def request_once(url: str, timeout: float) -> tuple[int, str]:
+    request = urllib.request.Request(
+        url,
+        headers={"User-Agent": USER_AGENT, "Range": "bytes=0-1023", "Accept": "*/*"},
+        method="GET",
+    )
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        response.read(1)
+        return response.status, response.geturl()
+
+
+def check_link(url: str, timeout: float, retries: int) -> LinkResult:
+    for attempt in range(retries + 1):
+        try:
+            status, final_url = request_once(url, timeout)
+            if 200 <= status < 400:
+                redirect = "" if final_url == url else f" -> {final_url}"
+                return LinkResult(url, "ok", f"HTTP {status}{redirect}")
+            return LinkResult(url, "broken", f"unexpected HTTP {status}")
+        except urllib.error.HTTPError as error:
+            status = error.code
+            if status in RESTRICTED_STATUSES:
+                return LinkResult(url, "restricted", f"HTTP {status}")
+            if status in RATE_LIMIT_STATUSES:
+                if attempt < retries:
+                    time.sleep(0.5 * (attempt + 1))
+                    continue
+                return LinkResult(url, "rate-limited", f"HTTP {status} after {retries + 1} attempts")
+            if status >= 500 and attempt < retries:
+                time.sleep(0.5 * (attempt + 1))
+                continue
+            return LinkResult(url, "broken", f"HTTP {status}")
+        except (TimeoutError, urllib.error.URLError, OSError) as error:
+            if attempt < retries:
+                time.sleep(0.5 * (attempt + 1))
+                continue
+            return LinkResult(url, "broken", f"{type(error).__name__}: {error}")
+    raise AssertionError("request loop did not return")
+
+
+def main() -> int:
+    args = parse_args()
+    root = Path(__file__).resolve().parent.parent
+    try:
+        markdown_files = discover_markdown(root, args.paths)
+        links = extract_links(markdown_files)
+    except (OSError, UnicodeError, ValueError) as error:
+        print(f"check-links: {error}", file=sys.stderr)
+        return 2
+
+    if not links:
+        print("check-links: no external HTTP(S) links found", file=sys.stderr)
+        return 2
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=args.jobs) as executor:
+        futures = {
+            url: executor.submit(check_link, url, args.timeout, args.retries) for url in links
+        }
+        results = [futures[url].result() for url in sorted(futures)]
+
+    failures = 0
+    warnings = 0
+    for result in results:
+        locations = ", ".join(links[result.url])
+        if result.outcome == "ok":
+            print(f"ok         {result.url} ({result.detail})")
+            continue
+        if result.outcome == "restricted":
+            warnings += 1
+            print(
+                f"restricted {result.url} ({result.detail}; {locations})",
+                file=sys.stderr,
+            )
+            if args.strict_restricted:
+                failures += 1
+            continue
+        if result.outcome == "rate-limited":
+            warnings += 1
+            print(f"rate-limit {result.url} ({result.detail}; {locations})", file=sys.stderr)
+            continue
+        failures += 1
+        print(f"BROKEN     {result.url} ({result.detail}; {locations})", file=sys.stderr)
+
+    print(
+        f"check-links: checked {len(results)} unique links in {len(markdown_files)} files; "
+        f"{failures} broken, {warnings} access/rate warnings"
+    )
+    return 1 if failures else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

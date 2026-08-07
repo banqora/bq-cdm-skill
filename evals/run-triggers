@@ -1,0 +1,201 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+skill_root="$(cd -- "$script_dir/.." && pwd)"
+
+usage() {
+  cat >&2 <<'USAGE'
+Usage:
+  run-triggers --vendor <claude|codex> [--runs <n>] [--results <file>]
+
+Runs every prompt in evals/prompts.json against the vendor's headless CLI in a
+clean workspace where this skill is the only one installed, detects whether the
+skill was used, and scores trigger rates against evals/baseline.json.
+
+Vendors:
+  claude  needs the claude CLI and ANTHROPIC_API_KEY (or a logged-in CLI)
+  codex   needs the codex CLI and CODEX_API_KEY (or a logged-in CLI)
+
+Detection is exact for claude (a Skill tool call naming cdm-dev). For codex no
+skill-activation event exists in the JSONL stream, so use is inferred from the
+stream touching this skill's files; treat codex rates as a proxy signal.
+
+Without a baseline entry for the vendor, results are recorded but not judged.
+USAGE
+}
+
+vendor=""
+runs=1
+results_file=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --vendor)
+      vendor="${2:?--vendor needs a value}"
+      shift 2
+      ;;
+    --runs)
+      runs="${2:?--runs needs a value}"
+      shift 2
+      ;;
+    --results)
+      results_file="${2:?--results needs a value}"
+      shift 2
+      ;;
+    -h | --help | help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "run-triggers: unknown option '$1'" >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+case "$vendor" in
+  claude | codex) ;;
+  *)
+    usage
+    exit 1
+    ;;
+esac
+[[ "$runs" =~ ^[1-9][0-9]*$ ]] || {
+  echo "run-triggers: --runs must be a positive integer" >&2
+  exit 1
+}
+command -v "$vendor" >/dev/null || {
+  echo "run-triggers: the '$vendor' CLI is not installed" >&2
+  exit 1
+}
+results_file="${results_file:-$script_dir/results-$vendor.json}"
+
+workspace="$(mktemp -d "${TMPDIR:-/tmp}/cdm-dev-evals.XXXXXX")"
+cleanup() { rm -rf -- "$workspace"; }
+trap cleanup EXIT
+
+case "$vendor" in
+  claude)
+    mkdir -p "$workspace/.claude/skills"
+    ln -s "$skill_root" "$workspace/.claude/skills/cdm-dev"
+    ;;
+  codex)
+    mkdir -p "$workspace/.agents/skills"
+    ln -s "$skill_root" "$workspace/.agents/skills/cdm-dev"
+    ;;
+esac
+
+run_prompt() {
+  local prompt="$1" stream=""
+  case "$vendor" in
+    claude)
+      stream="$(
+        cd "$workspace" &&
+          claude -p "$prompt" \
+            --output-format stream-json --verbose \
+            --max-turns 2 \
+            --strict-mcp-config --mcp-config '{"mcpServers":{}}' \
+            2>/dev/null
+      )" || true
+      if grep -q '"name":[[:space:]]*"Skill"' <<<"$stream" &&
+        grep -q 'cdm-dev' <<<"$stream"; then
+        echo triggered
+      else
+        echo quiet
+      fi
+      ;;
+    codex)
+      stream="$(
+        cd "$workspace" &&
+          codex exec --json --sandbox read-only --skip-git-repo-check \
+            "$prompt" 2>/dev/null
+      )" || true
+      if grep -q 'cdm-dev' <<<"$stream" &&
+        grep -qE 'SKILL\.md|cdm-source|references/' <<<"$stream"; then
+        echo triggered
+      else
+        echo quiet
+      fi
+      ;;
+  esac
+}
+
+prompt_count="$(python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1]))))' "$script_dir/prompts.json")"
+observations="$workspace/observations.tsv"
+: >"$observations"
+
+for ((index = 0; index < prompt_count; index++)); do
+  prompt_id="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[int(sys.argv[2])]["id"])' "$script_dir/prompts.json" "$index")"
+  prompt_text="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[int(sys.argv[2])]["prompt"])' "$script_dir/prompts.json" "$index")"
+  for ((attempt = 1; attempt <= runs; attempt++)); do
+    verdict="$(run_prompt "$prompt_text")"
+    printf '%s\t%s\n' "$prompt_id" "$verdict" >>"$observations"
+    echo "run-triggers: $vendor $prompt_id run $attempt/$runs -> $verdict" >&2
+  done
+done
+
+python3 - "$script_dir/prompts.json" "$observations" "$script_dir/baseline.json" \
+  "$vendor" "$results_file" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+prompts_path, observations_path, baseline_path, vendor, results_path = sys.argv[1:6]
+prompts = {entry["id"]: entry for entry in json.load(open(prompts_path))}
+
+counts = {prompt_id: [0, 0] for prompt_id in prompts}
+for line in Path(observations_path).read_text().splitlines():
+    prompt_id, verdict = line.split("\t")
+    counts[prompt_id][0] += 1
+    if verdict == "triggered":
+        counts[prompt_id][1] += 1
+
+rows = []
+for prompt_id, entry in prompts.items():
+    total, triggered = counts[prompt_id]
+    rows.append({
+        "id": prompt_id,
+        "expect": entry["expect"],
+        "runs": total,
+        "triggered": triggered,
+        "rate": triggered / total if total else 0.0,
+    })
+
+positives = [row for row in rows if row["expect"] == "trigger"]
+negatives = [row for row in rows if row["expect"] == "no-trigger"]
+summary = {
+    "vendor": vendor,
+    "trigger_rate": sum(r["rate"] for r in positives) / len(positives),
+    "false_trigger_rate": sum(r["rate"] for r in negatives) / len(negatives),
+    "prompts": rows,
+}
+Path(results_path).write_text(json.dumps(summary, indent=2) + "\n")
+
+for row in rows:
+    marker = "+" if row["expect"] == "trigger" else "-"
+    print(f"  {marker} {row['id']:<24} {row['triggered']}/{row['runs']}")
+print(f"run-triggers: {vendor} trigger_rate={summary['trigger_rate']:.2f} "
+      f"false_trigger_rate={summary['false_trigger_rate']:.2f} -> {results_path}")
+
+baseline_file = Path(baseline_path)
+baseline = json.loads(baseline_file.read_text()) if baseline_file.is_file() else {}
+if vendor not in baseline:
+    print(f"run-triggers: no baseline for {vendor}; recorded results only")
+    raise SystemExit(0)
+
+expected = baseline[vendor]
+problems = []
+if summary["trigger_rate"] < expected["min_trigger_rate"]:
+    problems.append(
+        f"trigger_rate {summary['trigger_rate']:.2f} fell below "
+        f"baseline {expected['min_trigger_rate']:.2f}")
+if summary["false_trigger_rate"] > expected["max_false_trigger_rate"]:
+    problems.append(
+        f"false_trigger_rate {summary['false_trigger_rate']:.2f} exceeded "
+        f"baseline {expected['max_false_trigger_rate']:.2f}")
+if problems:
+    raise SystemExit("run-triggers: behavioral drift detected:\n  " +
+                     "\n  ".join(problems))
+print(f"run-triggers: {vendor} within baseline")
+PY

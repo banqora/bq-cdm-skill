@@ -1,0 +1,258 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+skill_root="$(cd -- "$script_dir/.." && pwd)"
+cdm_source="$skill_root/scripts/cdm-source"
+check_skill="$skill_root/scripts/check-skill"
+
+for required_tool in python3 rg zipinfo unzip; do
+  command -v "$required_tool" >/dev/null || {
+    echo "tests/run: required command is not installed: $required_tool" >&2
+    exit 1
+  }
+done
+
+work="$(mktemp -d "${TMPDIR:-/tmp}/cdm-skill-tests.XXXXXX")"
+cleanup() { rm -rf -- "$work"; }
+trap cleanup EXIT
+
+passed=0
+failed=0
+
+report() {
+  local status="$1" name="$2"
+  if [[ "$status" == ok ]]; then
+    passed=$((passed + 1))
+    echo "ok   $name"
+  else
+    failed=$((failed + 1))
+    echo "FAIL $name"
+  fi
+}
+
+# expect_ok NAME [--stdout REGEX] -- CMD...
+expect_ok() {
+  local name="$1" stdout_regex="" output
+  shift
+  if [[ "$1" == --stdout ]]; then
+    stdout_regex="$2"
+    shift 2
+  fi
+  [[ "$1" == -- ]] && shift
+  if output="$("$@" 2>&1)"; then
+    if [[ -z "$stdout_regex" ]] || grep -qE -- "$stdout_regex" <<<"$output"; then
+      report ok "$name"
+      return
+    fi
+    echo "  expected output matching: $stdout_regex" >&2
+  fi
+  printf '%s\n' "$output" | sed 's/^/  /' >&2
+  report fail "$name"
+}
+
+# expect_fail NAME [--stderr REGEX] -- CMD...
+expect_fail() {
+  local name="$1" stderr_regex="" output
+  shift
+  if [[ "$1" == --stderr ]]; then
+    stderr_regex="$2"
+    shift 2
+  fi
+  [[ "$1" == -- ]] && shift
+  if output="$("$@" 2>&1)"; then
+    echo "  expected failure but command succeeded" >&2
+    printf '%s\n' "$output" | sed 's/^/  /' >&2
+    report fail "$name"
+    return
+  fi
+  if [[ -n "$stderr_regex" ]] && ! grep -qE -- "$stderr_regex" <<<"$output"; then
+    echo "  expected failure output matching: $stderr_regex" >&2
+    printf '%s\n' "$output" | sed 's/^/  /' >&2
+    report fail "$name"
+    return
+  fi
+  report ok "$name"
+}
+
+# --- fixtures -----------------------------------------------------------------
+
+# A fixture JAR shaped like a real cdm-java release: enough Rosetta sources to
+# clear the live gate's floor, containing the anchor declarations it asserts.
+python3 - "$work" <<'PY'
+import sys
+import zipfile
+from pathlib import Path
+
+work = Path(sys.argv[1])
+
+with zipfile.ZipFile(work / "cdm-java-9.9.9.jar", "w") as jar:
+    jar.writestr(
+        "cdm/rosetta/event-common-type.rosetta",
+        "namespace cdm.event.common\n\ntype TradeState:\n  trade Trade (1..1)\n",
+    )
+    jar.writestr(
+        "cdm/rosetta/event-qualification-func.rosetta",
+        "namespace cdm.event.qualification\n\nfunc Qualify_Fixture:\n  output: is_event boolean (1..1)\n",
+    )
+    for index in range(58):
+        jar.writestr(
+            f"cdm/rosetta/filler-{index:02d}-type.rosetta",
+            f"namespace cdm.fixture\n\ntype Filler{index}:\n  value string (0..1)\n",
+        )
+    jar.writestr("META-INF/MANIFEST.MF", "Manifest-Version: 1.0\n")
+
+with zipfile.ZipFile(work / "no-rosetta.jar", "w") as jar:
+    jar.writestr("META-INF/MANIFEST.MF", "Manifest-Version: 1.0\n")
+    jar.writestr("com/example/Empty.class", b"\xca\xfe\xba\xbe")
+PY
+
+fixture_jar="$work/cdm-java-9.9.9.jar"
+no_rosetta_jar="$work/no-rosetta.jar"
+
+# A discovery sandbox shaped like a built project.
+project="$work/project"
+mkdir -p "$project/.git" "$project/lib"
+cp "$fixture_jar" "$project/lib/cdm-java-9.9.9.jar"
+
+# A mutable copy of the skill for static-gate negative tests.
+fresh_copy() {
+  local copy="$work/copy-$1"
+  rm -rf -- "$copy"
+  mkdir -p "$copy"
+  cp -R "$skill_root/SKILL.md" "$skill_root/README.md" \
+    "$skill_root/references" "$skill_root/scripts" "$copy/"
+  printf '%s\n' "$copy"
+}
+
+# --- cdm-source ---------------------------------------------------------------
+
+expect_ok "version reports the release parsed from the JAR filename" \
+  --stdout '^version=9\.9\.9$' -- \
+  "$cdm_source" --jar "$fixture_jar" version
+
+expect_ok "jar prints the canonical path" \
+  --stdout 'cdm-java-9\.9\.9\.jar$' -- \
+  "$cdm_source" --jar "$fixture_jar" jar
+
+expect_ok "list filters Rosetta entries by regex" \
+  --stdout '^cdm/rosetta/event-common-type\.rosetta$' -- \
+  "$cdm_source" --jar "$fixture_jar" list 'event-common'
+
+expect_ok "search locates a declaration with context" \
+  --stdout 'type TradeState:' -- \
+  "$cdm_source" --jar "$fixture_jar" search '^type TradeState:'
+
+expect_ok "show dumps a named Rosetta source" \
+  --stdout 'namespace cdm\.event\.common' -- \
+  "$cdm_source" --jar "$fixture_jar" show cdm/rosetta/event-common-type.rosetta
+
+expect_fail "show rejects an entry that is not in the JAR" \
+  --stderr "is not a Rosetta source" -- \
+  "$cdm_source" --jar "$fixture_jar" show cdm/rosetta/absent.rosetta
+
+expect_fail "a JAR without embedded Rosetta sources is rejected" \
+  --stderr "contains no embedded cdm/rosetta sources" -- \
+  "$cdm_source" --jar "$no_rosetta_jar" version
+
+expect_fail "a missing --jar path is rejected" \
+  --stderr "JAR does not exist" -- \
+  "$cdm_source" --jar "$work/absent.jar" version
+
+env_select() {
+  (cd "$work" && CDM_JAVA_JAR="$fixture_jar" "$cdm_source" version)
+}
+expect_ok "CDM_JAVA_JAR selects the JAR when --jar is absent" \
+  --stdout '^version=9\.9\.9$' -- env_select
+
+flag_beats_env() {
+  CDM_JAVA_JAR="$no_rosetta_jar" "$cdm_source" --jar "$fixture_jar" version
+}
+expect_ok "--jar takes precedence over CDM_JAVA_JAR" \
+  --stdout '^version=9\.9\.9$' -- flag_beats_env
+
+discover_single() {
+  (cd "$project" && "$cdm_source" version)
+}
+expect_ok "discovery finds a single project JAR" \
+  --stdout '^version=9\.9\.9$' -- discover_single
+
+# shellcheck disable=SC2016  # the inner bash -c expands these, not this shell
+expect_ok "discovery ignores sources/javadoc companions" \
+  --stdout '^version=9\.9\.9$' -- \
+  bash -c \
+  'cp "$1/lib/cdm-java-9.9.9.jar" "$1/lib/cdm-java-9.9.9-sources.jar" && cd "$1" && "$2" version' \
+  _ "$project" "$cdm_source"
+
+# shellcheck disable=SC2016  # the inner bash -c expands these, not this shell
+expect_fail "discovery refuses to choose between two candidate JARs" \
+  --stderr "multiple cdm-java JARs" -- \
+  bash -c \
+  'cp "$1/lib/cdm-java-9.9.9.jar" "$1/lib/cdm-java-8.8.8.jar" && cd "$1" && "$2" version' \
+  _ "$project" "$cdm_source"
+
+# --- check-skill --------------------------------------------------------------
+
+expect_ok "static gate passes on this repository" \
+  --stdout 'static contract passed' -- \
+  "$check_skill" --static
+
+copy="$(fresh_copy broken-link)"
+printf '\nSee [missing](references/absent.md).\n' >>"$copy/SKILL.md"
+expect_fail "static gate catches a broken reference link" \
+  --stderr "missing Markdown references" -- \
+  "$copy/scripts/check-skill" --static
+
+copy="$(fresh_copy orphan)"
+printf '# Orphan\n\n1\n2\n3\n4\n5\n6\n7\n8\n' >"$copy/references/orphan.md"
+expect_fail "static gate catches an orphan reference" \
+  --stderr "orphan references" -- \
+  "$copy/scripts/check-skill" --static
+
+copy="$(fresh_copy forbidden-path)"
+printf '\nDebug notes live in /Users/example/notes.md.\n' >>"$copy/references/testing.md"
+expect_fail "static gate catches an absolute user path" \
+  --stderr "absolute user path" -- \
+  "$copy/scripts/check-skill" --static
+
+copy="$(fresh_copy pinned-jar)"
+printf '\nTested against cdm-java-9.9.9.jar only.\n' >>"$copy/references/testing.md"
+expect_fail "static gate catches a hard-coded cdm-java release" \
+  --stderr "hard-codes a released cdm-java filename" -- \
+  "$copy/scripts/check-skill" --static
+
+copy="$(fresh_copy long-description)"
+python3 - "$copy" <<'PY'
+import sys
+from pathlib import Path
+
+skill = Path(sys.argv[1]) / "SKILL.md"
+lines = skill.read_text().splitlines()
+for index, line in enumerate(lines):
+    if line.startswith("description:"):
+        lines[index] = "description: " + "cdm development guidance " * 60
+        break
+skill.write_text("\n".join(lines) + "\n")
+PY
+expect_fail "static gate enforces the 1024-character description cap" \
+  --stderr "1024" -- \
+  "$copy/scripts/check-skill" --static
+
+copy="$(fresh_copy oversized)"
+for _ in $(seq 60); do printf 'Padding line to inflate the always-loaded skill.\n' >>"$copy/SKILL.md"; done
+expect_fail "static gate enforces the SKILL.md line budget" \
+  --stderr "move detail to references" -- \
+  "$copy/scripts/check-skill" --static
+
+expect_ok "live gate passes against the fixture JAR" \
+  --stdout 'live contract passed' -- \
+  "$check_skill" --jar "$fixture_jar"
+
+expect_fail "live gate rejects a JAR without Rosetta sources" -- \
+  "$check_skill" --jar "$no_rosetta_jar"
+
+# ------------------------------------------------------------------------------
+
+echo
+echo "tests/run: $passed passed, $failed failed"
+[[ "$failed" -eq 0 ]]

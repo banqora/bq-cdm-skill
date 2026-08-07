@@ -1,0 +1,57 @@
+[
+  {
+    "id": "map-fpml-tradestate",
+    "expect": "trigger",
+    "prompt": "Our ingestion service maps FpML confirmations into CDM TradeState objects. The notional currency is getting lost somewhere between the mapper and the serialized JSON. Help me trace where the field is dropped."
+  },
+  {
+    "id": "dialect-migration",
+    "expect": "trigger",
+    "prompt": "We are migrating our stored trade documents from the legacy CDM JSON dialect to the Rune serialization. What should I check so no fields are silently lost in the round trip?"
+  },
+  {
+    "id": "upgrade-breakage",
+    "expect": "trigger",
+    "prompt": "After bumping our cdm-java dependency, the build fails because a generated builder method no longer exists and two validation snapshots changed. Walk me through diagnosing this upgrade."
+  },
+  {
+    "id": "lifecycle-event",
+    "expect": "trigger",
+    "prompt": "I need to implement a partial termination as a CDM lifecycle event in our post-trade platform and prove the resulting after-state qualifies correctly."
+  },
+  {
+    "id": "qualification-debug",
+    "expect": "trigger",
+    "prompt": "Our booked interest rate swap validates fine but is not being qualified as InterestRateSwap by the CDM qualification functions. How do I work out why?"
+  },
+  {
+    "id": "rosetta-meaning",
+    "expect": "trigger",
+    "prompt": "In our codebase a PriceQuantity is built with builders from the generated model. What does the underlying Rosetta model say the cardinality and conditions on quantity are, and how should our code respect them?"
+  },
+  {
+    "id": "generic-java-npe",
+    "expect": "no-trigger",
+    "prompt": "My Spring Boot application throws a NullPointerException in a @PostConstruct method during startup. How do I debug this?"
+  },
+  {
+    "id": "generic-sql",
+    "expect": "no-trigger",
+    "prompt": "Write a SQL query that returns the top five customers by total order value across two joined tables."
+  },
+  {
+    "id": "fix-protocol",
+    "expect": "no-trigger",
+    "prompt": "How do I parse FIX 4.4 execution reports in Java and republish them to a Kafka topic?"
+  },
+  {
+    "id": "generic-gradle",
+    "expect": "no-trigger",
+    "prompt": "My Gradle build is slow. What are good ways to profile the build and speed up dependency resolution?"
+  },
+  {
+    "id": "protobuf-schema",
+    "expect": "no-trigger",
+    "prompt": "Design a protobuf schema for a customer orders service and explain how to evolve it without breaking old readers."
+  }
+]
