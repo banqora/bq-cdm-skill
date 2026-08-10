@@ -45,6 +45,62 @@ reconstruct the workflow supplied by the skill. Counts were self-reported by the
 this as a transparent forward-test result rather than a broad performance claim. The local eval
 suite below provides the reproducible task and grading foundation for broader trials.
 
+A second isolated A/B on 2026-08-10 asked both agents to implement a three-way tokenisation
+classifier: tokenised bond, conventional Gilt repo with tokenised cash settlement, and conventional
+Gilt. Both agents used the same CDM 7.0.0 artefacts and completed in one agent turn without a
+follow-up.
+
+| Measure | With `cdm-dev` | Without skill |
+|---|---:|---:|
+| Agent-authored tests | 4/4 pass | 4/4 pass |
+| Correct CDM 7.0.0 repo topology | Yes | No |
+| Hidden exact-repo-shape probe | `SETTLEMENT_LEVEL` | `NOT_TOKENISED` |
+| Exact requested `ClassifyTokenisation(Trade)` method | No (`evaluate`) | Yes |
+| Tool-call batches | 48 | 35 |
+| Individual tool calls | 107 | 44 |
+| Shell commands | 104 | 42 |
+| Files read | 49 | 31 |
+
+This run exposed a different benefit and a real cost. The skill-guided agent represented a repo
+using the version-correct top-level `InterestRatePayout` and nested collateral
+`AssetPayout`; the control labelled a top-level `AssetPayout` as a repo, so its own tests passed
+while an independently added correct-shape probe failed. Both agents correctly kept tokenised
+securities out of CDM 7.0.0 `DigitalAsset` and put the missing asset/settlement facts behind an
+application-owned seam. However, the skill-guided solution took more than twice as many calls and
+commands, used a broad reflective graph walk, and missed the requested public method name.
+
+That is the practical reason to use the skill: it supplies versioned domain topology and catches
+green-but-wrong CDM fixtures that ordinary implementation work can miss. It is not a guarantee of
+faster or automatically better code. This single-run result also produced concrete improvements:
+the asset guide now records the two-level tokenisation pattern and targeted traversal paths, while
+the testing guide requires an exact requested entry point to be exercised. Counts are
+self-reported; the clean 4/4 reruns and hidden probe were independently executed.
+
+The classifier test was repeated with two isolated `claude-opus-5` sessions on 2026-08-10, using
+the local Claude Max subscription and no API credential. Both arms reached the 50-turn safety cap
+and completed in one continuation session.
+
+| Measure | With `cdm-dev` | Without skill |
+|---|---:|---:|
+| Claude turns across two sessions | 95 | 91 |
+| Wall-clock model duration | 12m 49s | 14m 36s |
+| Tool calls | 110 | 91 |
+| Agent-authored tests | 8/8 pass | 4/4 pass |
+| Exact requested method | Yes | No |
+| Correct nested-repo precedence probe | `ASSET_LEVEL` | `SETTLEMENT_LEVEL` |
+
+The correctness result replicated: the skill arm traversed the purchased asset in the nested
+collateral product, while the blind arm's self-authored repo kept both payouts at the top level and
+missed that path. The skill arm also replaced the earlier reflection sweep with typed traversal and
+shipped the exact API. It used more tool calls but finished sooner.
+
+This replication is not a clean estimate of general skill lift: at test time the asset guide
+contained a near-worked version of the classifier's repo path, precedence, and test matrix. An Opus
+review identified the reusable causes as the versioned securities-financing topology and exact-API
+testing rule; the task-specific answer material has now been removed. The same review added a
+fixture-fidelity gate and a general containment-route guard. A future unrelated forward test is
+needed to measure those changes without corpus overlap.
+
 ## Install
 
 The distributable skill is the `skills/cdm-dev/` directory; everything outside it is

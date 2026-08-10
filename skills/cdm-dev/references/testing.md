@@ -28,6 +28,11 @@ Every deserialize/round-trip/function test should assert:
 Then assert validation, qualification, equality, or determinism. Two hollow objects comparing
 equal is not a useful round-trip test.
 
+When a hand-built fixture claims a product-family shape, verify that claim separately from the
+code under test: run the release validator and applicable `Qualify_*` where practical. If the
+fixture is intentionally partial, label it and pair it with a version-matched example or focused
+source-derived path probe before treating its shape as model-conformance evidence.
+
 ## Assert economics as well as structure
 
 Generated validation proves model conditions, not business intent. A value can be the wrong
@@ -110,6 +115,10 @@ normalizer. Compare typed content, then separately approve expected textual cano
 Generated functions can depend on injected helpers. Use the project's production-equivalent
 dependency injection, reference resolver, and post-processor. Expose invocation errors while
 diagnosing; do not turn exceptions into an empty qualifier list.
+
+When the task names a public function, method, command, or wire signature, compile and invoke that
+exact entry point in a focused test. A renamed class containing a more idiomatic helper is not a
+substitute for the caller-visible contract; keep an alias only in addition to the requested API.
 
 Lifecycle tests should include a sequence, not only isolated events. Assert before/after
 identity, economic delta, lineage, keys/references, validation, and classification after each

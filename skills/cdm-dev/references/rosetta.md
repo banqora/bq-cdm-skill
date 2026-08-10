@@ -73,6 +73,12 @@ does not establish every condition that applies to a realistic object.
 Descriptions are evidence of intent, especially for units and market conventions, but use a
 generated validator or function probe before claiming runtime behavior.
 
+For `[metadata key]`, Rune's `globalKey` is a deep content hash, so identical terms do not provide
+distinct instruction or leg identity. `externalKey` is supplied by an external source; Rune does
+not guarantee that source's uniqueness or lifetime. State those assumptions before joining an
+application overlay to either key, and use an application-owned identity when durable distinction
+is required.
+
 ## Inspect generated APIs and wire metadata
 
 Search existing compiled usage first. When necessary, inspect the dependency directly with

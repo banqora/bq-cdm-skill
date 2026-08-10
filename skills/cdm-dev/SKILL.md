@@ -79,12 +79,12 @@ object construction, lifecycle functions, validation, serialization, and upgrade
 
 ## Guard against plausible wrong answers
 
-- A valid document can still be economically wrong. Assert units, conventions, the exact
-  economic leaf, and expected qualification.
+- A valid document can still be economically wrong. Assert units, conventions, qualification,
+  the exact economic leaf, and any caller-visible signature named by the task; aliases are additive.
 - A JSON tree can contain a field that the selected mapper silently drops. Inspect the typed
   object and canonical reserialization before trusting validation or function output.
-- A choice type has multiple legal routes. Search every applicable branch before claiming a
-  concept is absent.
+- Choices and containment can have multiple economic routes. Before claiming absence, enumerate
+  applicable branches and root paths through payouts, collateral, nested products, and trade lots.
 - A qualifier's existence does not prove reachability. Read its predicate and execute positive
   and negative cases.
 - Optional cardinality does not override conditional or inherited base-type rules, and an empty

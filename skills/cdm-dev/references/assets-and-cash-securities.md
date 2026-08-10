@@ -37,6 +37,22 @@ the actual trade.
   settlement structures. A bond forward may qualify under an interest-rate debt-forward
   predicate; that does not make the bond itself an interest-rate payout.
 
+## Keep asset and settlement tokenisation separate
+
+In the 7.0.0 baseline, classify a native unbacked `DigitalAsset` at asset level, but keep a
+tokenised bond as `Asset -> Instrument -> Security`; an application-owned security-master fact
+must say that the conventional asset has a token representation. `SettlementTerms` has no ledger,
+transfer-rail, or settlement-asset field in that release, so an on-chain cash leg likewise needs an
+explicit application-owned fact associated with the relevant settlement instruction.
+
+Inspect the economic paths, not every model object reachable by reflection. For a direct asset
+trade, follow `SettlementPayout.underlier` through its `Observable -> Asset` or
+`Product -> TransferableProduct -> asset` choice and inspect that payout's settlement terms. For a
+product-family shape such as repo, use the version-matched encoding in
+[Securities financing](securities-financing.md), not a path inferred from a convenient fixture.
+If both asset and settlement evidence exist, their precedence is application policy: state it and
+test both sides explicitly.
+
 ## Application boundary
 
 CDM owns the typed asset, identifier-with-scheme, taxonomy, issuer roles, economic terms,
