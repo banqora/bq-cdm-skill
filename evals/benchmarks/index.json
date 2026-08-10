@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "fixture": {
+    "id": "java-21-cdm-7.0.0",
+    "path": "benchmarks/fixtures/java-21-cdm-7.0.0",
+    "artifact_version": "7.0.0",
+    "binary_sha256": "904b6d328584751c3e576994b16c3a2f3e85a7a6cf431134ae5df4275e538342",
+    "sources_sha256": "18525245186d4888a88726e62b011938300f61077260235b332ef6c47bec93dc"
+  },
+  "benchmarks": [
+    {
+      "id": "settlement-tokenisation-classifier",
+      "title": "Settlement-level tokenisation classifier",
+      "kind": "implementation-forward-test",
+      "artifact_version": "7.0.0",
+      "language": "java",
+      "task": "benchmarks/settlement-tokenisation-classifier/TASK.md",
+      "rubric": "benchmarks/settlement-tokenisation-classifier/rubric.json",
+      "baseline": "benchmarks/settlement-tokenisation-classifier/baseline.json"
+    },
+    {
+      "id": "locate-matching-engine",
+      "title": "Locate matching engine",
+      "kind": "implementation-forward-test",
+      "artifact_version": "7.0.0",
+      "language": "java",
+      "task": "benchmarks/locate-matching-engine/TASK.md",
+      "rubric": "benchmarks/locate-matching-engine/rubric.json",
+      "baseline": "benchmarks/locate-matching-engine/baseline.json"
+    }
+  ]
+}

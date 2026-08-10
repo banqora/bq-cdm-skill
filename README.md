@@ -101,6 +101,35 @@ testing rule; the task-specific answer material has now been removed. The same r
 fixture-fidelity gate and a general containment-route guard. A future unrelated forward test is
 needed to measure those changes without corpus overlap.
 
+That unrelated test was run later on 2026-08-10. Four isolated sessions implemented a locate
+matching engine over CDM 7.0.0 `SecurityLocate` and `AvailableInventory`: `claude-opus-5` and
+`gpt-5.6-sol`, each with and without `cdm-dev`. All four used local subscriptions, received the
+same binary/source JARs and task, exposed the exact `MatchLocate` entry point, and passed every
+self-authored acceptance test plus independent reruns.
+
+| Arm | Agent-authored tests | Hidden reference-scope checks | Agent work | Wall time |
+|---|---:|---:|---:|---:|
+| Opus 5 + `cdm-dev` | 12/12 | 2/3 | 78 turns, 77 tool calls | 13m 13s |
+| Opus 5 control | 6/6 | 3/3 | 43 turns, 42 tool calls | 7m 56s |
+| Codex + `cdm-dev` | 5/5 | 1/3 | 85 completed items, 64 commands | about 20m 30s |
+| Codex control | 6/6 | 1/3 | 70 completed items, 54 commands | about 17m 21s |
+
+The ordinary cases did not show a skill lift: every arm correctly separated CDM facts from the
+application-owned settlement date and correctly handled inline general/targeted inventory. The
+adversarial checks used CDM's actual metadata-reference form across separate roots. The Opus
+control was the only implementation to resolve all three correctly. Opus with the skill resolved
+valid cross-root references but treated a declared, unresolvable borrower role as absent and hence
+general inventory. Codex with the skill failed closed but rejected valid external references.
+Codex control compared raw root-local reference strings, causing both a false rejection and the
+more serious false authorisation when different borrowers reused the same local key.
+
+This mixed result is useful rather than promotional: the skill did not make either model faster,
+and it did not guarantee correctness. It exposed a missing reusable guard. The skill now separates
+reference declaration, resolution and object identity; requires resolution within the owning root;
+forbids collapsing an unresolved declaration into permissive absence; and prescribes positive and
+negative cross-root identity probes. These instructions were added after the run, so the table is
+the honest pre-fix result, not evidence that the revision has already improved model behavior.
+
 ## Install
 
 The distributable skill is the `skills/cdm-dev/` directory; everything outside it is
@@ -177,6 +206,9 @@ evals/run-local --vendor all --quality-only --case price-quantity-model-api
 The local runner deliberately ignores API-key environment variables. Live model evals do not run
 in GitHub Actions and require no repository secrets. See [Local skill evaluations](evals/README.md)
 for authentication, focused commands, fixture caching, result review, and baseline promotion.
+The two code-writing use cases are also preserved as leakage-aware
+[implementation forward benchmarks](evals/benchmarks/README.md), with fixed tasks, hidden rubrics,
+observed skill/control baselines, a shared CDM 7.0.0 seed, and `evals/check-benchmarks` validation.
 
 Requirements: Bash, Python 3, `rg`, `zipinfo`, and `unzip`; network access for the live link
 and release checks; local Claude Code and Codex CLIs for live model evals.
@@ -200,6 +232,6 @@ skills/cdm-dev/          the distributable skill — everything an install ships
 scripts/check-skill      static and live drift gates (repository tooling)
 scripts/check-links      verify external documentation links and redirects
 tests/                   hermetic per-tool suites (driver: tests/run; shared lib.sh, fixtures.sh)
-evals/                   local subscription runners, trigger/quality cases, graders, and baselines
+evals/                   local runners, implementation benchmarks, graders, and baselines
 .github/                 hermetic lint/tests, CDM release matrix, links, and upstream canary
 ```

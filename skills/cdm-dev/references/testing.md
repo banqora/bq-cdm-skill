@@ -65,6 +65,12 @@ Useful negative controls include:
 - run a qualifier against a nearby non-matching event;
 - alter a reference key and require resolution/lineage assertions to fail.
 
+Where absence selects a general, default, or permissive policy branch, test three states instead
+of two: truly absent, declared and resolved, and declared but unresolved. The last must not collapse
+to absence. For references crossing document roots, also test that different local keys can resolve
+to the same business identity and that reusing the same local key for different identities does not
+create a match.
+
 Avoid mutations that are expensive or unsafe; a focused fixture or test double is enough.
 
 ## Discover open populations

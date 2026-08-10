@@ -79,6 +79,15 @@ not guarantee that source's uniqueness or lifetime. State those assumptions befo
 application overlay to either key, and use an application-owned identity when durable distinction
 is required.
 
+Reference declaration, reference resolution, and referenced-object identity are three separate
+facts. A role or field with an unresolved `ReferenceWithMeta*` value is still declared; never turn
+that resolution failure into semantic absence when absence selects a general, default, or
+permissive path. Resolve a reference against the keys in its own enclosing root before comparing
+objects. Across roots, compare resolved domain identifiers such as party identifiers, or a
+documented application identity. Do not compare raw `externalReference`, `scopedReference`, or
+`globalReference` strings across roots unless the producer contract defines a shared namespace;
+two roots may reuse a local key, while the same object may have different local keys.
+
 ## Inspect generated APIs and wire metadata
 
 Search existing compiled usage first. When necessary, inspect the dependency directly with
@@ -130,7 +139,10 @@ When the API, mapper, validator, or function behavior is uncertain:
 1. Find the project's active dependency declaration and existing usage.
 2. Inspect the relevant Rosetta declaration and generated class metadata.
 3. Write the smallest typed compile/runtime probe in the project's normal test framework.
-4. Assert meaningful input survived and include a close negative control.
+4. Assert meaningful input survived and include a close negative control. For cross-root
+   references, include both different local keys resolving to the same domain identity and the
+   same local key resolving to different identities. Where absence changes policy, also exercise a
+   declared but unresolved reference and require the application to fail closed.
 5. Keep the probe as a regression test if the behavior is load-bearing; otherwise move its
    conclusion into the owning production test or report.
 

@@ -10,6 +10,7 @@ only deterministic tests; this repository does not store model API keys or subsc
 - [Run a two-vendor smoke test](#run-a-two-vendor-smoke-test)
 - [Run the complete suite](#run-the-complete-suite)
 - [Run one evaluation layer](#run-one-evaluation-layer)
+- [Run implementation forward benchmarks](#run-implementation-forward-benchmarks)
 - [Interpret and promote results](#interpret-and-promote-results)
 - [Why live evals stay local](#why-live-evals-stay-local)
 
@@ -116,6 +117,25 @@ evals/run-quality --vendor codex \
 captures the final answer, and applies deterministic reviewed checks from `quality.json`. Always
 read the captured answer in the results file; a checklist is a regression signal, not a substitute
 for human review.
+
+## Run implementation forward benchmarks
+
+The tokenisation-classifier and locate-matcher implementation cases are preserved under
+[`evals/benchmarks`](benchmarks/README.md). Each package contains a model-facing `TASK.md`, a fixed
+public/hidden rubric, and its observed baseline. Both use the shared minimal Java 21/CDM 7.0.0
+Gradle seed and the same checksummed binary/source fixtures as the quality suite.
+
+Validate the saved benchmark contract without calling a model:
+
+```bash
+evals/check-benchmarks
+```
+
+These are reviewed forward tests rather than ordinary `run-local` cases because an implementation
+agent writes an entire temporary project and implementations expose different application-owned
+types. Follow the isolation protocol in the benchmark README: copy only the seed and selected task
+into each fresh arm, keep the rubric and historical results outside the model workspace, expose the
+skill only to the treatment arm, and add evaluator-owned tests only after every agent has exited.
 
 ## Interpret and promote results
 

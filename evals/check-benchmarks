@@ -1,0 +1,294 @@
+#!/usr/bin/env python3
+"""Validate the durable implementation benchmark manifest and packages."""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import json
+import re
+import sys
+from pathlib import Path
+from typing import Any
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--evals-dir",
+        type=Path,
+        default=Path(__file__).resolve().parent,
+        help="evals directory to validate (defaults to the script's directory)",
+    )
+    return parser.parse_args()
+
+
+def load_json(path: Path, errors: list[str]) -> Any:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        errors.append(f"missing file: {path}")
+    except json.JSONDecodeError as exc:
+        errors.append(f"invalid JSON in {path}: {exc}")
+    return None
+
+
+def contained_path(evals_dir: Path, relative: object, label: str, errors: list[str]) -> Path | None:
+    if not isinstance(relative, str) or not relative:
+        errors.append(f"{label} must be a non-empty relative path")
+        return None
+    candidate = (evals_dir / relative).resolve()
+    try:
+        candidate.relative_to(evals_dir.resolve())
+    except ValueError:
+        errors.append(f"{label} escapes the evals directory: {relative}")
+        return None
+    if not candidate.is_file() and not candidate.is_dir():
+        errors.append(f"{label} does not exist: {relative}")
+    return candidate
+
+
+def require_keys(value: object, keys: set[str], label: str, errors: list[str]) -> bool:
+    if not isinstance(value, dict):
+        errors.append(f"{label} must be an object")
+        return False
+    missing = sorted(keys - set(value))
+    if missing:
+        errors.append(f"{label} is missing keys: {', '.join(missing)}")
+        return False
+    return True
+
+
+def validate_rubric(path: Path, benchmark_id: str, task: str, errors: list[str]) -> None:
+    rubric = load_json(path, errors)
+    required = {
+        "schema_version",
+        "benchmark_id",
+        "total_score",
+        "required_entry_points",
+        "fatal_failures",
+        "criteria",
+    }
+    if not require_keys(rubric, required, f"rubric {benchmark_id}", errors):
+        return
+    if rubric["schema_version"] != 1:
+        errors.append(f"rubric {benchmark_id} must use schema_version 1")
+    if rubric["benchmark_id"] != benchmark_id:
+        errors.append(f"rubric id mismatch for {benchmark_id}")
+    if rubric["total_score"] != 100:
+        errors.append(f"rubric {benchmark_id} total_score must be 100")
+
+    entry_points = rubric["required_entry_points"]
+    if not isinstance(entry_points, list) or not entry_points or not all(
+        isinstance(item, str) and item for item in entry_points
+    ):
+        errors.append(f"rubric {benchmark_id} required_entry_points must be non-empty strings")
+    else:
+        for entry_point in entry_points:
+            if entry_point not in task:
+                errors.append(f"task {benchmark_id} does not name required entry point {entry_point}")
+
+    fatal = rubric["fatal_failures"]
+    if not isinstance(fatal, list) or not fatal or not all(isinstance(item, str) and item for item in fatal):
+        errors.append(f"rubric {benchmark_id} fatal_failures must be non-empty strings")
+
+    criteria = rubric["criteria"]
+    if not isinstance(criteria, list) or not criteria:
+        errors.append(f"rubric {benchmark_id} criteria must be a non-empty list")
+        return
+    ids: set[str] = set()
+    visibilities: set[str] = set()
+    weight = 0
+    for index, criterion in enumerate(criteria):
+        label = f"rubric {benchmark_id} criterion {index}"
+        if not require_keys(
+            criterion,
+            {"id", "visibility", "weight", "description", "checks"},
+            label,
+            errors,
+        ):
+            continue
+        criterion_id = criterion["id"]
+        if not isinstance(criterion_id, str) or not re.fullmatch(r"[a-z0-9-]+", criterion_id):
+            errors.append(f"{label} has an invalid id")
+        elif criterion_id in ids:
+            errors.append(f"rubric {benchmark_id} repeats criterion id {criterion_id}")
+        else:
+            ids.add(criterion_id)
+        visibility = criterion["visibility"]
+        if visibility not in {"public", "hidden"}:
+            errors.append(f"{label} visibility must be public or hidden")
+        else:
+            visibilities.add(visibility)
+        criterion_weight = criterion["weight"]
+        if not isinstance(criterion_weight, int) or criterion_weight <= 0:
+            errors.append(f"{label} weight must be a positive integer")
+        else:
+            weight += criterion_weight
+        if not isinstance(criterion["description"], str) or not criterion["description"]:
+            errors.append(f"{label} description must be non-empty")
+        checks = criterion["checks"]
+        if not isinstance(checks, list) or not checks or not all(
+            isinstance(item, str) and item for item in checks
+        ):
+            errors.append(f"{label} checks must be non-empty strings")
+    if weight != rubric["total_score"]:
+        errors.append(f"rubric {benchmark_id} criterion weights total {weight}, expected 100")
+    if visibilities != {"public", "hidden"}:
+        errors.append(f"rubric {benchmark_id} must contain public and hidden criteria")
+
+
+def validate_baseline(path: Path, benchmark_id: str, errors: list[str]) -> None:
+    baseline = load_json(path, errors)
+    required = {
+        "schema_version",
+        "benchmark_id",
+        "recorded_at",
+        "fixture_version",
+        "note",
+        "runs",
+    }
+    if not require_keys(baseline, required, f"baseline {benchmark_id}", errors):
+        return
+    if baseline["schema_version"] != 1:
+        errors.append(f"baseline {benchmark_id} must use schema_version 1")
+    if baseline["benchmark_id"] != benchmark_id:
+        errors.append(f"baseline id mismatch for {benchmark_id}")
+    try:
+        dt.date.fromisoformat(baseline["recorded_at"])
+    except (TypeError, ValueError):
+        errors.append(f"baseline {benchmark_id} recorded_at must be an ISO date")
+    if not isinstance(baseline["note"], str) or not baseline["note"]:
+        errors.append(f"baseline {benchmark_id} note must be non-empty")
+
+    runs = baseline["runs"]
+    if not isinstance(runs, list) or len(runs) < 2:
+        errors.append(f"baseline {benchmark_id} must contain at least two runs")
+        return
+    arms: set[str] = set()
+    skill_values: set[bool] = set()
+    for index, run in enumerate(runs):
+        label = f"baseline {benchmark_id} run {index}"
+        if not require_keys(
+            run,
+            {"arm", "vendor", "model", "skill", "authored_tests", "outcomes", "metrics"},
+            label,
+            errors,
+        ):
+            continue
+        arm = run["arm"]
+        if not isinstance(arm, str) or not arm:
+            errors.append(f"{label} arm must be non-empty")
+        elif arm in arms:
+            errors.append(f"baseline {benchmark_id} repeats arm {arm}")
+        else:
+            arms.add(arm)
+        if not isinstance(run["vendor"], str) or not run["vendor"]:
+            errors.append(f"{label} vendor must be non-empty")
+        if not isinstance(run["model"], str) or not run["model"]:
+            errors.append(f"{label} model must be non-empty")
+        if not isinstance(run["skill"], bool):
+            errors.append(f"{label} skill must be boolean")
+        else:
+            skill_values.add(run["skill"])
+        authored = run["authored_tests"]
+        if not require_keys(authored, {"passed", "total"}, f"{label} authored_tests", errors):
+            continue
+        if not all(isinstance(authored[key], int) and authored[key] >= 0 for key in ("passed", "total")):
+            errors.append(f"{label} authored test counts must be non-negative integers")
+        elif authored["passed"] > authored["total"]:
+            errors.append(f"{label} authored passed count exceeds total")
+        if not isinstance(run["outcomes"], dict) or not run["outcomes"]:
+            errors.append(f"{label} outcomes must be a non-empty object")
+        if not isinstance(run["metrics"], dict) or not run["metrics"]:
+            errors.append(f"{label} metrics must be a non-empty object")
+    if skill_values != {False, True}:
+        errors.append(f"baseline {benchmark_id} must include skill and control arms")
+
+
+def main() -> int:
+    args = parse_args()
+    evals_dir = args.evals_dir.resolve()
+    errors: list[str] = []
+    index_path = evals_dir / "benchmarks" / "index.json"
+    index = load_json(index_path, errors)
+    if not require_keys(index, {"schema_version", "fixture", "benchmarks"}, "benchmark index", errors):
+        return report(errors)
+    if index["schema_version"] != 1:
+        errors.append("benchmark index must use schema_version 1")
+
+    fixture = index["fixture"]
+    if require_keys(
+        fixture,
+        {"id", "path", "artifact_version", "binary_sha256", "sources_sha256"},
+        "benchmark fixture",
+        errors,
+    ):
+        fixture_path = contained_path(evals_dir, fixture["path"], "fixture path", errors)
+        if fixture_path is not None:
+            for filename in ("build.gradle.kts", "settings.gradle.kts"):
+                if not (fixture_path / filename).is_file():
+                    errors.append(f"fixture is missing {filename}")
+        for key in ("binary_sha256", "sources_sha256"):
+            if not isinstance(fixture[key], str) or not re.fullmatch(r"[0-9a-f]{64}", fixture[key]):
+                errors.append(f"fixture {key} must be a lowercase SHA-256 digest")
+
+    benchmarks = index["benchmarks"]
+    if not isinstance(benchmarks, list) or not benchmarks:
+        errors.append("benchmark index must contain benchmarks")
+        return report(errors)
+    benchmark_ids: set[str] = set()
+    required_entry = {
+        "id",
+        "title",
+        "kind",
+        "artifact_version",
+        "language",
+        "task",
+        "rubric",
+        "baseline",
+    }
+    for index_number, benchmark in enumerate(benchmarks):
+        label = f"benchmark {index_number}"
+        if not require_keys(benchmark, required_entry, label, errors):
+            continue
+        benchmark_id = benchmark["id"]
+        if not isinstance(benchmark_id, str) or not re.fullmatch(r"[a-z0-9-]+", benchmark_id):
+            errors.append(f"{label} has an invalid id")
+            continue
+        if benchmark_id in benchmark_ids:
+            errors.append(f"benchmark index repeats id {benchmark_id}")
+        benchmark_ids.add(benchmark_id)
+        if benchmark["kind"] != "implementation-forward-test":
+            errors.append(f"benchmark {benchmark_id} has an unsupported kind")
+        if benchmark["artifact_version"] != fixture.get("artifact_version"):
+            errors.append(f"benchmark {benchmark_id} artifact version differs from fixture")
+        task_path = contained_path(evals_dir, benchmark["task"], f"task {benchmark_id}", errors)
+        rubric_path = contained_path(evals_dir, benchmark["rubric"], f"rubric {benchmark_id}", errors)
+        baseline_path = contained_path(evals_dir, benchmark["baseline"], f"baseline {benchmark_id}", errors)
+        task = ""
+        if task_path is not None and task_path.is_file():
+            task = task_path.read_text(encoding="utf-8")
+            if len(task.split()) < 100:
+                errors.append(f"task {benchmark_id} is too short to preserve the benchmark contract")
+            if "CDM 7.0.0" not in task:
+                errors.append(f"task {benchmark_id} must pin CDM 7.0.0")
+        if rubric_path is not None and rubric_path.is_file():
+            validate_rubric(rubric_path, benchmark_id, task, errors)
+        if baseline_path is not None and baseline_path.is_file():
+            validate_baseline(baseline_path, benchmark_id, errors)
+
+    return report(errors, len(benchmark_ids))
+
+
+def report(errors: list[str], count: int = 0) -> int:
+    if errors:
+        for error in errors:
+            print(f"check-benchmarks: {error}", file=sys.stderr)
+        return 1
+    print(f"check-benchmarks: {count} benchmarks passed")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

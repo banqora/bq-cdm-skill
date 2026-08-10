@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "settlement-tokenisation-classifier",
+  "total_score": 100,
+  "required_entry_points": [
+    "ClassifyTokenisation"
+  ],
+  "fatal_failures": [
+    "production or test compilation fails",
+    "the exact ClassifyTokenisation(Trade) entry point is absent",
+    "a conventional repo is labelled asset-level solely because its settlement leg is tokenised",
+    "the implementation invents a CDM 7.0.0 field or edits generated model code"
+  ],
+  "criteria": [
+    {
+      "id": "caller-contract",
+      "visibility": "public",
+      "weight": 10,
+      "description": "Expose and invoke the exact Trade-based classifier and three result values.",
+      "checks": [
+        "Compile and invoke ClassifyTokenisation(Trade) directly.",
+        "Return exactly ASSET_LEVEL, SETTLEMENT_LEVEL, or NOT_TOKENISED."
+      ]
+    },
+    {
+      "id": "security-token-bond",
+      "visibility": "public",
+      "weight": 15,
+      "description": "A tokenised bond is classified at asset level.",
+      "checks": [
+        "The fixture is a bond/security, not a native cryptocurrency substituted for the requested case.",
+        "The result is ASSET_LEVEL."
+      ]
+    },
+    {
+      "id": "tokenised-repo-settlement",
+      "visibility": "public",
+      "weight": 20,
+      "description": "A conventional Gilt repo with tokenised cash settlement is settlement-level only.",
+      "checks": [
+        "The asset remains conventional.",
+        "The result is SETTLEMENT_LEVEL and an explicit negative assertion excludes ASSET_LEVEL."
+      ]
+    },
+    {
+      "id": "vanilla-gilt",
+      "visibility": "public",
+      "weight": 10,
+      "description": "A conventional Gilt with conventional settlement is not tokenised.",
+      "checks": [
+        "The result is NOT_TOKENISED."
+      ]
+    },
+    {
+      "id": "repo-model-fidelity",
+      "visibility": "hidden",
+      "weight": 20,
+      "description": "Traverse the exact CDM 7.0.0 repo product topology rather than a plausible fixture invented by the implementation.",
+      "checks": [
+        "Exercise a version-correct repo with the top-level interest-rate payout and purchased asset in the nested collateral product.",
+        "Prove the economic leaf used by the classifier is present before asserting the result."
+      ]
+    },
+    {
+      "id": "asset-precedence",
+      "visibility": "hidden",
+      "weight": 10,
+      "description": "Asset-level tokenisation takes precedence when both asset and settlement signals exist.",
+      "checks": [
+        "A repo whose correctly nested purchased asset is tokenised returns ASSET_LEVEL even when settlement is also tokenised."
+      ]
+    },
+    {
+      "id": "application-boundary",
+      "visibility": "hidden",
+      "weight": 10,
+      "description": "Represent facts missing from CDM 7.0.0 through a narrow explicit application seam.",
+      "checks": [
+        "Keep Trade as the public input.",
+        "Do not misuse DigitalAsset for a digital representation of another asset.",
+        "Document which token or transfer evidence is application-owned and how it is keyed."
+      ]
+    },
+    {
+      "id": "test-integrity",
+      "visibility": "hidden",
+      "weight": 5,
+      "description": "Tests exercise the requested API and prove their fixtures are economically meaningful.",
+      "checks": [
+        "Invoke the exact entry point in a focused test.",
+        "Include a close negative and a non-vacuous fixture-shape assertion."
+      ]
+    }
+  ]
+}

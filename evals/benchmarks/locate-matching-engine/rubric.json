@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "locate-matching-engine",
+  "total_score": 100,
+  "required_entry_points": [
+    "MatchLocate"
+  ],
+  "fatal_failures": [
+    "production or test compilation fails",
+    "the exact MatchLocate entry point is absent",
+    "availability targeted at another borrower is allocated",
+    "the implementation invents a CDM 7.0.0 field or edits generated model code"
+  ],
+  "criteria": [
+    {
+      "id": "caller-contract",
+      "visibility": "public",
+      "weight": 10,
+      "description": "Expose and invoke the exact matcher with a caller-visible fill plan.",
+      "checks": [
+        "Compile and invoke MatchLocate(locateRequest, availabilityBroadcasts) directly.",
+        "Expose lender allocations, total filled quantity, shortfall quantity, and a shortfall/full-fill flag."
+      ]
+    },
+    {
+      "id": "general-full-fill",
+      "visibility": "public",
+      "weight": 10,
+      "description": "Cap one general 500,000 broadcast at the requested 100,000.",
+      "checks": [
+        "Return one 100,000 fill and zero shortfall."
+      ]
+    },
+    {
+      "id": "general-plus-targeted",
+      "visibility": "public",
+      "weight": 15,
+      "description": "Aggregate general and correctly targeted inventory in input order.",
+      "checks": [
+        "Return Lender X 60,000 followed by Lender Y 40,000 and zero shortfall."
+      ]
+    },
+    {
+      "id": "wrong-target-fails-closed",
+      "visibility": "public",
+      "weight": 20,
+      "description": "Never treat a broadcast targeted at another counterparty as general inventory.",
+      "checks": [
+        "Return only Lender X's 60,000 and a 40,000 shortfall.",
+        "Include a close control proving the same Lender Y inventory is usable for its intended borrower."
+      ]
+    },
+    {
+      "id": "matching-filters",
+      "visibility": "hidden",
+      "weight": 10,
+      "description": "Filter on ISIN, settlement date, inventory type, positive quantity, and compatible units.",
+      "checks": [
+        "Wrong-ISIN and wrong-date broadcasts do not fill.",
+        "A RequestToBorrow message replayed as availability does not fill."
+      ]
+    },
+    {
+      "id": "allocation-integrity",
+      "visibility": "hidden",
+      "weight": 10,
+      "description": "Allocation is deterministic, capped, and side-effect free.",
+      "checks": [
+        "Stop at the requested quantity in broadcast then record order.",
+        "Do not mutate CDM objects or the caller's list.",
+        "Filled plus shortfall equals requested in the requested unit."
+      ]
+    },
+    {
+      "id": "cdm-model-fidelity",
+      "visibility": "hidden",
+      "weight": 10,
+      "description": "Use CDM 7.0.0 locate, inventory, security, quantity, party and role paths faithfully.",
+      "checks": [
+        "Use SecurityLocate and AvailableInventory/AvailableInventoryRecord rather than parallel domain copies.",
+        "Keep settlement date in a documented application sidecar because this CDM branch has no settlement-date field.",
+        "Represent targeting with the broadcast-level Borrower role, not a record-level invented field."
+      ]
+    },
+    {
+      "id": "reference-scope-safety",
+      "visibility": "hidden",
+      "weight": 15,
+      "description": "Resolve metadata references in their own roots and compare resolved party identity.",
+      "checks": [
+        "Different local reference keys resolving to the same party identifier match.",
+        "The same local reference key resolving to different party identifiers does not match.",
+        "A declared but unresolved Borrower role never collapses to general inventory; rejection or an ineligible result fails closed."
+      ]
+    }
+  ]
+}

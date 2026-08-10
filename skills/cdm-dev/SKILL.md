@@ -85,6 +85,11 @@ object construction, lifecycle functions, validation, serialization, and upgrade
   object and canonical reserialization before trusting validation or function output.
 - Choices and containment can have multiple economic routes. Before claiming absence, enumerate
   applicable branches and root paths through payouts, collateral, nested products, and trade lots.
+- A declared metadata reference is not absent merely because it did not resolve. When absence
+  enables a default, general, or permissive branch, detect declaration presence first and fail
+  closed on resolution failure. Resolve each reference inside its owning root, then compare the
+  resolved business identifiers; raw external, scoped, or global reference strings are not
+  cross-root party identity unless the application explicitly defines that shared namespace.
 - A qualifier's existence does not prove reachability. Read its predicate and execute positive
   and negative cases.
 - Optional cardinality does not override conditional or inherited base-type rules, and an empty
