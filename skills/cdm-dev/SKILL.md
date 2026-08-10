@@ -36,7 +36,8 @@ If CDM is not installed, its distribution is unclear, or a language must be sele
 3. Query version-matched `.rosetta` source with `scripts/cdm-source` resolved from this `SKILL.md`;
    a matching `cdm-java` JAR can be only the source container. Batch questions, open owning
    declarations, and use [Rosetta and generated code](references/rosetta.md) only for remaining
-   declaration, generated-API, or runtime ambiguity.
+   declaration, generated-API, or runtime ambiguity. An exact caller-supplied path is a confirmation
+   task; do not survey neighboring types.
 4. Build or compile the smallest typed vertical slice early: exercise at least one production
    getter or builder and the first real branch. Compiling empty directories, records, or signatures
    alone is not evidence. Let errors identify API details that still need inspection.
@@ -50,16 +51,15 @@ If CDM is not installed, its distribution is unclear, or a language must be sele
    Inspect data-driven inputs and snapshot diffs; do not invent a universal build command.
 
 Bound the evidence pass before coding: list the input path and choices, units or direction, output
-contract, and owning layer. Stop when each required claim has one version-matched source and the
-smallest compile or test confirms it. Escalate from typed construction, to a targeted data rule or
-function probe, to full runtime wiring and whole-object validation only when the requested behavior
-depends on that layer. Do not make a partial application fixture fully qualify merely because the
-runtime is available.
+contract, and owner. Stop when each claim has one version-matched source and the smallest compile or
+test confirms it. Escalate from typed construction to a rule/function probe or full runtime only when
+the requested behavior depends on it; never make a partial fixture fully qualify as ceremony.
 
-For a typed application-owned calculation with supplied CDM types and resolved values, the steps
-above are the fast path: one combined declaration/builder query, one real vertical slice, then its
-focused test. Load no general workflow, testing, or legal guide unless a question requires it. Use
-[Day-to-day workflows](references/workflows.md) for broader integration routes.
+For a typed application-owned calculation with resolved values, use one combined declaration/builder
+query, one real vertical slice, then its test. A product name alone does not require its guide when
+exact paths and rules are supplied. Inspect only members the function reads or rebuilds. To prove a
+single-leaf rebuild, assert untouched neighboring fields or rewind the leaf and compare the whole
+object with the input. Use [Day-to-day workflows](references/workflows.md) only for broader routes.
 
 ## Load only what the task needs
 

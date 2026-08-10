@@ -57,7 +57,9 @@ inventory neighboring generated classes without a question they can answer.
 Compile after that first pass. Use the compiler to name the remaining generated-API uncertainty,
 then inspect only that interface or builder section. Prefer one combined source query and one
 focused compile over a sequence of whole-file dumps; repeated reads of the same generated type are
-a signal to narrow the question or keep a small probe.
+a signal to narrow the question or keep a small probe. Generated source and `javap` are alternative
+views for most member-signature questions; do not use both after either one has already established
+the getter or builder contract you need.
 
 ## Read a type
 

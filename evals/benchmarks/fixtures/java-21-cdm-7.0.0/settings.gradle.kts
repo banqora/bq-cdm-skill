@@ -1,1 +1,1 @@
-rootProject.name = "cdm-dev-forward-benchmark"
+rootProject.name = "implementation-forward-benchmark"

@@ -47,6 +47,16 @@
       "task": "benchmarks/csa-margin-call-calculator/TASK.md",
       "rubric": "benchmarks/csa-margin-call-calculator/rubric.json",
       "baseline": "benchmarks/csa-margin-call-calculator/baseline.json"
+    },
+    {
+      "id": "evergreen-repo-lifecycle",
+      "title": "Evergreen repo lifecycle engine",
+      "kind": "implementation-forward-test",
+      "artifact_version": "7.0.0",
+      "language": "java",
+      "task": "benchmarks/evergreen-repo-lifecycle/TASK.md",
+      "rubric": "benchmarks/evergreen-repo-lifecycle/rubric.json",
+      "baseline": "benchmarks/evergreen-repo-lifecycle/baseline.json"
     }
   ]
 }

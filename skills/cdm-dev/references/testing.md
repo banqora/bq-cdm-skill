@@ -34,6 +34,10 @@ where practical. If the fixture is intentionally partial, label it and pair it w
 version-matched example, focused source-derived path probe, or targeted data rule; do not expand it
 into a fully qualifying document unless acceptance depends on that claim.
 
+For a narrow getter/builder function whose contract already supplies the path, prefer the smallest
+fixture that discriminates the behavior under test. Add extra economics only when an assertion reads
+them.
+
 ## Assert economics as well as structure
 
 Generated validation proves model conditions, not business intent. A value can be the wrong

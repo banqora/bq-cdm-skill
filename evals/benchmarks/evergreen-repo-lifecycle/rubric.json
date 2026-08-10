@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "evergreen-repo-lifecycle",
+  "total_score": 100,
+  "required_entry_points": [
+    "benchmark.evergreen.EvergreenRepoLifecycle.ProcessDay"
+  ],
+  "fatal_failures": [
+    "production or test compilation fails",
+    "the exact public static ProcessDay(EvergreenTradeState, LocalDate, List) entry point or required public support types are absent",
+    "notice does not permanently freeze the repurchase date",
+    "the coincident re-rate and month-end date emits zero or multiple interest settlements",
+    "the pre-collision bucket is repriced, the collision day is included in the old settlement, or any interest is compounded or paid twice",
+    "the implementation passes monetary or rate arithmetic through double or float, edits generated model code, or ignores the supplied holiday calendar"
+  ],
+  "criteria": [
+    {
+      "id": "caller-contract",
+      "visibility": "public",
+      "weight": 8,
+      "description": "Expose the exact state-machine contract with typed state, events, settlements, and trigger reasons.",
+      "checks": [
+        "Compile and invoke benchmark.evergreen.EvergreenRepoLifecycle.ProcessDay directly.",
+        "Return a non-null DayResult whose state and immutable settlement list use the required public record and enum types."
+      ]
+    },
+    {
+      "id": "constant-tenor-calendar",
+      "visibility": "public",
+      "weight": 15,
+      "description": "Maintain the crawling tenor across business days, weekends, a bank holiday, and month-end.",
+      "checks": [
+        "Before notice, residual maturity is exactly the CDM notice-period multiplier on every processed date.",
+        "Business dates replace the termination leaf with date plus tenor business days; weekends and 25 August 2025 leave it unchanged.",
+        "Business-day counting excludes the start, includes the result, and uses the supplied holiday set."
+      ]
+    },
+    {
+      "id": "notice-freeze-and-lcr",
+      "visibility": "public",
+      "weight": 15,
+      "description": "Freeze on notice and expose the intended LCR residual-maturity transition.",
+      "checks": [
+        "Notice on 31 July 2025 locks the date at 19 September 2025 with the supplied 25 August holiday.",
+        "Later business and non-business calls never crawl the date again.",
+        "The contractual business-day residual is 35 on notice day, while LCR uses calendar days: 31 on 19 August and first 30 on 20 August."
+      ]
+    },
+    {
+      "id": "coincident-trigger-atomicity",
+      "visibility": "public",
+      "weight": 18,
+      "description": "Handle a re-rate on the scheduled month-end payment date as one atomic settlement.",
+      "checks": [
+        "4 August 2025 emits exactly one GBP 700.00 settlement with RERATE and MONTH_END reasons.",
+        "The incoming bucket through 3 August is paid at 3.65% and reset once before the re-rate.",
+        "The returned rate is 7.30% and its fresh bucket contains GBP 200.00 for 4 August without compounding."
+      ]
+    },
+    {
+      "id": "cdm-path-and-preservation",
+      "visibility": "hidden",
+      "weight": 12,
+      "description": "Use the pinned CDM termination and evergreen paths while preserving unrelated model content.",
+      "checks": [
+        "Read the tenor from terminationProvision.evergreenProvision.noticePeriod rather than hard-coding 35; a 10-business-day fixture crawls by 10.",
+        "Read and update only terminationDate.adjustableDate.unadjustedDate through generated 7.0.0 getters/builders.",
+        "Preserve trade state, histories, product content, metadata, date-adjustment content, and the original immutable input."
+      ]
+    },
+    {
+      "id": "simple-daily-accrual",
+      "visibility": "hidden",
+      "weight": 10,
+      "description": "Accrue daily ACT/365 simple interest exactly and settle it as CDM Money.",
+      "checks": [
+        "Accrue every non-final calendar day, including weekends and holidays, against the unchanged principal.",
+        "Use BigDecimal scale-18 HALF_EVEN division, accumulate without compounding, and round only settlement Money to two decimals HALF_EVEN.",
+        "Preserve the principal currency and never use double or float."
+      ]
+    },
+    {
+      "id": "other-settlement-triggers",
+      "visibility": "hidden",
+      "weight": 9,
+      "description": "Implement standalone month-end and final-repurchase settlement behavior.",
+      "checks": [
+        "The second business day strictly after a calendar month-end settles once even without a re-rate.",
+        "The final repurchase date is accrual-end-exclusive: it settles through the prior day once, resets, marks terminated, and rejects later processing.",
+        "Any coincident trigger set produces one settlement with the complete reason union."
+      ]
+    },
+    {
+      "id": "state-machine-guards",
+      "visibility": "hidden",
+      "weight": 8,
+      "description": "Reject malformed temporal transitions and inputs without changing state.",
+      "checks": [
+        "Require exactly the next calendar date and reject processing after termination.",
+        "Reject weekend/holiday notices, repeated notice, duplicate event types, null/unknown events, blank party, and negative re-rates.",
+        "Reject missing or unsupported CDM paths, invalid calendars, non-positive principal, and negative incoming rates or accrual."
+      ]
+    },
+    {
+      "id": "immutability-and-test-integrity",
+      "visibility": "hidden",
+      "weight": 5,
+      "description": "Keep inputs and result collections stable and prove the dangerous sequence boundaries.",
+      "checks": [
+        "Do not mutate CDM values, application records, caller event lists, or the caller holiday set.",
+        "Authored tests invoke the exact public method sequentially and directly assert freeze, LCR crossing, and exactly-once collision behavior.",
+        "Do not wire whole-object qualification or generated lifecycle event infrastructure that the contract does not invoke."
+      ]
+    }
+  ]
+}

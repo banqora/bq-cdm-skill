@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "evergreen-repo-lifecycle",
+  "recorded_at": "2026-08-10",
+  "fixture_version": "7.0.0",
+  "note": "Four isolated single-session arms used Claude Code 2.1.226 or Codex CLI 0.147.0 with local Claude Max or ChatGPT subscription authentication and all API credential overrides removed. The same neutral task and checksummed CDM 7.0.0 artifacts were used everywhere. Controls had no skill directory; Claude ran in safe mode with empty MCP configuration, and Codex disabled rules, plugins, apps, browser features, and subagents. A complete trace audit found no control references to cdm-dev, SKILL.md, the evaluator, rubric, repository, or sibling workspaces. Runs were sequential, and the identical eight-test evaluator was copied only after all four model processes exited. A discarded pre-code Codex setup attempt is excluded because workspace sandboxing blocked Gradle's localhost daemon socket; both recorded Codex arms therefore used the same danger-full-access execution mode with isolated homes, workspaces, and temp directories. Every arm passed all authored and evaluator tests. A later independent claude-fable-5 source review and post-hoc probes scored Opus control 98, Codex control 99, and both treatment arms 100: the skill bought modest robustness and test-quality improvements but remained 14% slower for Opus and 26% slower for Codex. Treatment traces also duplicated source/API inspection. Opus treatment's richer fixture supported a required rate-non-interference assertion, but needed extra builder inspection and correction rounds. The stricter inspection stopping and focused-preservation guidance was added after these runs and is not credited to them.",
+  "independent_review": {
+    "reviewer": "claude-fable-5",
+    "claude_code_version": "2.1.226",
+    "recorded_at": "2026-08-10",
+    "wall_seconds": 775,
+    "fresh_suite_rerun": "all four combined suites pass",
+    "reviewed_scores": {
+      "opus-5-with-skill": "100/100",
+      "opus-5-control": "98/100",
+      "codex-with-skill": "100/100",
+      "codex-control": "99/100"
+    },
+    "posthoc_findings": [
+      "Opus control accepts a principal with no currency unit and can emit settlement Money with unit null.",
+      "Both Opus arms accept a malformed termination choice with adjustableDate and relativeDate populated; both Codex arms reject it.",
+      "All four return immutable settlement lists and trigger sets.",
+      "Both skill arms add meaningful robustness or boundary-test coverage beyond their same-vendor controls.",
+      "The frozen evaluator does not distinguish deliberate IllegalArgumentException from accidental RuntimeException or exercise incomplete currency, malformed dual choices, high-scale incoming accrual, or non-empty output mutation."
+    ],
+    "leakage_verdict": "clean on trace-verifiable dimensions",
+    "leakage_limitations": [
+      "Codex JSONL does not expose a model identifier, so gpt-5.6-sol comes from the recorded invocation rather than the trace.",
+      "Subscription authentication, credential removal, safe mode, and empty MCP selection come from the recorded harness invocation rather than model trace events.",
+      "Codex used danger-full-access for Gradle compatibility, so isolation is supported by the complete command/read audit rather than sandbox enforcement."
+    ]
+  },
+  "runs": [
+    {
+      "arm": "opus-5-with-skill",
+      "vendor": "claude",
+      "model": "claude-opus-5",
+      "skill": true,
+      "authored_tests": {"passed": 16, "total": 16},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "100/100",
+        "evaluator_probes": "8/8 pass",
+        "combined_suite": "24/24 pass",
+        "constant_tenor_and_holiday": "pass",
+        "notice_freeze_and_lcr": "pass",
+        "coincident_trigger_atomicity": "pass",
+        "incomplete_principal_currency": "pass"
+      },
+      "metrics": {
+        "sessions": 1,
+        "effort": "high",
+        "turns": 50,
+        "tool_calls": 49,
+        "shell_commands": 33,
+        "tool_calls_before_first_edit": 20,
+        "wall_seconds": 653
+      }
+    },
+    {
+      "arm": "opus-5-control",
+      "vendor": "claude",
+      "model": "claude-opus-5",
+      "skill": false,
+      "authored_tests": {"passed": 15, "total": 15},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "98/100",
+        "evaluator_probes": "8/8 pass",
+        "combined_suite": "23/23 pass",
+        "constant_tenor_and_holiday": "pass",
+        "notice_freeze_and_lcr": "pass",
+        "coincident_trigger_atomicity": "pass",
+        "incomplete_principal_currency": "fail"
+      },
+      "metrics": {
+        "sessions": 1,
+        "effort": "high",
+        "turns": 43,
+        "tool_calls": 42,
+        "shell_commands": 37,
+        "tool_calls_before_first_edit": 22,
+        "wall_seconds": 571
+      }
+    },
+    {
+      "arm": "codex-with-skill",
+      "vendor": "codex",
+      "model": "gpt-5.6-sol",
+      "skill": true,
+      "authored_tests": {"passed": 6, "total": 6},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "100/100",
+        "evaluator_probes": "8/8 pass",
+        "combined_suite": "14/14 pass",
+        "constant_tenor_and_holiday": "pass",
+        "notice_freeze_and_lcr": "pass",
+        "coincident_trigger_atomicity": "pass"
+      },
+      "metrics": {
+        "top_level_turns": 1,
+        "reasoning_effort": "max",
+        "completed_items": 28,
+        "commands": 15,
+        "file_changes": 5,
+        "completed_items_before_first_edit": 15,
+        "wall_seconds": 667
+      }
+    },
+    {
+      "arm": "codex-control",
+      "vendor": "codex",
+      "model": "gpt-5.6-sol",
+      "skill": false,
+      "authored_tests": {"passed": 3, "total": 3},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "99/100",
+        "evaluator_probes": "8/8 pass",
+        "combined_suite": "11/11 pass",
+        "constant_tenor_and_holiday": "pass",
+        "notice_freeze_and_lcr": "pass",
+        "coincident_trigger_atomicity": "pass",
+        "authored_final_and_guard_coverage": "absent"
+      },
+      "metrics": {
+        "top_level_turns": 1,
+        "reasoning_effort": "max",
+        "completed_items": 23,
+        "commands": 15,
+        "file_changes": 2,
+        "completed_items_before_first_edit": 13,
+        "wall_seconds": 530
+      }
+    }
+  ]
+}

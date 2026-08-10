@@ -10,6 +10,7 @@ these cases require an agent to write and test Java code.
 - [Locate matching engine](locate-matching-engine/)
 - [Repo settlement shaping](repo-settlement-shaping/)
 - [CSA margin-call calculator](csa-margin-call-calculator/)
+- [Evergreen repo lifecycle engine](evergreen-repo-lifecycle/)
 
 ## Contents
 

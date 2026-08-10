@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "securities-lending-month-end-billing",
+  "total_score": 100,
+  "required_entry_points": [
+    "benchmark.billing.MonthEndBilling.GenerateInvoice"
+  ],
+  "fatal_failures": [
+    "production or test compilation fails",
+    "the exact public static GenerateInvoice(List<Loan>, List<? extends LoanEvent>, BillingPeriod) entry point or required public support types are absent",
+    "a full-return settlement date accrues, the CDM open date does not accrue, or a partial return is applied from instruction date instead of settlement date",
+    "a same-day mark is used for that day's fee accrual instead of a strictly earlier T-1 mark",
+    "a negative rebate spread is clamped, absolutized, or loses its sign during counterparty netting",
+    "the implementation passes monetary or rate arithmetic through double or float, edits generated model code, or nets different currencies together"
+  ],
+  "criteria": [
+    {
+      "id": "caller-contract",
+      "visibility": "public",
+      "weight": 7,
+      "description": "Expose the exact billing contract with typed loans, events, records, and summaries.",
+      "checks": [
+        "Compile and invoke benchmark.billing.MonthEndBilling.GenerateInvoice directly.",
+        "Return one typed LoanBillingRecord per loan and deterministic typed CounterpartySummary values."
+      ]
+    },
+    {
+      "id": "baseline-t1-fencepost",
+      "visibility": "public",
+      "weight": 16,
+      "description": "Use prior marks and the correct open-inclusive, return-exclusive interval.",
+      "checks": [
+        "The January GBP baseline emits GBP 5900.00 for exactly 30 accrual days.",
+        "The interval starts on 1 January and ends exclusively on 31 January.",
+        "The 1 January mark first applies on 2 January; no same-day or return-day amount leaks in."
+      ]
+    },
+    {
+      "id": "rerate-partial-return-segmentation",
+      "visibility": "public",
+      "weight": 17,
+      "description": "Segment fee accrual at the start-of-day re-rate and settlement-effective partial return.",
+      "checks": [
+        "The 1-11, 12-19, and 20-31 slices total GBP 3900.00.",
+        "The new fee applies on 12 January.",
+        "The quantity remains 100000 through 19 January and falls to 50000 on 20 January, regardless of the 15 January instruction date."
+      ]
+    },
+    {
+      "id": "negative-rebate-and-netting",
+      "visibility": "public",
+      "weight": 17,
+      "description": "Preserve a negative rebate spread through the loan record and signed counterparty netting.",
+      "checks": [
+        "Calculate cash collateral times benchmark minus rebate without a zero floor.",
+        "Emit a negative CDM Money record when rebate exceeds benchmark.",
+        "Net the signed record against a positive fee record for the same pair and currency without absolute values or clamping."
+      ]
+    },
+    {
+      "id": "currency-and-day-count-isolation",
+      "visibility": "public",
+      "weight": 11,
+      "description": "Apply ACT/360 and ACT/365 per loan and keep currencies separate.",
+      "checks": [
+        "A USD ACT/360 loan and GBP ACT/365 loan each use their own basis.",
+        "The invoice emits separate USD and GBP summaries even for the same counterparty pair.",
+        "All record and summary Money values retain a non-blank matching currency."
+      ]
+    },
+    {
+      "id": "cdm-topology-and-style",
+      "visibility": "hidden",
+      "weight": 12,
+      "description": "Read the pinned CDM 7 security-loan topology and select economics from collateral style.",
+      "checks": [
+        "Read direct effective and termination dates and the top-level SecurityLending AssetPayout from TradeState.trade.product.economicTerms.",
+        "Read a positive SHARE resolved quantity from that payout rather than a similarly shaped unrelated quantity.",
+        "Require NON_CASH plus FeeTerms or CASH plus RebateTerms and reject CASH_POOL, mismatches, missing paths, and extra/misclassified payouts."
+      ]
+    },
+    {
+      "id": "event-stream-semantics",
+      "visibility": "hidden",
+      "weight": 8,
+      "description": "Process unordered, loan-scoped events deterministically at their stated economic dates.",
+      "checks": [
+        "Event-list order does not change records or summaries.",
+        "Relevant rate changes and settled returns before the billing-period start establish the opening state.",
+        "Reject unknown loans, null events, duplicate same-date marks/rates, style-inapplicable events, malformed dates, and excess returns."
+      ]
+    },
+    {
+      "id": "exact-arithmetic-and-rounding",
+      "visibility": "hidden",
+      "weight": 7,
+      "description": "Use exact signed decimal arithmetic and round once at the loan boundary.",
+      "checks": [
+        "Divide daily accruals to scale 18 HALF_EVEN and retain them unrounded until the final loan record.",
+        "Round each record once to two decimals HALF_EVEN, then make each summary exactly reconcile to emitted records.",
+        "Never pass values through double or float; negative and high-scale values retain the expected sign and cents."
+      ]
+    },
+    {
+      "id": "guards-ordering-and-immutability",
+      "visibility": "hidden",
+      "weight": 5,
+      "description": "Validate inputs, keep outputs deterministic, and preserve caller-owned state.",
+      "checks": [
+        "Reject blank/duplicate loan IDs, invalid periods, non-overlapping loans, malformed Money, negative rates, and unsupported day counts.",
+        "Preserve input order for records and sort summaries by lender, borrower, and currency.",
+        "Return unmodifiable defensive copies of result lists and do not mutate CDM inputs, loans, or events."
+      ]
+    }
+  ]
+}

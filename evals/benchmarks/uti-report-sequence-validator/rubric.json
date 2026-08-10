@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "uti-report-sequence-validator",
+  "total_score": 100,
+  "required_entry_points": [
+    "benchmark.reporting.UtiReportSequenceValidator.ValidateReportSequence"
+  ],
+  "fatal_failures": [
+    "production or test compilation fails",
+    "the exact public static ValidateReportSequence(List<Report>) entry point or required public support types are absent",
+    "CORRECT is accepted after ERROR without an intervening REVIVE",
+    "a rejected report changes lifecycle state, replaces the anchored UTI, or prevents later reports from being evaluated",
+    "TERMINATED and CANCELLED are collapsed so the existed-versus-never-valid distinction is lost",
+    "the implementation replaces the typed CDM 7.0.0 TradeIdentifier boundary with an invented UTI model or edits generated model code"
+  ],
+  "criteria": [
+    {
+      "id": "caller-contract",
+      "visibility": "public",
+      "weight": 8,
+      "description": "Expose the exact typed batch-validation contract and one decision per report.",
+      "checks": [
+        "Compile and invoke benchmark.reporting.UtiReportSequenceValidator.ValidateReportSequence directly.",
+        "Expose the required action, state, rejection-reason, report, decision, and result types.",
+        "Return decisions in input order and a final state consistent with the last decision."
+      ]
+    },
+    {
+      "id": "ordinary-closure",
+      "visibility": "public",
+      "weight": 11,
+      "description": "Accept an ordinary live lifecycle and stop live-only updates after termination.",
+      "checks": [
+        "NEW, MODIFY, and TERMINATE are accepted in sequence.",
+        "The TERMINATE decision changes ALIVE to TERMINATED.",
+        "A later MODIFY is rejected and reports unchanged TERMINATED state."
+      ]
+    },
+    {
+      "id": "revive-semantics",
+      "visibility": "public",
+      "weight": 12,
+      "description": "Re-open closed report histories without allowing creation by REVIVE.",
+      "checks": [
+        "NEW -> TERMINATE -> REVIVE -> MODIFY is accepted throughout and REVIVE returns ALIVE.",
+        "REVIVE from CANCELLED also returns ALIVE.",
+        "REVIVE while ALIVE is rejected without changing state."
+      ]
+    },
+    {
+      "id": "first-report-rule",
+      "visibility": "public",
+      "weight": 9,
+      "description": "Require NEW to establish the trade while allowing recovery after a rejected leading item.",
+      "checks": [
+        "A leading REVIVE is rejected with FIRST_REPORT_MUST_BE_NEW and NEVER_EXISTED state.",
+        "A later valid NEW in the same stream is accepted and establishes ALIVE state.",
+        "A repeated NEW is rejected rather than resetting history."
+      ]
+    },
+    {
+      "id": "error-versus-termination",
+      "visibility": "public",
+      "weight": 18,
+      "description": "Preserve the semantic difference between a trade that ended and a report that should never have existed.",
+      "checks": [
+        "ERROR from an established state produces CANCELLED and preserves that distinct state in output.",
+        "CORRECT after ERROR is rejected and remains CANCELLED; REVIVE then CORRECT is accepted.",
+        "The close control CORRECT after TERMINATE is accepted, remains TERMINATED, and does not silently revive."
+      ]
+    },
+    {
+      "id": "per-action-gating",
+      "visibility": "public",
+      "weight": 13,
+      "description": "Apply explicit action-specific preconditions rather than one broad update predicate.",
+      "checks": [
+        "VALUATION and MARGIN_UPDATE are accepted only while ALIVE.",
+        "TERMINATE is accepted only while ALIVE.",
+        "POSITION_COMPONENT is accepted only while ALIVE and otherwise rejected without changing state; this is the benchmark's explicit focused policy."
+      ]
+    },
+    {
+      "id": "typed-uti-identity",
+      "visibility": "hidden",
+      "weight": 12,
+      "description": "Validate and compare the actual CDM 7.0.0 UTI representation.",
+      "checks": [
+        "Require UNIQUE_TRANSACTION_IDENTIFIER and exactly one non-blank, trimmed assigned identifier value.",
+        "Accept a positive assigned-identifier version change when the UTI value is unchanged.",
+        "Reject a different UTI value with UTI_MISMATCH while preserving the first accepted NEW's complete typed UTI."
+      ]
+    },
+    {
+      "id": "rejection-continuity",
+      "visibility": "hidden",
+      "weight": 10,
+      "description": "Fail individual reports closed without corrupting or terminating stream processing.",
+      "checks": [
+        "Null reports, null actions, malformed UTI structures, and invalid versions yield MALFORMED_REPORT decisions.",
+        "Every rejected decision reports the unchanged state and does not replace the anchored UTI.",
+        "A valid later report is still evaluated and accepted when its state/action pair permits it."
+      ]
+    },
+    {
+      "id": "immutability-and-boundaries",
+      "visibility": "hidden",
+      "weight": 7,
+      "description": "Make batch results stable and handle stream-level boundaries explicitly.",
+      "checks": [
+        "A null top-level list throws IllegalArgumentException; empty input returns null UTI, no decisions, and NEVER_EXISTED.",
+        "The decision list is a defensive unmodifiable copy and the input list and CDM values remain unchanged.",
+        "Accepted decisions use NONE, rejected decisions use the precise non-NONE reason, and output has exactly one decision per input."
+      ]
+    }
+  ]
+}

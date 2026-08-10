@@ -200,6 +200,36 @@ for unresolved questions, and compact deterministic functions use at most one re
 mutation. Those changes post-date the table, so this benchmark is evidence for the problem and the
 design of the fix—not evidence that the final fast path is already faster.
 
+A fifth [four-arm benchmark](evals/benchmarks/evergreen-repo-lifecycle/) exercised that revised
+fast path with an evergreen repo state machine: a 35-business-day crawl over a bank holiday,
+permanent notice freeze, a separate 30-calendar-day LCR horizon, daily simple accrual, and an
+exactly-once re-rate/month-end collision. The task supplied the precise CDM termination and
+evergreen paths and kept calendars, accrual state, and resolved rate facts application-owned.
+
+| Arm | Agent-authored tests | Evaluator probes | Reviewed rubric | Agent work | Wall time |
+|---|---:|---:|---:|---:|---:|
+| Opus 5 + `cdm-dev` | 16/16 | 8/8 | 100/100 | 50 turns, 49 tool calls | 10m 53s |
+| Opus 5 control | 15/15 | 8/8 | 98/100 | 43 turns, 42 tool calls | 9m 31s |
+| Codex + `cdm-dev` | 6/6 | 8/8 | 100/100 | 28 completed items, 15 commands | 11m 7s |
+| Codex control | 3/3 | 8/8 | 99/100 | 23 completed items, 15 commands | 8m 50s |
+
+The frozen evaluator was a correctness tie: all four implementations preserved the typed CDM leaf,
+held the contractual tenor, froze after notice, entered the LCR horizon on the specified calendar
+date, and settled the old-rate bucket once before fresh new-rate accrual. An independent
+`claude-fable-5` source review and post-hoc probes found a small treatment advantage beyond those
+eight tests. Opus control accepted an incomplete principal and emitted settlement `Money` with no
+currency; the skill arm rejected it. Codex treatment added final-day, rejection, and immutability
+tests absent from its control. Fable therefore scored the controls 98 and 99, and both treatments 100.
+
+That modest quality lift cost time: the treatment arms were 14% slower for Opus and 26% slower for
+Codex. Codex repeated generated-source inspection after `cdm-source` had answered the same API
+questions. Opus used a comparatively rich payout/party/identifier fixture; it supported a required
+rate-non-interference assertion, but needed several extra builder inspections and corrections. The
+skill now treats exact paths as confirmation tasks, keeps generated source and `javap` as alternative
+views, and proves a leaf rebuild with focused neighboring-field or whole-object comparison. These
+refinements post-date the table. Controls had no skill directory, and both the original and Fable
+trace audits found no skill, evaluator, rubric, repository, or sibling access before evaluator reveal.
+
 ## Install
 
 The distributable skill is the `skills/cdm-dev/` directory; everything outside it is
@@ -276,7 +306,7 @@ evals/run-local --vendor all --quality-only --case price-quantity-model-api
 The local runner deliberately ignores API-key environment variables. Live model evals do not run
 in GitHub Actions and require no repository secrets. See [Local skill evaluations](evals/README.md)
 for authentication, focused commands, fixture caching, result review, and baseline promotion.
-The four code-writing use cases are also preserved as leakage-aware
+The five code-writing use cases are also preserved as leakage-aware
 [implementation forward benchmarks](evals/benchmarks/README.md), with fixed tasks, hidden rubrics,
 observed skill/control baselines, a shared CDM 7.0.0 seed, and `evals/check-benchmarks` validation.
 
