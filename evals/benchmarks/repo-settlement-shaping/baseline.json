@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "repo-settlement-shaping",
+  "recorded_at": "2026-08-10",
+  "fixture_version": "7.0.0",
+  "note": "Observed before the settlement-shaping guidance learned from this run was added to cdm-dev. Four isolated single-session arms used Claude Code 2.1.226 or Codex CLI 0.147.0 with local Claude Max or ChatGPT subscription authentication and API credential overrides removed. Authored tests were rerun after each arm exited; evaluator probes were added only after all arms were sealed. Claude metrics come from CLI result events. Codex wall times are JSONL creation-to-final-event approximations.",
+  "runs": [
+    {
+      "arm": "opus-5-with-skill",
+      "vendor": "claude",
+      "model": "claude-opus-5",
+      "skill": true,
+      "authored_tests": {"passed": 14, "total": 14},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "93/100",
+        "evaluator_probes": "4/6 pass",
+        "start_leg_direction": "pass",
+        "unresolved_party_rejected": "pass",
+        "one_asset_leg_rejected": "fail",
+        "non_dvp_first_leg_rejected": "fail"
+      },
+      "metrics": {
+        "sessions": 1,
+        "turns": 115,
+        "tool_calls": 114,
+        "shell_commands": 100,
+        "wall_seconds": 1435
+      }
+    },
+    {
+      "arm": "opus-5-control",
+      "vendor": "claude",
+      "model": "claude-opus-5",
+      "skill": false,
+      "authored_tests": {"passed": 11, "total": 11},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "86/100",
+        "evaluator_probes": "2/6 pass",
+        "start_leg_direction": "fail",
+        "unresolved_party_rejected": "fail",
+        "one_asset_leg_rejected": "fail",
+        "non_dvp_first_leg_rejected": "fail"
+      },
+      "metrics": {
+        "sessions": 1,
+        "turns": 94,
+        "tool_calls": 93,
+        "shell_commands": 73,
+        "wall_seconds": 1025
+      }
+    },
+    {
+      "arm": "codex-with-skill",
+      "vendor": "codex",
+      "model": "gpt-5.6-sol",
+      "skill": true,
+      "authored_tests": {"passed": 4, "total": 4},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "98/100",
+        "evaluator_probes": "6/6 pass",
+        "start_leg_direction": "pass",
+        "unresolved_party_rejected": "pass",
+        "one_asset_leg_rejected": "pass",
+        "non_dvp_first_leg_rejected": "pass"
+      },
+      "metrics": {
+        "top_level_turns": 1,
+        "completed_items": 152,
+        "commands": 131,
+        "wall_seconds_approximate": 1745
+      }
+    },
+    {
+      "arm": "codex-control",
+      "vendor": "codex",
+      "model": "gpt-5.6-sol",
+      "skill": false,
+      "authored_tests": {"passed": 4, "total": 4},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "92/100",
+        "evaluator_probes": "4/6 pass",
+        "start_leg_direction": "fail",
+        "unresolved_party_rejected": "fail",
+        "one_asset_leg_rejected": "pass",
+        "non_dvp_first_leg_rejected": "pass"
+      },
+      "metrics": {
+        "top_level_turns": 1,
+        "completed_items": 108,
+        "commands": 96,
+        "wall_seconds_approximate": 1223
+      }
+    }
+  ]
+}

@@ -3,6 +3,15 @@
 Load this reference for repurchase agreements, buy/sell-backs, securities lending, collateral,
 returns, billing, repricing, substitution, pair-off, shaping, partial delivery, and repo rolls.
 
+## Contents
+
+- [Re-query the active release](#re-query-the-active-release)
+- [Construct and qualify deliberately](#construct-and-qualify-deliberately)
+- [Separate trade shaping from settlement shaping](#separate-trade-shaping-from-settlement-shaping)
+- [Lifecycle and application boundary](#lifecycle-and-application-boundary)
+- [Non-vacuous tests](#non-vacuous-tests)
+- [Official context and freshness](#official-context-and-freshness)
+
 ## Re-query the active release
 
 Research baseline: these anchors and runtime behaviors were checked against FINOS CDM 7.0.0 on
@@ -38,6 +47,31 @@ repo and securities-lending function examples; directory presence is not a scena
 - Qualifiers are not guaranteed to be mutually exclusive. Evaluate the complete result set and
   assert both required and forbidden labels; do not route on the first result.
 
+## Separate trade shaping from settlement shaping
+
+Inspect a function's output type and populated primitive before reusing it. A function named for
+shaping can split one trade into shaped trades; that is not the same operation as splitting a
+delivery into capped settlement instructions.
+
+- For operational settlement shaping, preserve the original trade and represent each shape at the
+  transfer layer. Where the application treats two legs as DvP, keep the security and opposing cash
+  `TransferState` values together in one `TransferInstruction`; do not infer atomicity from the
+  function name alone.
+- Identify cash and collateral quantities by their observable/asset choices and reconcile them to
+  the payout underlier. Require the expected security choice rather than accepting any non-cash
+  asset. Repo examples can express both quantities with currency units, so list position or unit
+  alone is not a safe discriminator.
+- Require the ordered near/far `AssetLeg` pair, the expected delivery method on the selected leg,
+  and its settlement date. Establish role direction from the active release's examples and
+  functions. In the CDM 7.0.0 repo-and-bond baseline, the `AssetPayout` direction is the far
+  collateral return; reverse it for the start delivery. Resolve actual party references, fail
+  closed on a declared but unresolved wrapper, and make the paired cash direction exactly opposite.
+- Treat a bare cap as an amount in the collateral nominal's unit and use the agreed cash quantity as
+  authoritative. The 7.0.0 `AssetFlowBase.QuantityUnitExists` condition requires a financial unit
+  for an Instrument transfer, while the repo example carries currency-denominated bond nominal and
+  `FinancialUnitEnum` has no bond-face unit. Preserve the economics behind an explicit application
+  boundary; never relabel the amount as shares merely to satisfy validation.
+
 ## Lifecycle and application boundary
 
 CDM provides product predicates and lifecycle functions, but the application owns agreement and
@@ -58,6 +92,9 @@ an upgrade tripwire for the behavior your application relies on.
   references, validation, classification, and deterministic rerun.
 - Add a nearby negative for missing/changed collateral, `tradeType`, rate, payout location or
   termination terms. Demonstrate that the test fails for the plausible wrong representation.
+- For an ordered near/far flow, assert which leg supplied the date, delivery method and party
+  direction; mutate each independently and require the focused test to catch selection of the other
+  leg or an unsupported settlement method.
 - Discover complete input/output pairs in version-matched examples and require a content floor;
   do not hard-code a count from documentation or let an empty discovery set pass.
 

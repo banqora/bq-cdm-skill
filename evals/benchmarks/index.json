@@ -27,6 +27,16 @@
       "task": "benchmarks/locate-matching-engine/TASK.md",
       "rubric": "benchmarks/locate-matching-engine/rubric.json",
       "baseline": "benchmarks/locate-matching-engine/baseline.json"
+    },
+    {
+      "id": "repo-settlement-shaping",
+      "title": "Repo settlement shaping",
+      "kind": "implementation-forward-test",
+      "artifact_version": "7.0.0",
+      "language": "java",
+      "task": "benchmarks/repo-settlement-shaping/TASK.md",
+      "rubric": "benchmarks/repo-settlement-shaping/rubric.json",
+      "baseline": "benchmarks/repo-settlement-shaping/baseline.json"
     }
   ]
 }

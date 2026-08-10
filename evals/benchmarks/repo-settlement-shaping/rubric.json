@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "repo-settlement-shaping",
+  "total_score": 100,
+  "required_entry_points": [
+    "ShapeSettlement"
+  ],
+  "fatal_failures": [
+    "production or test compilation fails",
+    "the exact public static List<PrimitiveInstruction> ShapeSettlement(Trade, BigDecimal) entry point is absent",
+    "the implementation calls Create_ShapingInstruction or emits split/execution/quantity-change trade-shaping output",
+    "a valid public case produces a shape without exactly one security transfer and one cash transfer paired in the same TransferInstruction with opposing directions",
+    "the implementation invents a CDM 7.0.0 field, edits generated model code, replaces the security leg with cash, or silently relabels currency-denominated bond nominal as shares"
+  ],
+  "criteria": [
+    {
+      "id": "caller-contract",
+      "visibility": "public",
+      "weight": 10,
+      "description": "Expose and invoke the exact static Trade-based shaper.",
+      "checks": [
+        "Compile and invoke ShapeSettlement(Trade, BigDecimal) directly.",
+        "Return a non-null ordered List<PrimitiveInstruction>."
+      ]
+    },
+    {
+      "id": "rounding-residual-case",
+      "visibility": "public",
+      "weight": 20,
+      "description": "Shape 170m/168,734,567.89 at a 50m cap and reconcile the cent residual.",
+      "checks": [
+        "Return collateral shapes 50m, 50m, 50m, 20m in order.",
+        "Return cash shapes 49,627,814.09, 49,627,814.09, 49,627,814.09, 19,851,125.62.",
+        "Every collateral amount is positive and no greater than the cap.",
+        "Collateral and cash sums exactly equal their respective inputs."
+      ]
+    },
+    {
+      "id": "exact-cap-multiple",
+      "visibility": "public",
+      "weight": 10,
+      "description": "Do not emit a zero remainder when the nominal is an exact cap multiple.",
+      "checks": [
+        "100m at a 50m cap produces exactly two 50m shapes.",
+        "Each cash leg is 49,625,000.00 and no zero-sized instruction exists."
+      ]
+    },
+    {
+      "id": "under-cap-economic-identity",
+      "visibility": "public",
+      "weight": 10,
+      "description": "An under-cap settlement remains one economically identical DvP pair.",
+      "checks": [
+        "30m at a 50m cap produces exactly one instruction.",
+        "Collateral remains 30m and cash remains 29,775,000.33 without recomputation or rescaling.",
+        "Security, cash currency, date, and parties are preserved."
+      ]
+    },
+    {
+      "id": "per-shape-dvp-topology",
+      "visibility": "public",
+      "weight": 10,
+      "description": "Represent each shape as one transfer primitive containing its paired legs.",
+      "checks": [
+        "Every PrimitiveInstruction has transfer populated and split/execution/quantityChange absent.",
+        "Each TransferInstruction has exactly two TransferState entries: one Security and one Cash.",
+        "Both are ScheduledTransfer values with required quantity, asset, date, payerReceiver, and PRINCIPAL transfer type."
+      ]
+    },
+    {
+      "id": "repo-model-fidelity",
+      "visibility": "hidden",
+      "weight": 10,
+      "description": "Traverse and disambiguate the exact CDM 7.0.0 repo topology.",
+      "checks": [
+        "Require one TradeLot and select unique cash and security-observable PriceQuantity objects structurally rather than by list position or currency unit alone.",
+        "Traverse economicTerms.collateral.collateralPortfolio.value.collateralPosition.product.transferableProduct.economicTerms.payout.assetPayout.",
+        "Use the AssetPayout underlier and prove its identifier agrees with the security observable.",
+        "A reordered PriceQuantity list produces identical results."
+      ]
+    },
+    {
+      "id": "start-leg-settlement-fidelity",
+      "visibility": "hidden",
+      "weight": 10,
+      "description": "Generate the near/start DvP leg rather than the far/repurchase leg.",
+      "checks": [
+        "Require the first ordered AssetLeg to be DELIVERY_VERSUS_PAYMENT.",
+        "Use its settlement date for both transfers and do not use the far-leg date.",
+        "Reverse the AssetPayout payer/receiver for the start collateral leg and make cash exactly opposite.",
+        "Resolve and preserve actual counterparty references rather than substituting Party1/Party2 labels."
+      ]
+    },
+    {
+      "id": "authoritative-cash-and-numeric-integrity",
+      "visibility": "hidden",
+      "weight": 7,
+      "description": "Use the agreed cash PriceQuantity and exact BigDecimal allocation.",
+      "checks": [
+        "An intentionally inconsistent asset price does not affect the output cash total.",
+        "A HALF_EVEN tie fixture, such as cash 100.05 split 50/50, gives 50.02 then 50.03.",
+        "The final cash leg is original cash minus prior rounded legs.",
+        "No calculation passes through double, float, or a binary floating-point constructor."
+      ]
+    },
+    {
+      "id": "validation-and-ambiguity",
+      "visibility": "hidden",
+      "weight": 6,
+      "description": "Fail clearly instead of guessing or looping on invalid input.",
+      "checks": [
+        "Reject zero and negative caps; null inputs fail with a meaningful message.",
+        "Reject multi-lot trades and missing or duplicate cash/security quantity candidates.",
+        "Reject missing or multiple collateral products/AssetPayouts, fewer than two AssetLegs, a non-DvP first leg, mismatched security identifiers, or unresolved counterparties.",
+        "Do not return partial output before reporting an invalid shape."
+      ]
+    },
+    {
+      "id": "application-boundary",
+      "visibility": "hidden",
+      "weight": 4,
+      "description": "Handle the CDM bond-nominal unit gap explicitly.",
+      "checks": [
+        "Document that bare maxShapeSize is interpreted in the collateral nominal's unit and that the specified rounding policy is USD cents.",
+        "Document that the distribution's currency-denominated bond nominal conflicts with AssetFlowBase.QuantityUnitExists for an Instrument transfer.",
+        "Preserve the economic nominal and isolate the known validation limitation; do not silently map it to SHARE or another invented unit.",
+        "Do not require full recursive validation of only that known incompatible rule; all other required output fields should be populated."
+      ]
+    },
+    {
+      "id": "side-effect-and-test-integrity",
+      "visibility": "hidden",
+      "weight": 3,
+      "description": "Keep the operation side-effect free and tests non-vacuous.",
+      "checks": [
+        "The input Trade is unchanged after success and failure.",
+        "Tests invoke the exact public method and assert the fixture's one-lot, two-quantity, nested-AssetPayout shape before checking output."
+      ]
+    }
+  ]
+}

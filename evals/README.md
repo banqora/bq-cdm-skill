@@ -120,10 +120,10 @@ for human review.
 
 ## Run implementation forward benchmarks
 
-The tokenisation-classifier and locate-matcher implementation cases are preserved under
-[`evals/benchmarks`](benchmarks/README.md). Each package contains a model-facing `TASK.md`, a fixed
-public/hidden rubric, and its observed baseline. Both use the shared minimal Java 21/CDM 7.0.0
-Gradle seed and the same checksummed binary/source fixtures as the quality suite.
+The tokenisation-classifier, locate-matcher, and repo-settlement-shaping implementation cases are
+preserved under [`evals/benchmarks`](benchmarks/README.md). Each package contains a model-facing
+`TASK.md`, a fixed public/hidden rubric, and its observed baseline. All three use the shared minimal
+Java 21/CDM 7.0.0 Gradle seed and the same checksummed binary/source fixtures as the quality suite.
 
 Validate the saved benchmark contract without calling a model:
 

@@ -130,6 +130,42 @@ forbids collapsing an unresolved declaration into permissive absence; and prescr
 negative cross-root identity probes. These instructions were added after the run, so the table is
 the honest pre-fix result, not evidence that the revision has already improved model behavior.
 
+A third [isolated four-arm test](evals/benchmarks/repo-settlement-shaping/) on 2026-08-10 asked the
+same two models to shape a repo's start-leg settlement into capped, paired DvP transfer
+instructions. The arithmetic included an exact cap multiple, an under-cap case, and a cent-rounding
+residual. All arms used the same pinned CDM 7.0.0 project and local subscriptions; model-authored
+tests were rerun before evaluator tests were added.
+
+| Arm | Agent-authored tests | Evaluator probes | Reviewed rubric | Agent work | Wall time |
+|---|---:|---:|---:|---:|---:|
+| Opus 5 + `cdm-dev` | 14/14 | 4/6 | 93/100 | 115 turns, 114 tool calls | 23m 55s |
+| Opus 5 control | 11/11 | 2/6 | 86/100 | 94 turns, 93 tool calls | 17m 5s |
+| Codex + `cdm-dev` | 4/4 | 6/6 | 98/100 | 152 completed items, 131 commands | about 29m 5s |
+| Codex control | 4/4 | 4/6 | 92/100 | 108 completed items, 96 commands | about 20m 23s |
+
+The six evaluator probes covered reordered `PriceQuantity` entries, a `HALF_EVEN` tie, start-leg
+party direction, an empty unresolved party reference, an incomplete one-leg payout, and a non-DvP
+near leg. The same correctness gap appeared for both vendors: each skill arm reversed the
+`AssetPayout` direction for the repo's start collateral delivery and rejected the empty unresolved
+party wrapper; each control emitted the far/repurchase direction and accepted the unresolved
+wrapper. Every arm's own tests were green, and both control suites asserted the wrong direction,
+which is exactly the kind of plausible CDM error a compile-and-test result does not expose.
+
+This was a correctness win, not a speed win: both controls finished faster with less model work.
+The pre-run skill did not contain a worked settlement-shaping answer. It routed the treatment arms
+to the version-matched securities-financing topology, shipped repo examples, Rune declarations,
+and fixture/negative-control checks. Run logs show both treatment arms using those sources; the Opus
+arm also mutation-tested its party reversal. The result supports using the skill when model-semantic
+correctness matters more than raw completion time, while remaining only one paired run per model.
+
+The test also found two missing guards: the Opus skill arm accepted an incomplete one-leg payout
+and a non-DvP near leg. After recording the baseline, the securities-financing guide was extended
+to distinguish trade shaping from settlement shaping, require the ordered near/far and delivery
+method checks, preserve start-leg direction, classify quantity candidates structurally, and state
+the CDM 7.0.0 bond-nominal unit limitation. The generic testing guide now covers exact-decimal
+partitioning and residual allocation. These revisions post-date the table and must not be credited
+to it.
+
 ## Install
 
 The distributable skill is the `skills/cdm-dev/` directory; everything outside it is
@@ -206,7 +242,7 @@ evals/run-local --vendor all --quality-only --case price-quantity-model-api
 The local runner deliberately ignores API-key environment variables. Live model evals do not run
 in GitHub Actions and require no repository secrets. See [Local skill evaluations](evals/README.md)
 for authentication, focused commands, fixture caching, result review, and baseline promotion.
-The two code-writing use cases are also preserved as leakage-aware
+The three code-writing use cases are also preserved as leakage-aware
 [implementation forward benchmarks](evals/benchmarks/README.md), with fixed tasks, hidden rubrics,
 observed skill/control baselines, a shared CDM 7.0.0 seed, and `evals/check-benchmarks` validation.
 

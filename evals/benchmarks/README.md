@@ -1,8 +1,14 @@
 # Implementation forward benchmarks
 
-These benchmarks preserve the two implementation tasks used to forward-test `cdm-dev` against
+These benchmarks preserve the three implementation tasks used to forward-test `cdm-dev` against
 clean CDM 7.0.0 projects. They complement `evals/quality.json`, which grades read-only answers;
 these cases require an agent to write and test Java code.
+
+## Cases
+
+- [Settlement-level tokenisation classifier](settlement-tokenisation-classifier/)
+- [Locate matching engine](locate-matching-engine/)
+- [Repo settlement shaping](repo-settlement-shaping/)
 
 ## Contents
 

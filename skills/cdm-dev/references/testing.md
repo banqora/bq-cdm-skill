@@ -51,6 +51,12 @@ Use boundary values for decimal fractions, percentages, basis points, dates, and
 conversions. Include a value that would remain plausible under the most likely wrong
 conversion.
 
+For a capped or partitioned economic allocation, keep the agreed total authoritative. Allocate and
+round non-final pieces in the currency's minor unit, then make the final piece absorb the exact
+decimal residual. Test an exact cap multiple, an under-cap input, a rounding tie, reordered source
+candidates, and a deliberately inconsistent derived price; assert both per-piece bounds and exact
+aggregate reconciliation without passing through binary floating point.
+
 ## Use positive and negative controls
 
 A new check is not established until it has been observed failing for the defect it guards.
