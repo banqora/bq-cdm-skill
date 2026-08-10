@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "csa-margin-call-calculator",
+  "recorded_at": "2026-08-10",
+  "fixture_version": "7.0.0",
+  "note": "Four isolated single-session arms used Claude Code 2.1.226 or Codex CLI 0.147.0 with local Claude Max or ChatGPT subscription authentication and all API credential overrides removed. The treatment snapshot included the first bounded-evidence revision: batched model questions, an early typed compile, and runtime escalation only when required. Authored tests were independently rerun before the eight evaluator tests were copied into each sealed arm. Opus control passed six: it accepted a CollateralRounding with no required currency and validated only the increment selected by that call, producing its 97/100 score. The other arms passed all eight. The run exposed broad-reference loading and signature-only compilation as treatment overhead; the more explicit resolved-input fast path and one-representative-mutation limit were added after these runs and are not credited to them. Claude metrics come from result events; Codex wall times are measured process times.",
+  "runs": [
+    {
+      "arm": "opus-5-with-skill",
+      "vendor": "claude",
+      "model": "claude-opus-5",
+      "skill": true,
+      "authored_tests": {"passed": 13, "total": 13},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "100/100",
+        "evaluator_probes": "8/8 pass",
+        "return_direction_and_rounding": "pass",
+        "mta_equality": "pass",
+        "independent_amount": "pass",
+        "separate_rounding_elections": "pass"
+      },
+      "metrics": {
+        "sessions": 1,
+        "effort": "high",
+        "turns": 34,
+        "tool_calls": 32,
+        "shell_commands": 25,
+        "tool_calls_before_first_edit": 22,
+        "wall_seconds": 377
+      }
+    },
+    {
+      "arm": "opus-5-control",
+      "vendor": "claude",
+      "model": "claude-opus-5",
+      "skill": false,
+      "authored_tests": {"passed": 21, "total": 21},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "97/100",
+        "evaluator_probes": "6/8 pass",
+        "return_direction_and_rounding": "pass",
+        "mta_equality": "pass",
+        "independent_amount": "pass",
+        "missing_rounding_currency_rejected": "fail",
+        "unselected_invalid_increment_rejected": "fail"
+      },
+      "metrics": {
+        "sessions": 1,
+        "effort": "high",
+        "turns": 22,
+        "tool_calls": 21,
+        "shell_commands": 18,
+        "tool_calls_before_first_edit": 15,
+        "wall_seconds": 250
+      }
+    },
+    {
+      "arm": "codex-with-skill",
+      "vendor": "codex",
+      "model": "gpt-5.6-sol",
+      "skill": true,
+      "authored_tests": {"passed": 10, "total": 10},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "100/100",
+        "evaluator_probes": "8/8 pass",
+        "return_direction_and_rounding": "pass",
+        "mta_equality": "pass",
+        "independent_amount": "pass",
+        "separate_rounding_elections": "pass"
+      },
+      "metrics": {
+        "top_level_turns": 1,
+        "reasoning_effort": "max",
+        "completed_items": 40,
+        "commands": 27,
+        "file_changes": 5,
+        "completed_items_before_first_edit": 15,
+        "wall_seconds": 497
+      }
+    },
+    {
+      "arm": "codex-control",
+      "vendor": "codex",
+      "model": "gpt-5.6-sol",
+      "skill": false,
+      "authored_tests": {"passed": 9, "total": 9},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "100/100",
+        "evaluator_probes": "8/8 pass",
+        "return_direction_and_rounding": "pass",
+        "mta_equality": "pass",
+        "independent_amount": "pass",
+        "separate_rounding_elections": "pass"
+      },
+      "metrics": {
+        "top_level_turns": 1,
+        "reasoning_effort": "max",
+        "completed_items": 24,
+        "commands": 17,
+        "file_changes": 1,
+        "completed_items_before_first_edit": 15,
+        "wall_seconds": 309
+      }
+    }
+  ]
+}

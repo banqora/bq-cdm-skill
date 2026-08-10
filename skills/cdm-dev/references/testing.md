@@ -29,9 +29,10 @@ Then assert validation, qualification, equality, or determinism. Two hollow obje
 equal is not a useful round-trip test.
 
 When a hand-built fixture claims a product-family shape, verify that claim separately from the
-code under test: run the release validator and applicable `Qualify_*` where practical. If the
-fixture is intentionally partial, label it and pair it with a version-matched example or focused
-source-derived path probe before treating its shape as model-conformance evidence.
+code under test. For a complete CDM root, run the release validator and applicable `Qualify_*`
+where practical. If the fixture is intentionally partial, label it and pair it with a
+version-matched example, focused source-derived path probe, or targeted data rule; do not expand it
+into a fully qualifying document unless acceptance depends on that claim.
 
 ## Assert economics as well as structure
 
@@ -59,9 +60,11 @@ aggregate reconciliation without passing through binary floating point.
 
 ## Use positive and negative controls
 
-A new check is not established until it has been observed failing for the defect it guards.
-Temporarily break the relevant input or pipeline, run the focused test, verify the failure is
-specific and actionable, then restore it.
+A load-bearing check should be observed failing for the defect it guards. Temporarily break the
+relevant input or pipeline, run the focused test, verify the failure is specific and actionable,
+then restore it. For a compact deterministic function, use direct assertions against plausible
+wrong outputs and at most one representative mutation to verify the harness; do not mutation-run
+every branch already distinguished by those assertions.
 
 Useful negative controls include:
 
@@ -125,8 +128,10 @@ normalizer. Compare typed content, then separately approve expected textual cano
 ## Test functions through real wiring
 
 Generated functions can depend on injected helpers. Use the project's production-equivalent
-dependency injection, reference resolver, and post-processor. Expose invocation errors while
-diagnosing; do not turn exceptions into an empty qualifier list.
+dependency injection, reference resolver, and post-processor when the code under test actually
+invokes those functions. Expose invocation errors while diagnosing; do not turn exceptions into an
+empty qualifier list. Do not wire a generated runtime merely to perform application-owned
+arithmetic, selection, or mechanical builder conversion that a typed focused test can establish.
 
 When the task names a public function, method, command, or wire signature, compile and invoke that
 exact entry point in a focused test. A renamed class containing a more idiomatic helper is not a

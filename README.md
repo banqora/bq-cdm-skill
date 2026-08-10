@@ -166,6 +166,40 @@ the CDM 7.0.0 bond-nominal unit limitation. The generic testing guide now covers
 partitioning and residual allocation. These revisions post-date the table and must not be credited
 to it.
 
+A fourth [four-arm benchmark](evals/benchmarks/csa-margin-call-calculator/) tested a smaller
+application-owned calculation: derive a delivery, return, or no-call result from resolved CSA
+threshold, MTA, independent-amount, and asymmetric rounding elections. It deliberately required
+CDM `Money` and `CollateralRounding` but not a complete agreement tree or generated runtime.
+
+| Arm | Agent-authored tests | Evaluator probes | Reviewed rubric | Agent work | Wall time |
+|---|---:|---:|---:|---:|---:|
+| Opus 5 + `cdm-dev` | 13/13 | 8/8 | 100/100 | 34 turns, 32 tool calls | 6m 17s |
+| Opus 5 control | 21/21 | 6/8 | 97/100 | 22 turns, 21 tool calls | 4m 10s |
+| Codex + `cdm-dev` | 10/10 | 8/8 | 100/100 | 40 completed items, 27 commands | 8m 17s |
+| Codex control | 9/9 | 8/8 | 100/100 | 24 completed items, 17 commands | 5m 9s |
+
+Every arm got the business-critical behavior right: MTA is applied before rounding, equality is
+actionable, independent amount is added after flooring unsecured exposure, and a GBP 1.73m return
+rounds down to GBP 1.7m rather than up to GBP 1.8m. Opus control nevertheless missed two boundary
+guards: it accepted the CDM-required rounding currency as absent and validated only the increment
+selected by that call. The corresponding evaluator tests failed; the other three arms passed all
+eight.
+
+The skill therefore added a small completeness/validation win for Opus, but the broad-reference
+cost was not proportionate to this narrow contract. The treatment arms were 51% slower for Opus
+and 61% slower for Codex. Logs made the overhead concrete: the treatment route loaded up to 873
+lines from four broad references; Opus made 22 tool calls before its first edit versus 15 for
+control, while Codex compiled a signature-only skeleton before inspecting the getters it needed.
+Both treatment arms also performed extra mutation/check cycles after their focused suites were
+green.
+
+The skill was tightened from that evidence. A resolved-input calculation now has a self-contained
+fast path: one combined declaration/builder query, one compiled vertical slice that exercises a
+real getter and branch, and one focused test. Broad legal, testing, and workflow guides are reserved
+for unresolved questions, and compact deterministic functions use at most one representative
+mutation. Those changes post-date the table, so this benchmark is evidence for the problem and the
+design of the fix—not evidence that the final fast path is already faster.
+
 ## Install
 
 The distributable skill is the `skills/cdm-dev/` directory; everything outside it is
@@ -242,7 +276,7 @@ evals/run-local --vendor all --quality-only --case price-quantity-model-api
 The local runner deliberately ignores API-key environment variables. Live model evals do not run
 in GitHub Actions and require no repository secrets. See [Local skill evaluations](evals/README.md)
 for authentication, focused commands, fixture caching, result review, and baseline promotion.
-The three code-writing use cases are also preserved as leakage-aware
+The four code-writing use cases are also preserved as leakage-aware
 [implementation forward benchmarks](evals/benchmarks/README.md), with fixed tasks, hidden rubrics,
 observed skill/control baselines, a shared CDM 7.0.0 seed, and `evals/check-benchmarks` validation.
 

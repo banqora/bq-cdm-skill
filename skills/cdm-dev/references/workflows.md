@@ -8,6 +8,7 @@ CDM change. Project names differ, but the evidence path is stable.
 - [Orient in an unfamiliar project](#orient-in-an-unfamiliar-project)
 - [Add or change an input mapping](#add-or-change-an-input-mapping)
 - [Build or change a CDM document](#build-or-change-a-cdm-document)
+- [Implement an application-owned calculation](#implement-an-application-owned-calculation)
 - [Implement or change a lifecycle event](#implement-or-change-a-lifecycle-event)
 - [Debug a dropped or changed value](#debug-a-dropped-or-changed-value)
 - [Change validation or qualification handling](#change-validation-or-qualification-handling)
@@ -76,6 +77,26 @@ and test each route. Do not default into a convenient CDM choice merely because 
 
 When output snapshots change, inspect the complete semantic diff. Refreshing a baseline is
 the last step, not the diagnosis.
+
+## Implement an application-owned calculation
+
+1. Lock the caller-visible signature and identify the smallest typed input facts and output
+   invariants. Separate facts read from CDM from parameters, policy, and result types owned by the
+   application.
+2. Batch one model-source and generated-builder pass for the relevant paths, choices,
+   cardinalities, units, signs, and descriptions. If the task already names its CDM types and
+   fields, query those exact declarations rather than reading surrounding files. Record any fact
+   the active release cannot represent instead of searching for a convenient neighboring field.
+3. Build the smallest representative input and compile a production vertical slice immediately.
+   It must exercise a real getter or builder and one branch; an empty signature-only skeleton does
+   not test the API. Use compiler errors to drive any remaining generated-builder inspection.
+4. Implement the calculation with exact numeric types and explicit boundary behavior. Do not call a
+   generated function with a similar name unless its declared input, output, and semantics match.
+5. Test the clean case, every branch boundary, sign or direction asymmetry, invalid parameters, and
+   a plausible wrong implementation. Assert that the input is unchanged.
+6. Run a targeted CDM rule or generated function only for a model claim it owns. Use full dependency
+   injection, qualification, serialization, or whole-root validation only if the production path or
+   acceptance contract requires it.
 
 ## Implement or change a lifecycle event
 

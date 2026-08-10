@@ -33,20 +33,33 @@ If CDM is not installed, its distribution is unclear, or a language must be sele
 2. Trace the value end to end with `rg`: external input, normalization or mapping, generated
    builder, typed CDM object, serialization, validation/functions, and downstream storage or
    API behavior. Name any project-specific stages instead of treating them as CDM.
-3. Query the version-matched `.rosetta` source. Resolve `scripts/cdm-source` relative to this
-   `SKILL.md`; it can use the matching `cdm-java` JAR purely as a source container even when
-   the application uses another language. Read [Rosetta and generated code](references/rosetta.md).
-4. Add or tighten the smallest test that proves the requested behavior. Assert that meaningful
+3. Query version-matched `.rosetta` source with `scripts/cdm-source` resolved from this `SKILL.md`;
+   a matching `cdm-java` JAR can be only the source container. Batch questions, open owning
+   declarations, and use [Rosetta and generated code](references/rosetta.md) only for remaining
+   declaration, generated-API, or runtime ambiguity.
+4. Build or compile the smallest typed vertical slice early: exercise at least one production
+   getter or builder and the first real branch. Compiling empty directories, records, or signatures
+   alone is not evidence. Let errors identify API details that still need inspection.
+5. Add or tighten the smallest test that proves the requested behavior. Assert that meaningful
    content survived, the changed economic leaf is correct, and a close negative case does not
    pass accidentally.
-5. Change the narrowest owning layer. Keep source-system conversions in the application,
+6. Change the narrowest owning layer. Keep source-system conversions in the application,
    model semantics in generated CDM code, and explicit business guards labelled as application
    policy.
-6. Run the repository's focused check, then its normal offline suite and formatter/linter.
+7. Run the repository's focused check, then its normal offline suite and formatter/linter.
    Inspect data-driven inputs and snapshot diffs; do not invent a universal build command.
 
-Use [Day-to-day workflows](references/workflows.md) for concrete routes through mapping,
-object construction, lifecycle functions, validation, serialization, and upgrades.
+Bound the evidence pass before coding: list the input path and choices, units or direction, output
+contract, and owning layer. Stop when each required claim has one version-matched source and the
+smallest compile or test confirms it. Escalate from typed construction, to a targeted data rule or
+function probe, to full runtime wiring and whole-object validation only when the requested behavior
+depends on that layer. Do not make a partial application fixture fully qualify merely because the
+runtime is available.
+
+For a typed application-owned calculation with supplied CDM types and resolved values, the steps
+above are the fast path: one combined declaration/builder query, one real vertical slice, then its
+focused test. Load no general workflow, testing, or legal guide unless a question requires it. Use
+[Day-to-day workflows](references/workflows.md) for broader integration routes.
 
 ## Load only what the task needs
 
@@ -58,8 +71,8 @@ object construction, lifecycle functions, validation, serialization, and upgrade
   lending, collateral, qualification, and lifecycle traps.
 - [Transferable assets and cash securities](references/assets-and-cash-securities.md): cash,
   bonds, loans, listed derivatives, money-market instruments, and digital-asset boundaries.
-- [Legal agreements and contracts](references/legal-contracts.md): identification, governing
-  relationships, elections, collateral documents, formation, amendment, provenance, and gaps.
+- [Legal agreements and contracts](references/legal-contracts.md): use when representing, mapping,
+  or resolving agreements and elections—not merely when resolved legal values feed a calculation.
 - [Digital regulatory reporting](references/regulatory-reporting.md): DRR acquisition and
   compatibility, translate/enrich/transform/project, policy seams, regimes, evidence, and tests.
 - [Rosetta and generated code](references/rosetta.md): model declarations, generated APIs,
@@ -68,8 +81,8 @@ object construction, lifecycle functions, validation, serialization, and upgrade
   ordinary mapping, document, lifecycle, validation, or upgrade changes.
 - [JSON dialects](references/dialects.md): legacy/Rune detection, dropped fields, references,
   pruning, round trips, and migration.
-- [Testing CDM code](references/testing.md): non-vacuous assertions, fixtures, build inputs,
-  negative controls, and offline/live boundaries.
+- [Testing CDM code](references/testing.md): use for fixture, mapping, runtime, round-trip, build,
+  or corpus uncertainty; a supplied focused function contract can stay on the fast path above.
 - [ISDA corpus conformance](references/conformance.md): discovering shipped scenarios and
   comparing application execution with reference outputs.
 - [Getting started with CDM](references/onboarding.md): distributions, language options,

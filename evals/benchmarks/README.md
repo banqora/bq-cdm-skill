@@ -1,6 +1,6 @@
 # Implementation forward benchmarks
 
-These benchmarks preserve the three implementation tasks used to forward-test `cdm-dev` against
+These benchmarks preserve the implementation tasks used to forward-test `cdm-dev` against
 clean CDM 7.0.0 projects. They complement `evals/quality.json`, which grades read-only answers;
 these cases require an agent to write and test Java code.
 
@@ -9,6 +9,7 @@ these cases require an agent to write and test Java code.
 - [Settlement-level tokenisation classifier](settlement-tokenisation-classifier/)
 - [Locate matching engine](locate-matching-engine/)
 - [Repo settlement shaping](repo-settlement-shaping/)
+- [CSA margin-call calculator](csa-margin-call-calculator/)
 
 ## Contents
 
@@ -16,6 +17,7 @@ these cases require an agent to write and test Java code.
 - `fixtures/java-21-cdm-7.0.0/`: shared minimal Gradle seed.
 - `<benchmark>/TASK.md`: the only benchmark-specific file shown to the implementation agent.
 - `<benchmark>/rubric.json`: fixed public and hidden evaluator criteria.
+- `<benchmark>/evaluator/`: evaluator-owned tests copied in only after an arm is sealed, when saved.
 - `<benchmark>/baseline.json`: observed pre-revision runs, including model/skill arms and effort.
 
 ## Isolation protocol

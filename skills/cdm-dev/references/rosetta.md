@@ -54,6 +54,11 @@ then the type's `Meta` registry and only the validators or functions registered 
 independent reads and stop once each reported claim maps to an authoritative artefact; do not
 inventory neighboring generated classes without a question they can answer.
 
+Compile after that first pass. Use the compiler to name the remaining generated-API uncertainty,
+then inspect only that interface or builder section. Prefer one combined source query and one
+focused compile over a sequence of whole-file dumps; repeated reads of the same generated type are
+a signal to narrow the question or keep a small probe.
+
 ## Read a type
 
 For every field involved, record:
@@ -132,18 +137,28 @@ Generated functions may rely on injected dependencies. Instantiate them through 
 wiring the consuming project uses, or reproduce the release's own test/resource wiring.
 Direct construction that leaves dependencies null is not a model result.
 
+Wire that runtime only when the generated function's behavior is part of the requested path. For
+application-owned selection, arithmetic, or mechanical construction, prove the model boundary and
+test the application code directly. Do not invoke qualifiers, full-root validation, or dependency
+injection as general ceremony; use a targeted rule or function probe when it is the smallest
+executable evidence for a specific claim.
+
 ## Turn uncertainty into a focused probe
 
 When the API, mapper, validator, or function behavior is uncertain:
 
 1. Find the project's active dependency declaration and existing usage.
-2. Inspect the relevant Rosetta declaration and generated class metadata.
-3. Write the smallest typed compile/runtime probe in the project's normal test framework.
-4. Assert meaningful input survived and include a close negative control. For cross-root
+2. Batch the relevant Rosetta declarations, conditions, and direct callees into one bounded pass.
+3. Build the smallest typed object and compile immediately; inspect generated metadata only for
+   questions the compiler or wire contract leaves open.
+4. Add the narrowest runtime step needed: no generated runtime for application-only behavior, one
+   data rule for a condition, one function for a transformation, or full project wiring only for an
+   end-to-end runtime claim.
+5. Assert meaningful input survived and include a close negative control. For cross-root
    references, include both different local keys resolving to the same domain identity and the
    same local key resolving to different identities. Where absence changes policy, also exercise a
    declared but unresolved reference and require the application to fail closed.
-5. Keep the probe as a regression test if the behavior is load-bearing; otherwise move its
+6. Keep the probe as a regression test if the behavior is load-bearing; otherwise move its
    conclusion into the owning production test or report.
 
 Never edit generated dependency classes. Change the application's integration, its pinned

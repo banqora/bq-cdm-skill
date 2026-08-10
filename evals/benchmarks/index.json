@@ -37,6 +37,16 @@
       "task": "benchmarks/repo-settlement-shaping/TASK.md",
       "rubric": "benchmarks/repo-settlement-shaping/rubric.json",
       "baseline": "benchmarks/repo-settlement-shaping/baseline.json"
+    },
+    {
+      "id": "csa-margin-call-calculator",
+      "title": "CSA margin-call calculator",
+      "kind": "implementation-forward-test",
+      "artifact_version": "7.0.0",
+      "language": "java",
+      "task": "benchmarks/csa-margin-call-calculator/TASK.md",
+      "rubric": "benchmarks/csa-margin-call-calculator/rubric.json",
+      "baseline": "benchmarks/csa-margin-call-calculator/baseline.json"
     }
   ]
 }

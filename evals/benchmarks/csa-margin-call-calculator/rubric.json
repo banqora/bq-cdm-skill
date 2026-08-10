@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "csa-margin-call-calculator",
+  "total_score": 100,
+  "required_entry_points": [
+    "benchmark.margin.MarginCallCalculator.ComputeMarginCall"
+  ],
+  "fatal_failures": [
+    "production or test compilation fails",
+    "the exact public static ComputeMarginCall(Money, Money, CsaElections) entry point or required public support types are absent",
+    "the return case is emitted as DELIVERY or is rounded up to 1.8m",
+    "the implementation passes a monetary calculation through double or float",
+    "the implementation invents a CDM 7.0.0 field, edits generated model code, or silently ignores mixed currencies"
+  ],
+  "criteria": [
+    {
+      "id": "caller-contract",
+      "visibility": "public",
+      "weight": 10,
+      "description": "Expose the exact calculator contract and a caller-visible direction plus Money magnitude.",
+      "checks": [
+        "Compile and invoke benchmark.margin.MarginCallCalculator.ComputeMarginCall(Money, Money, CsaElections) directly.",
+        "Direction contains DELIVERY, RETURN, and NONE; result amount is a non-null, non-negative CDM Money magnitude."
+      ]
+    },
+    {
+      "id": "clean-delivery-case",
+      "visibility": "public",
+      "weight": 10,
+      "description": "Calculate the clean 12.3m versus 10m delivery case.",
+      "checks": [
+        "Return DELIVERY GBP 2.3m for exposure 12.3m, threshold 10m, posted/IA zero, and MTA 500k.",
+        "An already exact 100k multiple is not changed."
+      ]
+    },
+    {
+      "id": "mta-suppression-case",
+      "visibility": "public",
+      "weight": 10,
+      "description": "Suppress a raw amount strictly below MTA.",
+      "checks": [
+        "Return NONE and zero for a 400k raw delta under a 500k MTA.",
+        "Do not round the 400k into an actionable demand before applying MTA."
+      ]
+    },
+    {
+      "id": "asymmetric-return-case",
+      "visibility": "public",
+      "weight": 15,
+      "description": "Flip direction and round the return magnitude down.",
+      "checks": [
+        "For credit support 3.27m and posted 5m, return Direction.RETURN.",
+        "Round the 1.73m return down to 1.7m, not up to 1.8m.",
+        "Expose 1.7m as a non-negative magnitude rather than a signed Money value."
+      ]
+    },
+    {
+      "id": "formula-and-independent-amount",
+      "visibility": "hidden",
+      "weight": 12,
+      "description": "Implement the stated CSA formula, including additive independent amount.",
+      "checks": [
+        "Compute max(0, exposure - threshold) before adding independent amount.",
+        "An exposure below threshold with a positive IA can still create a delivery.",
+        "A negative exposure never makes the pre-IA exposure component negative."
+      ]
+    },
+    {
+      "id": "mta-boundaries-and-zero",
+      "visibility": "hidden",
+      "weight": 10,
+      "description": "Apply MTA to the absolute raw delta with the correct strict boundary.",
+      "checks": [
+        "A raw delta exactly equal to MTA remains actionable.",
+        "The same strict boundary applies to returns.",
+        "A zero delta returns NONE even when MTA is zero."
+      ]
+    },
+    {
+      "id": "rounding-election-fidelity",
+      "visibility": "hidden",
+      "weight": 15,
+      "description": "Use the separate CDM delivery and return rounding elections exactly.",
+      "checks": [
+        "Delivery uses deliveryAmount and deliveryDirection; return uses returnAmount and returnDirection.",
+        "Distinct delivery and return increments are not conflated.",
+        "UP behaves as ceiling and DOWN as floor on non-negative magnitudes; exact multiples remain exact.",
+        "No path uses Math.round, setScale as a substitute for increment rounding, double, or float."
+      ]
+    },
+    {
+      "id": "cdm-money-and-currency-fidelity",
+      "visibility": "hidden",
+      "weight": 10,
+      "description": "Use CDM 7.0.0 Money and CollateralRounding without parallel model copies.",
+      "checks": [
+        "Read Money.value and UnitType.currency through the generated API and build the output as cdm.observable.asset.Money.",
+        "Require exposure, posted collateral, threshold, MTA, IA, and CollateralRounding to use the same currency.",
+        "Preserve the base currency in both actionable and zero results."
+      ]
+    },
+    {
+      "id": "validation-and-side-effects",
+      "visibility": "hidden",
+      "weight": 5,
+      "description": "Fail clearly on invalid resolved inputs and remain side-effect free.",
+      "checks": [
+        "Reject null or incomplete values, negative posted/threshold/MTA/IA, and non-positive selected rounding increments.",
+        "Do not mutate any Money, UnitType, CollateralRounding, or elections input.",
+        "Do not wire a full Rosetta runtime or whole-agreement qualification path that this application-owned calculation does not invoke."
+      ]
+    },
+    {
+      "id": "test-integrity",
+      "visibility": "hidden",
+      "weight": 3,
+      "description": "Tests exercise the exact public method and materially prove the legal asymmetry.",
+      "checks": [
+        "Authored tests invoke the exact public method for all three required cases.",
+        "The return test explicitly rejects DELIVERY and 1.8m; inputs use exact BigDecimal string literals."
+      ]
+    }
+  ]
+}
