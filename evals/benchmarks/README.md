@@ -13,6 +13,7 @@ these cases require an agent to write and test Java code.
 - [Evergreen repo lifecycle engine](evergreen-repo-lifecycle/)
 - [Securities-lending month-end billing](securities-lending-month-end-billing/)
 - [UTI report-sequence validator](uti-report-sequence-validator/)
+- [BDT-style tranche-to-CDM expander](bdt-tranche-expander/)
 
 ## Contents
 
@@ -34,9 +35,11 @@ these cases require an agent to write and test Java code.
    sibling workspaces, or another arm. Disable subagents and session persistence.
 6. Run each arm once from its saved local Claude Code or Codex subscription login, with API-key
    environment variables removed. Do not send continuation hints or the rubric.
-7. After the agent exits, independently run its authored tests. Only then add evaluator-owned tests
-   derived from `rubric.json`; never leave hidden tests where a later arm can discover them.
-8. Record exact CLI/model versions, auth mode, wall time, exposed turn/item counts, tool calls,
+7. After the agent exits, independently run its authored tests and seal the deliverable output.
+8. Repeat the authored tests from a clean clone or copy that excludes ignored temp/cache files, so
+   a warmed workspace cannot hide missing dependencies. Only then add evaluator-owned tests derived
+   from `rubric.json`; never leave hidden tests where a later arm can discover them.
+9. Record exact CLI/model versions, auth mode, wall time, exposed turn/item counts, tool calls,
    authored-test results, hidden-check outcomes, and any harness limitations.
 
 The historical baseline is evidence from one run, not a threshold to optimise blindly. Promote a

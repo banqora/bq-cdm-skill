@@ -77,6 +77,16 @@
       "task": "benchmarks/uti-report-sequence-validator/TASK.md",
       "rubric": "benchmarks/uti-report-sequence-validator/rubric.json",
       "baseline": "benchmarks/uti-report-sequence-validator/baseline.json"
+    },
+    {
+      "id": "bdt-tranche-expander",
+      "title": "BDT-style tranche-to-CDM expander",
+      "kind": "implementation-forward-test",
+      "artifact_version": "7.0.0",
+      "language": "java",
+      "task": "benchmarks/bdt-tranche-expander/TASK.md",
+      "rubric": "benchmarks/bdt-tranche-expander/rubric.json",
+      "baseline": "benchmarks/bdt-tranche-expander/baseline.json"
     }
   ]
 }

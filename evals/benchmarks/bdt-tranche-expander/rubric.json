@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "bdt-tranche-expander",
+  "total_score": 100,
+  "required_entry_points": [
+    "benchmark.issuance.BdtTrancheExpander.ExpandIssuance"
+  ],
+  "fatal_failures": [
+    "production or test compilation fails",
+    "the exact public static ExpandIssuance(BdtMessage) entry point or required public support types are absent",
+    "a tranche override mutates or leaks into a programme default, sibling output, or previously emitted CDM security",
+    "a valid later tap emits a second Security with the same ISIN instead of increasing the existing issue size",
+    "a conflicting tap is silently accepted or resolved with last-writer-wins",
+    "the implementation replaces the typed CDM 7.0.0 Security boundary with an invented security model or edits generated model code"
+  ],
+  "criteria": [
+    {
+      "id": "caller-contract",
+      "visibility": "public",
+      "weight": 7,
+      "description": "Expose the exact expansion contract and fail-closed result model.",
+      "checks": [
+        "Compile and invoke benchmark.issuance.BdtTrancheExpander.ExpandIssuance directly.",
+        "Expose the required input, output, validation-code, failure, and result types.",
+        "Return non-null typed lists and make valid() agree with failures.isEmpty()."
+      ]
+    },
+    {
+      "id": "independent-inheritance",
+      "visibility": "public",
+      "weight": 18,
+      "description": "Resolve programme defaults independently without sideways override leakage.",
+      "checks": [
+        "Three unique rows with only the middle currency overridden emit GBP, EUR, GBP in first-occurrence order.",
+        "Issuer and governing-law inheritance and overrides are likewise isolated per row.",
+        "Expansion neither mutates the programme and input list nor aliases mutable working state across outputs."
+      ]
+    },
+    {
+      "id": "aggregate-completeness",
+      "visibility": "public",
+      "weight": 13,
+      "description": "Detect missing source rows through the declared-total checksum.",
+      "checks": [
+        "Sum every input row's issue size, including taps, using exact BigDecimal arithmetic.",
+        "Compare numerically without scale sensitivity and without an invented FX conversion.",
+        "A mismatch emits AGGREGATE_SIZE_MISMATCH and no securities."
+      ]
+    },
+    {
+      "id": "tap-consolidation",
+      "visibility": "public",
+      "weight": 20,
+      "description": "Merge a genuine later fungible tap by ISIN identity.",
+      "checks": [
+        "A matching later duplicate emits one security for the ISIN and increments issue size exactly.",
+        "The output keeps the first issue date, records the latest tap date, and preserves first-appearance ordering.",
+        "A same-day or earlier duplicate emits NON_LATER_TAP and no securities."
+      ]
+    },
+    {
+      "id": "conflicting-tap",
+      "visibility": "public",
+      "weight": 15,
+      "description": "Fail loudly when an ISIN re-opening changes fungibility terms.",
+      "checks": [
+        "Detect coupon, maturity, resolved issuer, resolved governing-law, and resolved-currency conflicts.",
+        "Resolve null and explicit-equal overrides before comparing terms.",
+        "A conflict emits CONFLICTING_TAP_TERMS, no partial output, and never last-writer-wins."
+      ]
+    },
+    {
+      "id": "typed-cdm-security",
+      "visibility": "hidden",
+      "weight": 15,
+      "description": "Build the intended CDM 7.0.0 security identity and issuer topology.",
+      "checks": [
+        "Each unique ISIN maps to a real Security with exactly one ISIN AssetIdentifier, SECURITY asset type, and DEBT security type.",
+        "Each Security has exactly one Party with exactly one LEI PartyIdentifier matching the resolved issuer.",
+        "Its ISSUER AssetPartyRole resolves to that party; issuance-only facts stay in the explicit ExpandedSecurity sidecar."
+      ]
+    },
+    {
+      "id": "validation-and-immutability",
+      "visibility": "hidden",
+      "weight": 12,
+      "description": "Reject malformed data predictably and return stable caller-owned results.",
+      "checks": [
+        "Reject malformed messages, programmes, tranches, identifiers, dates, sizes, rates, and overrides with the specified codes and non-blank messages.",
+        "Any failure returns no securities, uses -1 for programme-level or the zero-based row index for row-level failures, and does not throw for described data quality errors.",
+        "Result lists are defensive unmodifiable copies even under direct record construction; inputs and generated CDM values remain unchanged."
+      ]
+    }
+  ]
+}

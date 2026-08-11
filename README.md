@@ -307,6 +307,42 @@ mutable list passed directly to the public result-record constructor. Making tha
 in prose did not fix it, so the durable lesson is to add an executable constructor-boundary probe to
 future evaluators rather than keep making the skill more benchmark-specific.
 
+An eighth [four-arm benchmark](evals/benchmarks/bdt-tranche-expander/) used a focused
+[ICMA BDT 2.0](https://www.icmagroup.org/News/news-in-brief/icma-publishes-version-2-0-of-the-bond-data-taxonomy-reflecting-growing-market-adoption/)-style
+programme/tranche message and expanded it into one real CDM 7.0.0 `Security` per unique ISIN. The
+task tested independent programme-field inheritance, an exact row-total completeness check,
+fungible later taps, and hard failure on conflicting tap terms. It deliberately modelled the full
+issuance fields in an application-owned resolved sidecar because CDM `Security` owns identity,
+classification, and issuer topology but not that entire issuance-term set.
+
+| Arm | Agent-authored tests | Evaluator probes | Reviewed rubric | Agent work | Wall time |
+|---|---:|---:|---:|---:|---:|
+| Sonnet 5 + `cdm-dev` | 13/13 | 14/14 | 100/100 | 50 turns, 49 tool calls | 6m 57s |
+| Sonnet 5 control | 10/10 | 14/14 | 100/100 | 44 turns, 43 tool calls | 6m 10s |
+| GPT-5.4 + `cdm-dev` | 8/8 | 14/14 | 100/100 in sealed workspace | 69 completed items, 32 commands | 8m 20s |
+| GPT-5.4 control | 8/8 | 14/14 | 100/100 | 51 completed items, 34 commands | 6m 3s |
+
+This benchmark is a correctness tie, not a skill win. Every arm isolated GBP/EUR/GBP inheritance,
+summed all rows including taps, rejected non-later or conflicting duplicates, built the intended
+ISIN/LEI/issuer-role graph, and copied public result lists. Sonnet treatment wrote three more tests
+but was 13% slower. GPT-5.4 treatment used the bundled helpers to reach its first production write
+after 18 commands rather than the control's 29 and produced less code, but still finished 38%
+slower.
+
+The engineering review made the GPT treatment worse overall. It replaced the fixture's working
+`org.finos.cdm:cdm-java:7.0.0` dependency with paths to ignored `.tmp` copies of Rune runtime and
+Guava JARs. Its live workspace passed because those transient files remained; a clean clone failed
+to compile. Both Sonnet clones and GPT control passed from clean clones. The frozen behavioral
+rubric remains 100/100 for transparency, while the comparative review marks that treatment
+“request changes.”
+
+That failure produced one generic skill improvement rather than a BDT-specific recipe: using a
+local binary with `cdm-source` or `cdm-java-api` is inspection only and must not displace a working
+project dependency or introduce ignored/cache paths into durable build files. The change post-dates
+the table and is not credited to treatment. The broader result is deliberately negative evidence:
+when a task already pins the complete CDM boundary and acceptance rules, `cdm-dev` may add little;
+its value has to come from avoiding model-semantic mistakes, not from ritual source inspection.
+
 ## Install
 
 The distributable skill is the `skills/cdm-dev/` directory; everything outside it is
@@ -394,7 +430,7 @@ evals/run-local --vendor all --quality-only --case price-quantity-model-api
 The local runner deliberately ignores API-key environment variables. Live model evals do not run
 in GitHub Actions and require no repository secrets. See [Local skill evaluations](evals/README.md)
 for authentication, focused commands, fixture caching, result review, and baseline promotion.
-The seven code-writing use cases are also preserved as leakage-aware
+The eight code-writing use cases are also preserved as leakage-aware
 [implementation forward benchmarks](evals/benchmarks/README.md), with fixed tasks, hidden rubrics,
 observed skill/control baselines, a shared CDM 7.0.0 seed, and `evals/check-benchmarks` validation.
 

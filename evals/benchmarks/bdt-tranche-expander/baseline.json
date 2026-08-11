@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "bdt-tranche-expander",
+  "recorded_at": "2026-08-11",
+  "fixture_version": "7.0.0",
+  "task_sha256": "e1b3afc83fcd0eb2ff2880648034ac3e2c51f15342b75634d626da01587de343",
+  "rubric_sha256": "122fe74b9e687a009530a61646bdc479488a84e630df90242f21db3442bf269b",
+  "evaluator_sha256": "e7578b731507c2e8a3cd5af3b3f7825e8ea1b9d969ed96474eb28fa97b6fe41d",
+  "skill_snapshot_sha256": "14250d9fc79eca8eaa549b6bd14b87f2bea86e270664b4964766f20d2b90e005",
+  "skill_snapshot_hash_method": "SHA-256 of sorted relative-path sha256sum lines for every file under skills/cdm-dev",
+  "raw_run_root": "/private/tmp/bdt-benchmark.ZJ0jTy",
+  "note": "Four counted, isolated, sequential single-session arms used Claude Code 2.1.227 with claude-sonnet-5 or Codex CLI 0.147.0 invoked with gpt-5.4, all at high effort and with local Claude Max or ChatGPT subscription authentication. API credential and provider overrides were removed. Every arm received the same checksummed task and pinned CDM 7.0.0 artifacts; controls had no skill directory, global skills were denied, and the identical 14-test evaluator was copied only after all four counted model processes exited and their authored suites were independently rerun. All four passed 14/14 evaluator tests and received 100/100 on the frozen behavioral rubric. The skill therefore produced no correctness advantage on this saturated contract. Sonnet treatment authored 13 rather than 10 tests but was 13% slower and used six more tool calls. GPT-5.4 treatment reached its first production write after 18 rather than 29 commands and used two fewer commands overall, but was 38% slower. More importantly, it replaced the working dependency coordinate with paths to ignored .tmp copies of rune-runtime and Guava; its sealed workspace passed only because those transient files remained present, while a fresh clone failed compilation. The other three fresh clones passed. A generic guard against replacing working dependency declarations with inspection/temp JARs was added after the run and is not credited to treatment.",
+  "comparative_review": {
+    "reviewer": "Codex root using the code-reviewer workflow",
+    "recorded_at": "2026-08-11",
+    "fresh_suite_rerun": "all four frozen evaluator suites pass 14/14",
+    "reviewed_scores": {
+      "sonnet-5-with-skill": "100/100 rubric, 9/10 engineering judgment",
+      "sonnet-5-control": "100/100 rubric, 9/10 engineering judgment",
+      "gpt-5.4-with-skill": "100/100 rubric in the sealed workspace, 6/10 engineering judgment; request changes",
+      "gpt-5.4-control": "100/100 rubric, 9/10 engineering judgment"
+    },
+    "posthoc_findings": [
+      "Every implementation preserves independent GBP/EUR/GBP inheritance, exact row-total validation, first-occurrence order, later-tap size/date consolidation, all five resolved fungibility terms, and fail-closed conflict handling.",
+      "Every implementation builds a real CDM 7.0.0 Security with one ISIN identifier, SECURITY/DEBT classification, one LEI issuer Party, and an ISSUER role resolving to that party.",
+      "Every implementation defensively copies direct ExpansionResult list arguments and passes the malformed-input matrix without partial securities.",
+      "Sonnet treatment authored 13 tests versus control's 10, but both clean clones and all hidden checks passed; treatment had no observed behavioral advantage.",
+      "GPT-5.4 treatment used the bundled helpers to reach production after 18 commands versus 29 for control and produced a 444-line implementation versus 498 lines, but its temp-JAR build rewrite made the delivered tracked artifact non-reproducible.",
+      "Fresh-clone offline builds pass for both Sonnet arms and GPT-5.4 control; GPT-5.4 treatment fails because com.rosetta.model.lib runtime classes are absent once ignored .tmp JARs are removed."
+    ],
+    "recommendation": {
+      "sonnet-5-with-skill": "approved",
+      "sonnet-5-control": "approved",
+      "gpt-5.4-with-skill": "request changes: restore the existing org.finos.cdm:cdm-java:7.0.0 dependency declaration and remove temp/cache JAR paths",
+      "gpt-5.4-control": "approved"
+    },
+    "leakage_verdict": "clean for all four counted arms on trace-verifiable dimensions",
+    "leakage_limitations": [
+      "Codex JSONL does not echo the selected model identifier, so gpt-5.4 comes from the recorded invocation; subscription use is supported by the local login and removed credential overrides.",
+      "A preliminary Sonnet control launch was discarded before any production write after it attempted a broad filesystem search contrary to the prompt. The process was interrupted, its raw trace was retained separately, the workspace was rebuilt from the seed, and a tightened external sandbox denied historical benchmark trees for every counted arm.",
+      "The raw run root is temporary host evidence; durable task, rubric, evaluator, hashes, metrics, and findings are recorded here."
+    ]
+  },
+  "skill_revision_after_run": {
+    "pre_run_snapshot_sha256": "14250d9fc79eca8eaa549b6bd14b87f2bea86e270664b4964766f20d2b90e005",
+    "post_run_snapshot_sha256": "0902a51837971e9b60a76c2fc17772528d9c476418552dc8d48cdd685808c6d4",
+    "change": "The application-path instructions now say that supplying a JAR to an inspection helper does not justify replacing a working dependency declaration, and prohibit durable builds from depending on ignored temp files or dependency-cache paths.",
+    "credit": "not credited to any recorded treatment arm"
+  },
+  "runs": [
+    {
+      "arm": "sonnet-5-with-skill",
+      "vendor": "claude",
+      "model": "claude-sonnet-5",
+      "claude_code_version": "2.1.227",
+      "skill": true,
+      "authentication": "local Claude Max subscription; API credential overrides removed; trace apiKeySource=none",
+      "production_sha256": "528f16227e16952ef39af0e48051e325727211221215bcb31cb77e80de06714b",
+      "authored_tests": {"passed": 13, "total": 13},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "100/100",
+        "engineering_judgment_score": "9/10",
+        "evaluator_probes": "14/14 pass",
+        "combined_suite": "27/27 pass",
+        "fresh_clone_offline_build": "pass"
+      },
+      "metrics": {
+        "sessions": 1,
+        "effort": "high",
+        "turns": 50,
+        "tool_calls": 49,
+        "shell_commands": 45,
+        "tool_calls_before_first_production_write": 34,
+        "cdm_source_calls": 12,
+        "cdm_java_api_calls": 16,
+        "wall_seconds": 417
+      }
+    },
+    {
+      "arm": "sonnet-5-control",
+      "vendor": "claude",
+      "model": "claude-sonnet-5",
+      "claude_code_version": "2.1.227",
+      "skill": false,
+      "authentication": "local Claude Max subscription; API credential overrides removed; trace apiKeySource=none",
+      "production_sha256": "2ef27287713dbc654be51db0f037f627457ca4a0663b76cc62be92a4580e9075",
+      "authored_tests": {"passed": 10, "total": 10},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "100/100",
+        "engineering_judgment_score": "9/10",
+        "evaluator_probes": "14/14 pass",
+        "combined_suite": "24/24 pass",
+        "fresh_clone_offline_build": "pass"
+      },
+      "metrics": {
+        "sessions": 1,
+        "effort": "high",
+        "turns": 44,
+        "tool_calls": 43,
+        "shell_commands": 37,
+        "tool_calls_before_first_production_write": 33,
+        "wall_seconds": 370
+      }
+    },
+    {
+      "arm": "gpt-5.4-with-skill",
+      "vendor": "codex",
+      "model": "gpt-5.4",
+      "codex_cli_version": "0.147.0",
+      "skill": true,
+      "authentication": "local ChatGPT subscription; API credential overrides removed",
+      "production_sha256": "1920b1c64a5999510dadfd0fd28a5fd3e2d02a8cd55a2ba180d4c181eef3f61b",
+      "authored_tests": {"passed": 8, "total": 8},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none in the sealed workspace",
+        "reviewed_rubric_score": "100/100 in the sealed workspace",
+        "engineering_judgment_score": "6/10; request changes",
+        "evaluator_probes": "14/14 pass",
+        "combined_suite": "22/22 pass",
+        "fresh_clone_offline_build": "fail: durable build references ignored .tmp runtime and Guava JARs"
+      },
+      "metrics": {
+        "top_level_turns": 1,
+        "reasoning_effort": "high",
+        "completed_items": 69,
+        "commands": 32,
+        "file_changes": 5,
+        "commands_before_first_production_write": 18,
+        "cdm_source_commands": 8,
+        "cdm_java_api_commands": 4,
+        "wall_seconds": 500
+      }
+    },
+    {
+      "arm": "gpt-5.4-control",
+      "vendor": "codex",
+      "model": "gpt-5.4",
+      "codex_cli_version": "0.147.0",
+      "skill": false,
+      "authentication": "local ChatGPT subscription; API credential overrides removed",
+      "production_sha256": "77e47abc2ce08b7b596019ee421b864c9145f3f19e77ee846d8fed7a590f3a93",
+      "authored_tests": {"passed": 8, "total": 8},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "100/100",
+        "engineering_judgment_score": "9/10",
+        "evaluator_probes": "14/14 pass",
+        "combined_suite": "22/22 pass",
+        "fresh_clone_offline_build": "pass"
+      },
+      "metrics": {
+        "top_level_turns": 1,
+        "reasoning_effort": "high",
+        "completed_items": 51,
+        "commands": 34,
+        "file_changes": 2,
+        "commands_before_first_production_write": 29,
+        "wall_seconds": 363
+      }
+    }
+  ]
+}

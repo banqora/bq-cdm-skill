@@ -36,10 +36,10 @@ If CDM is not installed, its distribution is unclear, or a language must be sele
 3. Query version-matched `.rosetta` source with `scripts/cdm-source` resolved from this `SKILL.md`;
    point it at the binary `cdm-java` JAR, which embeds Rune source, not the generated-Java
    `-sources.jar`. Batch questions and open owning declarations. For Java getter and builder
-   signatures, batch types through `scripts/cdm-java-api`; add the project's resolved
-   `rune-runtime` JAR only for `com.rosetta.model.lib.*` support types. Use [Rosetta and generated
-   code](references/rosetta.md) only for remaining ambiguity. An exact caller-supplied path is a
-   confirmation task; do not survey neighboring types.
+   signatures, batch types through `scripts/cdm-java-api`; add the project's resolved `rune-runtime`
+   JAR only for support types. Inspection JARs must not replace working dependencies or enter durable
+   builds through ignored temp/cache paths. Use [Rosetta and generated code](references/rosetta.md)
+   only for remaining ambiguity; an exact path is confirmation, not cause to survey neighboring types.
 4. Build or compile the smallest typed vertical slice early: exercise at least one production
    getter or builder and the first real branch. Compiling empty directories, records, or signatures
    alone is not evidence. Let errors identify API details that still need inspection.
