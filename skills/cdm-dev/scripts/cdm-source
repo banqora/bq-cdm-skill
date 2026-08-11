@@ -244,6 +244,7 @@ class Declaration:
     namespace: str
     name: str
     base: str | None
+    imports: tuple[str, ...]
     path: Path
     line: int
     block: tuple[str, ...]
@@ -266,6 +267,11 @@ for path in files:
         if match:
             namespace = match.group(1)
             break
+    imports = tuple(
+        match.group(1)
+        for line in lines
+        if (match := re.match(r"^import\s+([A-Za-z_][A-Za-z0-9_.]*(?:\.\*)?)\s*$", line))
+    )
     for index, line in enumerate(lines):
         match = declaration_re.match(line)
         if not match:
@@ -280,6 +286,7 @@ for path in files:
                 namespace,
                 match.group(1),
                 match.group(2),
+                imports,
                 path,
                 index + 1,
                 tuple(lines[index:end]),
@@ -327,6 +334,63 @@ def resolve_base(declaration: Declaration) -> Declaration | None:
     return global_matches[0] if len(global_matches) == 1 else None
 
 
+def resolve_field_type(owner: Declaration, name: str) -> Declaration | None:
+    same_namespace = [
+        candidate
+        for candidate in declarations
+        if candidate.name == name and candidate.namespace == owner.namespace
+    ]
+    if len(same_namespace) == 1:
+        return same_namespace[0]
+
+    imported: list[Declaration] = []
+    for declaration_import in owner.imports:
+        if declaration_import.endswith(".*"):
+            imported_namespace = declaration_import[:-2]
+            imported.extend(
+                candidate
+                for candidate in declarations
+                if candidate.name == name and candidate.namespace == imported_namespace
+            )
+        elif declaration_import.endswith(f".{name}"):
+            imported.extend(
+                candidate for candidate in declarations if qualified(candidate) == declaration_import
+            )
+    imported = list({qualified(candidate): candidate for candidate in imported}.values())
+    if len(imported) == 1:
+        return imported[0]
+
+    global_matches = [candidate for candidate in declarations if candidate.name == name]
+    return global_matches[0] if len(global_matches) == 1 else None
+
+
+condition_re = re.compile(r"^\s+condition\s+([A-Za-z_][A-Za-z0-9_]*)\s*:")
+field_re = re.compile(
+    r"^\s+(?:override\s+)?([a-z][A-Za-z0-9_]*)\s+([A-Z][A-Za-z0-9_]*)\s+\([^)]+\)"
+)
+
+
+def declared_conditions(declaration: Declaration) -> tuple[str, ...]:
+    return tuple(
+        match.group(1)
+        for line in declaration.block
+        if (match := condition_re.match(line))
+    )
+
+
+def condition_chain(declaration: Declaration) -> list[tuple[Declaration, tuple[str, ...]]]:
+    result: list[tuple[Declaration, tuple[str, ...]]] = []
+    seen_conditions: set[str] = set()
+    current: Declaration | None = declaration
+    while current is not None and qualified(current) not in seen_conditions:
+        seen_conditions.add(qualified(current))
+        conditions = declared_conditions(current)
+        if conditions:
+            result.append((current, conditions))
+        current = resolve_base(current)
+    return result
+
+
 def print_declaration(label: str, declaration: Declaration) -> None:
     relative = declaration.path.relative_to(root)
     print(f"## {label}: {qualified(declaration)}")
@@ -337,10 +401,12 @@ def print_declaration(label: str, declaration: Declaration) -> None:
 print(f"# requested={requested}")
 print_declaration("declaration", target)
 seen = {qualified(target)}
+owners = [target]
 base = resolve_base(target)
 direct_base = base
 while base is not None and qualified(base) not in seen:
     seen.add(qualified(base))
+    owners.append(base)
     print()
     print_declaration("inherited", base)
     base = resolve_base(base)
@@ -361,6 +427,41 @@ if direct_base is not None:
             relative = sibling.path.relative_to(root)
             print(f"{qualified(sibling)}  # {relative}:{sibling.line}")
             print(sibling.block[0])
+
+conditioned_fields: list[
+    tuple[Declaration, str, Declaration, list[tuple[Declaration, tuple[str, ...]]]]
+] = []
+seen_fields: set[tuple[str, str, str]] = set()
+for owner in owners:
+    for line in owner.block:
+        field_match = field_re.match(line)
+        if not field_match:
+            continue
+        field_name, field_type_name = field_match.groups()
+        child = resolve_field_type(owner, field_type_name)
+        if child is None:
+            continue
+        child_conditions = condition_chain(child)
+        key = (qualified(owner), field_name, qualified(child))
+        if child_conditions and key not in seen_fields:
+            seen_fields.add(key)
+            conditioned_fields.append((owner, field_name, child, child_conditions))
+
+if conditioned_fields:
+    print()
+    print("## conditioned field types (parent validation does not recurse)")
+    for owner, field_name, child, child_conditions in conditioned_fields:
+        print(f"{qualified(owner)}.{field_name} -> {qualified(child)}")
+        for condition_owner, conditions in child_conditions:
+            relative = condition_owner.path.relative_to(root)
+            joined = ", ".join(conditions)
+            print(
+                f"  {qualified(condition_owner)} conditions: {joined}"
+                f"  # {relative}:{condition_owner.line}"
+            )
+
+print()
+print("# next=make at most one combined cdm-java-api query, then compile a populated slice")
 PY
     ;;
 

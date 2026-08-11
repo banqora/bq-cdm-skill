@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "intraday-repo-interest",
+  "total_score": 100,
+  "required_entry_points": [
+    "ComputeIntradayInterest"
+  ],
+  "fatal_failures": [
+    "production or authored tests do not compile and run from a clean offline copy",
+    "the caller-visible ComputeIntradayInterest operation is absent",
+    "the implementation uses no genuine generated CDM 7.0.0 object at its input or output boundary",
+    "elapsed interest is derived from calendar-date difference rather than the actual timestamp interval",
+    "equivalent cross-border timestamp representations can produce different amounts",
+    "a close-before-open input returns negative interest instead of failing",
+    "the main monetary calculation round-trips through double or float"
+  ],
+  "criteria": [
+    {
+      "id": "baseline-formula",
+      "visibility": "public",
+      "weight": 16,
+      "description": "Calculate the four-hour ACT/360 amount from actual elapsed seconds.",
+      "checks": [
+        "USD 500,000,000 at 0.053 for 14,400 seconds produces exactly USD 12,268.52.",
+        "The implementation retains decimal precision through the formula and rounds only the final cash result to cents.",
+        "The output preserves USD and does not substitute a bare number for the monetary result."
+      ]
+    },
+    {
+      "id": "midnight-independence",
+      "visibility": "public",
+      "weight": 16,
+      "description": "Do not infer duration from dates or calendar boundaries.",
+      "checks": [
+        "22:00 UTC to 01:00 UTC the next day is exactly 10,800 seconds and produces the three-hour amount.",
+        "Crossing midnight does not create a full-day charge.",
+        "A same-date interval is not accidentally suppressed merely because its date difference is zero."
+      ]
+    },
+    {
+      "id": "instant-normalisation",
+      "visibility": "public",
+      "weight": 17,
+      "description": "Make the result depend on instants rather than local wall-clock representation.",
+      "checks": [
+        "One interval represented in Europe/London and Asia/Hong_Kong produces the same cent amount.",
+        "Offset or zone information is retained until the instants are established.",
+        "A daylight-saving transition is measured by actual elapsed seconds rather than apparent local hours."
+      ]
+    },
+    {
+      "id": "duration-guards",
+      "visibility": "public",
+      "weight": 13,
+      "description": "Handle zero, sub-second, and reversed intervals deliberately.",
+      "checks": [
+        "Equal timestamps and a positive duration shorter than one whole second return exact zero in the nominal currency.",
+        "A close even fractionally before open fails before whole-second truncation can disguise the reversal.",
+        "Null or malformed timestamps fail visibly and no path emits NaN, infinity, or negative elapsed interest."
+      ]
+    },
+    {
+      "id": "basis-and-continuity",
+      "visibility": "public",
+      "weight": 14,
+      "description": "Respect the selected basis and join continuously to ordinary one-day interest.",
+      "checks": [
+        "A 24-hour interval equals nominal * rate / basis after the same final rounding policy.",
+        "ACT/360 and ACT/365 Fixed produce their distinct expected results.",
+        "Unsupported conventions fail closed instead of silently defaulting to 360 or 365."
+      ]
+    },
+    {
+      "id": "cdm-boundary-and-ownership",
+      "visibility": "hidden",
+      "weight": 16,
+      "description": "Use a version-correct CDM boundary without pretending date-based generated behavior owns the intraday rule.",
+      "checks": [
+        "The implementation uses coherent generated CDM 7.0.0 getters or builders for a timestamp, basis, nominal, rate, or monetary result boundary.",
+        "Any emitted CDM Money carries an exact value and currency unit and passes its structural plus applicable inherited data rules; another chosen CDM boundary is comparably defensible and validated.",
+        "DESIGN.md accurately labels elapsed-time normalisation and sub-day accrual as application behavior and does not claim a generated date day-count helper proves intraday semantics."
+      ]
+    },
+    {
+      "id": "validation-and-engineering",
+      "visibility": "hidden",
+      "weight": 8,
+      "description": "Deliver a stable, narrow implementation with meaningful tests and explicit numeric policy.",
+      "checks": [
+        "Missing inputs, non-positive nominal, invalid or unsupported basis, and economically invalid rates are handled consistently with the documented contract.",
+        "Inputs and returned objects cannot be altered through application-owned mutable aliases, and the calculation has no current-clock, default-zone, or static-state dependency.",
+        "The five requested scenarios and close plausible-wrong controls pass from a clean offline Java 21/Gradle 8.10 copy."
+      ]
+    }
+  ]
+}

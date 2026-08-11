@@ -54,7 +54,8 @@ then the type's `Meta` registry and only the validators or functions registered 
 independent reads and stop once each reported claim maps to an authoritative artefact; do not
 inventory neighboring generated classes without a question they can answer.
 
-Compile after that first pass. Use the compiler to name the remaining generated-API uncertainty,
+Compile after that first declaration/API pass even if questions remain. Use the compiler to name
+the remaining generated-API uncertainty,
 then inspect only that interface or builder section. Prefer one combined source query and one
 focused compile over a sequence of whole-file dumps; repeated reads of the same generated type are
 a signal to narrow the question or keep a small probe. Generated source and `javap` are alternative
@@ -113,6 +114,22 @@ generated source JAR, or a small compile test remains an alternative when source
 Generated APIs can change between releases; do not recall a builder or function signature from
 another version.
 
+Validation is an object-graph obligation, not a root-type checkbox. A generated structural
+validator and the root `Meta.dataRules()` cover only the type on which they are registered; they do
+not recursively execute conditions declared by populated child types. For each accepted or emitted
+boundary:
+
+1. run its structural, type-format, and applicable inherited data rules;
+2. enumerate every populated generated child and run that child's registered conditions, including
+   choice or `one-of` rules; and
+3. retain application-boundary checks that the model deliberately leaves open, such as whether a
+   schemed identifier resolves in the application's accepted code set.
+
+Query the child's declaration when its condition is not already shown by `cdm-source type`; do not
+guess the generated rule name. Validate the complete caller contract before taking a zero, empty,
+replay, or no-op shortcut, because an unrelated result value must not make an unsupported choice
+valid.
+
 Which annotations the generated code carries depends on the release; enumerate them from the
 active JAR instead of assuming. Older releases (4.x) generate only type-level annotations such
 as `@RosettaClass`, `@RosettaMeta`, and `@RosettaDataRule`; the legacy mapper derives wire
@@ -147,9 +164,13 @@ A qualifier roster proves only that generated functions exist. Its Rosetta body 
 predicate; a typed positive case and a close negative case establish reachability and
 specificity. Search every branch of a choice before concluding the model lacks a route.
 
-Generated functions may rely on injected dependencies. Instantiate them through the same
-wiring the consuming project uses, or reproduce the release's own test/resource wiring.
-Direct construction that leaves dependencies null is not a model result.
+Generated functions and validation factories may rely on injected dependencies. Instantiate them
+through the same wiring the consuming project uses, or reproduce the release's own test/resource
+wiring. Before trusting the result, run one trivial positive/negative smoke evaluation that proves
+injection happened; a constructed object with null injected fields is not a model result and can
+silently skip registered rules. If project wiring is unavailable, instantiate a concrete generated
+leaf only after version-matched source shows it has no injected dependencies, and document the
+narrower claim. Do not guess or pin a different runtime merely to make injection appear successful.
 
 Wire that runtime only when the generated function's behavior is part of the requested path. For
 application-owned selection, arithmetic, or mechanical construction, prove the model boundary and

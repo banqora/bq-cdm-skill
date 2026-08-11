@@ -22,11 +22,14 @@ def write_rosetta(jar):
         "cdm/rosetta/event-common-type.rosetta",
         """namespace cdm.event.common
 
+import cdm.base.math.*
+
 type TradeState:
   trade Trade (1..1)
 
 type AssetFlowBase:
   quantity number (1..1)
+  unit UnitType (1..1)
   condition PositiveQuantity:
     quantity > 0
 
@@ -40,6 +43,17 @@ type ContingentTransfer extends TransferBase:
   event string (1..1)
   condition EventExists:
     event exists
+""",
+    )
+    jar.writestr(
+        "cdm/rosetta/base-math-type.rosetta",
+        """namespace cdm.base.math
+
+type UnitType:
+  currency string (0..1)
+  financialUnit string (0..1)
+  condition UnitType:
+    one-of
 """,
     )
     jar.writestr(

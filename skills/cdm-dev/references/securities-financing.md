@@ -71,6 +71,8 @@ Keep product terms, observed events, transfer representation, and processing pol
   separately signed application amount when callers need a directional economic result.
 - Run the emitted type's structural validator plus applicable inherited `AssetFlowBase` conditions;
   generated Java annotations alone do not prove Rune cardinality or conditional validity.
+- Do not invent a non-negative-rate guard from intuition alone. Repo and securities-financing rates
+  can be negative; use an explicit caller contract or a model/application rule for any sign limit.
 - The application owns feed event IDs, correction lineage, position history, record-date snapshots,
   and an atomic durable replay ledger. Do not hide those facts in generated CDM fields or transient
   process memory.

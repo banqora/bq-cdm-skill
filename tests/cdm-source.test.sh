@@ -47,6 +47,18 @@ expect_ok "type lists sibling alternatives instead of encouraging a first-name m
   --stdout 'type ScheduledTransfer extends TransferBase:' -- \
   "$cdm_source" --jar "$fixture_jar" type cdm.event.common.ContingentTransfer
 
+expect_ok "type exposes conditions on direct fields inherited from a parent" \
+  --stdout 'AssetFlowBase\.unit -> cdm\.base\.math\.UnitType' -- \
+  "$cdm_source" --jar "$fixture_jar" type cdm.event.common.ContingentTransfer
+
+expect_ok "type warns that parent validation does not recurse into child conditions" \
+  --stdout 'UnitType conditions: UnitType' -- \
+  "$cdm_source" --jar "$fixture_jar" type cdm.event.common.ContingentTransfer
+
+expect_ok "type hands off to a combined API query and populated compile" \
+  --stdout '^# next=make at most one combined cdm-java-api query, then compile a populated slice$' -- \
+  "$cdm_source" --jar "$fixture_jar" type cdm.event.common.ContingentTransfer
+
 expect_fail "type rejects an unknown declaration clearly" \
   --stderr 'type not found: cdm\.event\.common\.Absent' -- \
   "$cdm_source" --jar "$fixture_jar" type cdm.event.common.Absent

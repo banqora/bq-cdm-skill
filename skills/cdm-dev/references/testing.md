@@ -137,6 +137,13 @@ invokes those functions. Expose invocation errors while diagnosing; do not turn 
 empty qualifier list. Do not wire a generated runtime merely to perform application-owned
 arithmetic, selection, or mechanical builder conversion that a typed focused test can establish.
 
+Smoke-test injected functions or validator factories with a known positive and a deliberately
+invalid object before trusting their output; silent null injection can otherwise make an empty rule
+set look successful. Validate populated child generated objects separately because parent
+structural validators and parent metadata data rules do not recurse into child conditions. Include
+one child-choice negative when the boundary contains a generated choice. Run validation of inputs
+and selected conventions before zero, empty, replay, or no-op fast paths.
+
 When the task names a public function, method, command, or wire signature, compile and invoke that
 exact entry point in a focused test. A renamed class containing a more idiomatic helper is not a
 substitute for the caller-visible contract; keep an alias only in addition to the requested API.

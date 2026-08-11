@@ -1,0 +1,232 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "intraday-repo-interest",
+  "recorded_at": "2026-08-11",
+  "fixture_version": "7.0.0",
+  "task_sha256": "fe6f743a0e418b0189655d7afe689bef4c1655353901889886a793131bc90819",
+  "rubric_sha256": "85db55a4d432f38a05be6485f77caac8d5cb3b69fde4245d82f26142c729832d",
+  "adaptive_probe_sha256": "cb7d7aa5fbff5b39ce3ca65702a47f571fb05e0bbef0702df8aa8b6e9d6590f3",
+  "review_sha256": "198cad4d53063814aee0b13e4f46b15a6b1b5994e11cd4b88571edacff85b8a1",
+  "skill_snapshot_sha256": "f8296f39f440856d71835b28deae0b641f2b3756c29d91d7b41d03b333b3a9c0",
+  "skill_snapshot_hash_method": "SHA-256 of sorted relative-path sha256sum lines for every file under skills/cdm-dev",
+  "production_tree_hash_method": "SHA-256 of each sorted repository-relative src/main path, a NUL separator, and that file's SHA-256 digest followed by a newline",
+  "raw_run_root": "/private/tmp/intraday-repo-counted.hPycsT",
+  "note": "Four counted, isolated, sequential single-session arms used Claude Code 2.1.227 with claude-sonnet-5 or Codex CLI 0.147.0 with gpt-5.4, all at high effort and authenticated through local Claude Max or ChatGPT subscriptions with API credential/provider overrides removed. Each received the identical checksummed open-discovery task and pinned CDM 7.0.0 artifacts. Controls could not read cdm-dev, this repository, benchmarks, global skills, or sibling workspaces. Every candidate exited and was committed before evaluator tests were adapted mechanically to its public API. Claude Fable 5 independently rebuilt all four, reproduced all six fixed probes, reviewed the code and traces, and added three public-contract edge checks. It scored Sonnet treatment/control 96/93 and GPT-5.4 treatment/control 91/96. The skill improved Sonnet's inherited generated validation but missed nested child choice validation in both treatment arms; for GPT it also displaced useful application-boundary checks and added substantial overhead. The child-condition view, non-recursive validation rule, compile-first handoff, injection smoke check, fail-closed shortcut rule, and negative-rate note added after the run are not credited to treatment.",
+  "independent_review": {
+    "reviewer": "Claude Fable 5",
+    "model": "claude-fable-5",
+    "claude_code_version": "2.1.227",
+    "effort": "high",
+    "authentication": "local Claude Max subscription; API credential overrides removed; trace apiKeySource=none",
+    "sessions": 1,
+    "turns": 59,
+    "wall_seconds": 788,
+    "api_duration_seconds": 778,
+    "scores": {
+      "sonnet-5-with-skill": 96,
+      "sonnet-5-control": 93,
+      "gpt-5.4-with-skill": 91,
+      "gpt-5.4-control": 96
+    },
+    "fatal_caps": "none",
+    "leakage_verdict": "clean on trace-verifiable dimensions",
+    "findings": [
+      "All four implementations compute elapsed time from real instants with exact decimal arithmetic and pass the required economic cases.",
+      "Sonnet treatment runs the deepest generated validation and passes the inherited dated-value rule that Sonnet control misses.",
+      "Parent Money validation does not recurse into UnitType; both skill arms and Sonnet control accept a currency-plus-financial-unit object that the generated child one-of rule rejects.",
+      "GPT-5.4 control has the strongest exact-rational arithmetic and application-boundary checks; GPT treatment accepts an unresolvable currency and hardcodes two decimal places.",
+      "Both GPT arms validate unsupported bases after at least one zero-result shortcut, creating fail-open edge cases.",
+      "The skill adds 18 percent wall time for Sonnet and 30 percent for GPT; GPT treatment consumes 2.8 times control input tokens."
+    ]
+  },
+  "adaptive_probes": {
+    "london_dst_actual_seconds": {
+      "sonnet-5-with-skill": "pass",
+      "sonnet-5-control": "pass",
+      "gpt-5.4-with-skill": "pass",
+      "gpt-5.4-control": "pass"
+    },
+    "one_nanosecond_reverse_rejects": {
+      "sonnet-5-with-skill": "pass",
+      "sonnet-5-control": "pass",
+      "gpt-5.4-with-skill": "pass",
+      "gpt-5.4-control": "pass"
+    },
+    "act_365_fixed": {
+      "sonnet-5-with-skill": "pass",
+      "sonnet-5-control": "pass",
+      "gpt-5.4-with-skill": "pass",
+      "gpt-5.4-control": "pass"
+    },
+    "invalid_iso_currency_rejects": {
+      "sonnet-5-with-skill": "pass",
+      "sonnet-5-control": "pass",
+      "gpt-5.4-with-skill": "fail: accepts ZZZ",
+      "gpt-5.4-control": "pass"
+    },
+    "nested_unit_type_one_of": {
+      "sonnet-5-with-skill": "fail: accepts currency plus financialUnit",
+      "sonnet-5-control": "fail: accepts currency plus financialUnit",
+      "gpt-5.4-with-skill": "fail: accepts currency plus financialUnit",
+      "gpt-5.4-control": "pass"
+    },
+    "inherited_dated_value_rule": {
+      "sonnet-5-with-skill": "pass",
+      "sonnet-5-control": "fail: accepts datedValue",
+      "gpt-5.4-with-skill": "pass",
+      "gpt-5.4-control": "pass"
+    }
+  },
+  "reviewer_edge_probes": {
+    "unsupported_basis_at_zero_duration": {
+      "sonnet-5-with-skill": "pass",
+      "sonnet-5-control": "pass",
+      "gpt-5.4-with-skill": "fail: zero shortcut bypasses basis validation",
+      "gpt-5.4-control": "fail: zero shortcut bypasses basis validation"
+    },
+    "unsupported_basis_at_zero_rate": {
+      "sonnet-5-with-skill": "pass",
+      "sonnet-5-control": "pass",
+      "gpt-5.4-with-skill": "pass",
+      "gpt-5.4-control": "fail: zero-rate shortcut bypasses basis validation"
+    },
+    "jpy_minor_unit": {
+      "sonnet-5-with-skill": "pass",
+      "sonnet-5-control": "pass",
+      "gpt-5.4-with-skill": "fail: hardcoded two-decimal scale",
+      "gpt-5.4-control": "pass"
+    }
+  },
+  "skill_revision_after_run": {
+    "pre_run_snapshot_sha256": "f8296f39f440856d71835b28deae0b641f2b3756c29d91d7b41d03b333b3a9c0",
+    "post_run_snapshot_sha256": "b9bbb6fa0eaa74deac2276dc7d677fb3df08f557dccbf140e30291886be12470",
+    "change": "Required populated-child condition validation because parent validation is non-recursive; made cdm-source type expose conditioned field types and print a compile-next handoff; required validation before zero or no-op shortcuts and a positive/negative injection smoke check; documented that negative repo rates can be valid.",
+    "credit": "not credited to any recorded treatment arm"
+  },
+  "discarded_diagnostic": {
+    "arm": "sonnet-5-with-skill",
+    "reason": "The first process start exited 127 before any model call or workspace write because the isolated shell PATH omitted the Claude CLI directory. The corrected counted run used the same intended CLI and environment; no candidate output from the discarded start exists."
+  },
+  "runs": [
+    {
+      "arm": "sonnet-5-with-skill",
+      "vendor": "claude",
+      "model": "claude-sonnet-5",
+      "claude_code_version": "2.1.227",
+      "skill": true,
+      "authentication": "local Claude Max subscription; API credential/provider overrides removed; trace apiKeySource=none",
+      "deliverable_git_commit": "ac71458d9f3648c7914161390337bd68ba90356a",
+      "production_tree_sha256": "2de02071ece323d1a53f631b63273c3f2604bc70b22140437731682dcedc86eb",
+      "authored_tests": {"passed": 15, "total": 15},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "96/100",
+        "fixed_evaluator_probes": "5/6 pass",
+        "fresh_clone_offline_build": "pass"
+      },
+      "metrics": {
+        "sessions": 1,
+        "effort": "high",
+        "turns": 122,
+        "tool_calls": 120,
+        "first_production_write_call_index": 98,
+        "first_production_write_wall_seconds": 290,
+        "wall_seconds": 780,
+        "api_duration_seconds": 758
+      }
+    },
+    {
+      "arm": "sonnet-5-control",
+      "vendor": "claude",
+      "model": "claude-sonnet-5",
+      "claude_code_version": "2.1.227",
+      "skill": false,
+      "authentication": "local Claude Max subscription; API credential/provider overrides removed; trace apiKeySource=none",
+      "deliverable_git_commit": "9a5888c15f1d61383b36e20cd088622a1ade4b2a",
+      "production_tree_sha256": "8a19bd9ab41c9323506565a1ac39e670f3cf1b5bbb44746b7a4d9717253cc5ac",
+      "authored_tests": {"passed": 14, "total": 14},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "93/100",
+        "fixed_evaluator_probes": "4/6 pass",
+        "fresh_clone_offline_build": "pass"
+      },
+      "metrics": {
+        "sessions": 1,
+        "effort": "high",
+        "turns": 73,
+        "tool_calls": 72,
+        "first_production_write_call_index": 39,
+        "first_production_write_wall_seconds": 355,
+        "wall_seconds": 660,
+        "api_duration_seconds": 645
+      }
+    },
+    {
+      "arm": "gpt-5.4-with-skill",
+      "vendor": "codex",
+      "model": "gpt-5.4",
+      "codex_cli_version": "0.147.0",
+      "skill": true,
+      "authentication": "local ChatGPT subscription; API credential/provider overrides removed",
+      "deliverable_git_commit": "e7b02be147f7cae4076976a951bbac57c10f6bf3",
+      "production_tree_sha256": "49ef0468f08935dfb58cc0898373cdef4e9fa734b22958d418c3bbe5758fc4b1",
+      "authored_tests": {"passed": 8, "total": 8},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "91/100",
+        "fixed_evaluator_probes": "4/6 pass",
+        "fresh_clone_offline_build": "pass"
+      },
+      "metrics": {
+        "top_level_turns": 1,
+        "reasoning_effort": "high",
+        "completed_items": 88,
+        "commands": 65,
+        "file_change_events": 6,
+        "first_production_write_completed_item": 44,
+        "commands_before_first_production_write": 36,
+        "wall_seconds": 496,
+        "input_tokens": 2600565,
+        "cached_input_tokens": 2488832,
+        "output_tokens": 22201,
+        "reasoning_output_tokens": 9728
+      }
+    },
+    {
+      "arm": "gpt-5.4-control",
+      "vendor": "codex",
+      "model": "gpt-5.4",
+      "codex_cli_version": "0.147.0",
+      "skill": false,
+      "authentication": "local ChatGPT subscription; API credential/provider overrides removed",
+      "deliverable_git_commit": "bfbd6408cbb4306d6fc675a605014e00547c97e2",
+      "production_tree_sha256": "3f7c806398cf1f8c4a4fb9caed6e01b54f0551d8b863a99c73a3e163428392f5",
+      "authored_tests": {"passed": 11, "total": 11},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "96/100",
+        "fixed_evaluator_probes": "6/6 pass",
+        "fresh_clone_offline_build": "pass"
+      },
+      "metrics": {
+        "top_level_turns": 1,
+        "reasoning_effort": "high",
+        "completed_items": 56,
+        "commands": 37,
+        "file_change_events": 3,
+        "first_production_write_completed_item": 43,
+        "commands_before_first_production_write": 33,
+        "wall_seconds": 382,
+        "input_tokens": 933130,
+        "cached_input_tokens": 871680,
+        "output_tokens": 17761,
+        "reasoning_output_tokens": 7735
+      }
+    }
+  ]
+}

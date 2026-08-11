@@ -16,6 +16,7 @@ these cases require an agent to write and test Java code.
 - [BDT-style tranche-to-CDM expander (prescribed contract)](bdt-tranche-expander/)
 - [BDT tranche-to-CDM expander (open discovery)](bdt-tranche-expander-discovery/)
 - [Manufactured-payment engine with reversal support](manufactured-payment-reversal/)
+- [Intraday repo interest calculator](intraday-repo-interest/)
 
 ## Contents
 

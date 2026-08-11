@@ -8,6 +8,11 @@ description: Develop, debug, test, upgrade, and review FINOS Common Domain Model
 Treat a CDM task as a change through a model-backed application, not as a sequence of
 lookups. First establish which layer owns the behavior.
 
+Before inspecting generated internals, write down the input path and choices, units or direction,
+output contract, and owning layer. Make one declaration query and one combined generated-API query,
+then compile a populated vertical slice. Let the compiler name the next symbol; do not open more
+source, validators, functions, or runtime wiring unless the requested contract executes them.
+
 ## Choose the authority
 
 | Question | Source of truth |
@@ -41,21 +46,19 @@ If CDM is not installed, its distribution is unclear, or a language must be sele
    getter or builder and the first real branch. Compiling empty directories, records, or signatures
    alone is not evidence. Let errors identify API details that still need inspection.
 5. Add the smallest test that proves meaningful content, the changed economic leaf, and a close
-   negative. For each emitted CDM type, run its structural validator and applicable inherited data rules;
-   never infer requiredness from Java annotations. Use one reversible mutation only when needed.
+   negative. Validate every accepted and emitted boundary with structural and inherited rules, then
+   each populated child's own choice/condition rules because parent validation is not recursive.
+   Keep application checks beside generated validation; validate inputs before zero/empty/replay/no-op
+   returns. Never infer requiredness from Java annotations. Use one reversible mutation only when needed.
 6. Change the narrowest owning layer. Keep source-system conversions in the application,
    model semantics in generated CDM code, and explicit business guards labelled as application
    policy.
 7. Run the repository's focused check, then its normal offline suite and formatter/linter.
    Inspect data-driven inputs and snapshot diffs; do not invent a universal build command.
 
-Bound the evidence pass before coding: list the input path and choices, units or direction, output
-contract, and owner. After one type/declaration query and one combined API query, edit and compile;
-do not inspect validators, functions, or runtime internals first unless the contract executes them.
-Let the first real compile name any remaining symbol. Never fully qualify a partial fixture as ceremony.
-
-For a typed application-owned calculation or supplied state machine, use one combined
-declaration/builder query, one real vertical slice, then its test. A product, lifecycle, or reporting
+For a typed application-owned calculation or supplied state machine, never fully qualify a partial
+fixture as ceremony. Use one combined declaration/builder query, one real vertical slice, then its
+test. A product, lifecycle, or reporting
 label alone does not require its domain, workflow, or DRR guide when the supplied contract owns the
 policy and does not execute or emit those artefacts. Inspect only members the function reads or rebuilds;
 for a single-leaf rebuild, assert untouched neighbors or rewind the leaf and compare the
@@ -114,7 +117,3 @@ whole object. Use [Day-to-day workflows](references/workflows.md) only for broad
   distinct from generated CDM validation.
 - Record the exact CDM version with every durable finding. Re-query the active JAR during an
   upgrade instead of carrying model facts forward as timeless prose.
-
-Before reporting a CDM defect, reproduce it with the dependency's generated artefacts,
-remove application mapping/policy from the reproducer, inspect the relevant Rune
-declarations and choice branches, and compare an ISDA scenario when one exists.

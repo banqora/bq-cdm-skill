@@ -107,6 +107,16 @@
       "task": "benchmarks/manufactured-payment-reversal/TASK.md",
       "rubric": "benchmarks/manufactured-payment-reversal/rubric.json",
       "baseline": "benchmarks/manufactured-payment-reversal/baseline.json"
+    },
+    {
+      "id": "intraday-repo-interest",
+      "title": "Intraday repo interest calculator",
+      "kind": "implementation-forward-test",
+      "artifact_version": "7.0.0",
+      "language": "java",
+      "task": "benchmarks/intraday-repo-interest/TASK.md",
+      "rubric": "benchmarks/intraday-repo-interest/rubric.json",
+      "baseline": "benchmarks/intraday-repo-interest/baseline.json"
     }
   ]
 }
