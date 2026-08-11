@@ -134,6 +134,135 @@ def markdown_words(value: str) -> list[str]:
     return re.findall(r"[A-Za-z0-9][A-Za-z0-9'/-]*", value)
 
 
+def semantic_text(value: str) -> str:
+    """Normalize prose for concept checks without pinning catalogue wording."""
+    value = re.sub(r"\[([^]]+)\]\([^)]+\)", r"\1", value)
+    value = value.replace("’", "'").replace("–", "-").replace("—", "-")
+    value = re.sub(r"[`*_#>]", " ", value.casefold())
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def semantic_clauses(value: str) -> list[str]:
+    return [
+        clause.strip()
+        for clause in re.split(r"[.;\n]+", semantic_text(value))
+        if clause.strip()
+    ]
+
+
+def matches_every(value: str, groups: list[tuple[str, ...]]) -> bool:
+    normalized = semantic_text(value)
+    return all(any(re.search(pattern, normalized) for pattern in group) for group in groups)
+
+
+def clause_matches_every(value: str, groups: list[tuple[str, ...]]) -> bool:
+    return any(matches_every(clause, groups) for clause in semantic_clauses(value))
+
+
+def validate_pattern_semantics(pattern_id: str, fields: dict[str, str], errors: list[str]) -> None:
+    """Keep high-value proof obligations while allowing editorial rewrites."""
+    pattern = fields.get("Pattern", "")
+    proof = fields.get("Proof", "")
+
+    if pattern_id == "PAT-003":
+        if not clause_matches_every(
+            pattern,
+            [
+                (r"\bprimitive\w*\b",),
+                (r"\benvelope\w*\b",),
+                (r"\bcardinalit\w*\b", r"\bcount\w*\b", r"\bnumber\w*\b"),
+            ],
+        ):
+            errors.append("PAT-003 Pattern must require primitive-envelope cardinality evidence")
+        if not clause_matches_every(
+            pattern,
+            [
+                (r"\bsemantic\w*\b", r"\bpayload\w*\b"),
+                (r"\bdirection\w*\b", r"\brole\w*\b"),
+                (r"\bidentit\w*\b",),
+            ],
+        ):
+            errors.append("PAT-003 Pattern must require semantic direction/role and identity evidence")
+        if not clause_matches_every(
+            pattern,
+            [
+                (r"\bstate\w*\b",),
+                (r"\bdelta\w*\b", r"\bbefore\b.*\bafter\b", r"\bafter\b.*\bbefore\b"),
+            ],
+        ):
+            errors.append("PAT-003 Pattern must require corresponding before/after state-delta evidence")
+        if not clause_matches_every(
+            pattern,
+            [
+                (r"\bonly[ -]+exists\b",),
+                (r"\bfield\w*\b",),
+                (r"\bpayload\w*\b",),
+                (r"\bcardinalit\w*\b", r"\bcount\w*\b", r"\bnumber\w*\b"),
+                (r"\bnot\b", r"\bnever\b", r"\bdoes(?:n't| not)\b", r"\bcannot\b"),
+            ],
+        ):
+            errors.append(
+                "PAT-003 Pattern must clarify that only-exists is field-presence, not payload/cardinality proof"
+            )
+        if not matches_every(
+            proof,
+            [
+                (r"\bindependent\w*\b", r"\bseparate\w*\b", r"\beach\b"),
+                (r"\bmutat\w*\b", r"\bprobe\w*\b", r"\btest\w*\b"),
+                (r"\benvelope\w*\b",),
+                (r"\bdirection\w*\b", r"\brole\w*\b"),
+                (r"\bidentit\w*\b",),
+                (r"\bstate\w*\b",),
+                (r"\bdelta\w*\b", r"\bbefore\b.*\bafter\b", r"\bafter\b.*\bbefore\b"),
+                (r"\bfail(?:s|ed|ing)?[ -]+closed\b", r"\breject\w*\b"),
+            ],
+        ):
+            errors.append(
+                "PAT-003 Proof must independently mutate envelope, direction/identity, and state delta and fail closed"
+            )
+
+    if pattern_id == "PAT-005":
+        if not matches_every(
+            pattern,
+            [
+                (r"\bselect\w*\b", r"\bfilter\w*\b", r"\bresolve\w*\b", r"\bidentify\w*\b"),
+                (r"\btyped\b",),
+                (r"\bleaf\b",),
+                (r"\bunit\w*\b",),
+            ],
+        ):
+            errors.append("PAT-005 Pattern must select an intended typed economic leaf and its unit")
+        if not matches_every(
+            pattern,
+            [
+                (r"\bfail(?:s|ed|ing)?[ -]+closed\b", r"\breject\w*\b"),
+                (r"\bmissing\b", r"\babsen\w*\b"),
+                (r"\bmultiple\w*\b", r"\bambigu\w*\b", r"\bmore than one\b"),
+            ],
+        ):
+            errors.append("PAT-005 Pattern must fail closed for missing or multiple typed values")
+        if not clause_matches_every(
+            pattern,
+            [
+                (r"\bjava\b",),
+                (r"\bbigdecimal\b",),
+                (r"\bcompareto\b",),
+                (r"\bequals\b",),
+                (r"\brather than\b", r"\binstead of\b", r"\bnot\b", r"\bnever\b", r"\bavoid\w*\b"),
+            ],
+        ):
+            errors.append("PAT-005 Pattern must prefer Java BigDecimal.compareTo over equals")
+        if not matches_every(
+            proof,
+            [
+                (r"\bscale\w*\b", r"\btrailing[ -]+zero\w*\b"),
+                (r"\bequivalent\w*\b", r"\bnumerically equal\b", r"\bsame numeric\b"),
+                (r"\bassert\w*\b", r"\btest\w*\b", r"\bprobe\w*\b"),
+            ],
+        ):
+            errors.append("PAT-005 Proof must include an executable scale-equivalent decimal case")
+
+
 def parse_fields(body: str, pattern_id: str, errors: list[str]) -> dict[str, str]:
     labels = list(re.finditer(r"(?m)^\*\*([^*\n]+):\*\*\s*(.*)$", body))
     known = [match for match in labels if match.group(1) in REQUIRED_LABELS]
@@ -250,6 +379,8 @@ def validate_catalogue(
 
         if fields.get("Use when", "").casefold() == fields.get("Avoid when", "").casefold():
             errors.append(f"{pattern_id} Use when and Avoid when must distinguish application from near-miss")
+
+        validate_pattern_semantics(pattern_id, fields, errors)
 
     return len(headings)
 

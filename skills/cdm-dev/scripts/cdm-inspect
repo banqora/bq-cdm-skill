@@ -6,15 +6,17 @@ usage() {
 Usage:
   cdm-inspect [--jar <cdm-java.jar>] [--classpath <path>] <RuneDeclaration>...
 
-Inspect a bounded CDM vertical slice in one command. For each requested Rune type, choice, or
-enum, print its exact embedded declaration, inheritance and conditioned children; the exact
-generated Java public API (including a matching builder); and the generated metadata and validator
-class names relevant to that slice.
+Inspect a bounded CDM vertical slice in one command. For each requested Rune type, choice, enum,
+function, or qualification function, print its exact embedded declaration, inheritance and
+conditioned children; the exact generated Java public API (including a matching builder or function
+default implementation); and the generated metadata and validator class names relevant to that
+slice.
 
 The command accepts at most 8 declarations and emits at most 1200 lines. It fails rather than
 truncating an exact declaration. The adjacent cdm-source helper selects the JAR; repeat
 --classpath for project-resolved runtime dependencies. Nothing is downloaded or persistently
-extracted, and ambiguous simple names must be fully qualified.
+extracted. Fully qualify ambiguous simple names; if a type and function share that fully qualified
+Rune name, prefix it with type:, choice:, enum:, func:, or qualification:.
 USAGE
 }
 
@@ -90,9 +92,7 @@ if [[ -z "$artifact_version" || "$artifact_version" == *$'\n'* ]]; then
   echo "cdm-inspect: internal error reading the selected CDM artifact version" >&2
   exit 1
 fi
-resolved_lines="$(
-  awk '/^## declaration: / { print $3 }' <<<"$source_output"
-)"
+resolved_lines="$(sed -n 's/^# java=//p' <<<"$source_output")"
 resolved_types=()
 while IFS= read -r resolved_type; do
   [[ -n "$resolved_type" ]] && resolved_types+=("$resolved_type")
@@ -135,9 +135,15 @@ lines = source_path.read_text(encoding="utf-8").splitlines()
 support_types: dict[str, None] = {}
 
 for line in lines:
-    owner_match = re.match(r"^## (?:declaration|inherited): ([A-Za-z0-9_.]+)$", line)
-    if owner_match:
-        support_types[owner_match.group(1)] = None
+    resolved_match = re.match(
+        r"^# resolved=([A-Za-z0-9_.]+) kind=(type|choice|enum)$", line
+    )
+    if resolved_match:
+        support_types[resolved_match.group(1)] = None
+
+    inherited_match = re.match(r"^## inherited: ([A-Za-z0-9_.]+)$", line)
+    if inherited_match:
+        support_types[inherited_match.group(1)] = None
 
     child_match = re.match(
         r"^[A-Za-z0-9_.]+\.[a-z][A-Za-z0-9_]* -> ([A-Za-z0-9_.]+)$", line

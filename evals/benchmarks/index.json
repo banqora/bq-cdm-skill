@@ -127,6 +127,16 @@
       "task": "benchmarks/repo-fail-mini-closeout/TASK.md",
       "rubric": "benchmarks/repo-fail-mini-closeout/rubric.json",
       "baseline": "benchmarks/repo-fail-mini-closeout/baseline.json"
+    },
+    {
+      "id": "securities-loan-event-qualifier",
+      "title": "Securities-loan event qualifier",
+      "kind": "implementation-forward-test",
+      "artifact_version": "7.0.0",
+      "language": "java",
+      "task": "benchmarks/securities-loan-event-qualifier/TASK.md",
+      "rubric": "benchmarks/securities-loan-event-qualifier/rubric.json",
+      "baseline": "benchmarks/securities-loan-event-qualifier/baseline.json"
     }
   ]
 }

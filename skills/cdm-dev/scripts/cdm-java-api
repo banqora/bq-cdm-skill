@@ -7,7 +7,8 @@ Usage:
   cdm-java-api [--jar <cdm-java.jar>] [--classpath <path>] <Type|fully.qualified.Type>...
 
 Print the public generated Java API for each requested type. When the selected cdm-java JAR
-contains a matching nested <Type>$<Type>Builder class, print that builder in the same javap pass.
+contains a matching nested <Type>$<Type>Builder or <Type>$<Type>Default class, print it in the same
+javap pass.
 An unqualified simple name is resolved from the selected JAR when it has exactly one match; the
 resolved fully qualified Java name is printed before the API. Ambiguous names fail with candidates.
 
@@ -88,6 +89,13 @@ for required_tool in javap zipinfo rg; do
   }
 done
 
+if ! javap_probe="$(javap -version 2>&1)"; then
+  echo "cdm-java-api: javap was found but no working JDK is configured" >&2
+  echo "cdm-java-api: install a JDK, then set JAVA_HOME and put its bin directory first on PATH" >&2
+  [[ -z "$javap_probe" ]] || printf 'cdm-java-api: javap: %s\n' "$javap_probe" >&2
+  exit 1
+fi
+
 if [[ ${#jar_args[@]} -gt 0 ]]; then
   jar="$("$source_helper" "${jar_args[@]}" jar)"
 else
@@ -97,6 +105,7 @@ fi
 jar_entries="$(zipinfo -1 "$jar")"
 targets=()
 resolution_notes=()
+resolution_errors=()
 
 add_target() {
   local candidate="$1"
@@ -109,8 +118,8 @@ add_target() {
 
 for requested_type in "${requested_types[@]}"; do
   if [[ ! "$requested_type" =~ ^[A-Za-z_$][A-Za-z0-9_$]*(\.[A-Za-z_$][A-Za-z0-9_$]*)*$ ]]; then
-    echo "cdm-java-api: invalid Java type: $requested_type" >&2
-    exit 1
+    resolution_errors+=("invalid Java type: $requested_type")
+    continue
   fi
 
   resolved_type="$requested_type"
@@ -125,13 +134,13 @@ for requested_type in "${requested_types[@]}"; do
       esac
     done <<<"$jar_entries"
     if [[ ${#simple_matches[@]} -eq 0 ]]; then
-      echo "cdm-java-api: Java type not found in selected JAR: $requested_type" >&2
-      exit 1
+      resolution_errors+=("Java type not found in selected JAR: $requested_type")
+      continue
     fi
     if [[ ${#simple_matches[@]} -gt 1 ]]; then
-      echo "cdm-java-api: Java type name is ambiguous; use a fully qualified name:" >&2
-      printf '  %s\n' "${simple_matches[@]}" | sort >&2
-      exit 1
+      sorted_matches="$(printf '    %s\n' "${simple_matches[@]}" | sort)"
+      resolution_errors+=("Java type name is ambiguous; use a fully qualified name: $requested_type"$'\n'"$sorted_matches")
+      continue
     fi
     resolved_type="${simple_matches[0]}"
     resolution_notes+=("# requested=$requested_type resolved=$resolved_type")
@@ -146,8 +155,20 @@ for requested_type in "${requested_types[@]}"; do
     if rg -Fx -- "$builder_entry" <<<"$jar_entries" >/dev/null; then
       add_target "$builder_type"
     fi
+
+    default_type="${resolved_type}\$${simple_name}Default"
+    default_entry="${default_type//.//}.class"
+    if rg -Fx -- "$default_entry" <<<"$jar_entries" >/dev/null; then
+      add_target "$default_type"
+    fi
   fi
 done
+
+if [[ ${#resolution_errors[@]} -gt 0 ]]; then
+  echo "cdm-java-api: type batch preflight failed:" >&2
+  printf '  %s\n' "${resolution_errors[@]}" >&2
+  exit 1
+fi
 
 classpath="$jar"
 [[ -z "$extra_classpath" ]] || classpath+=":$extra_classpath"

@@ -12,7 +12,7 @@ source "$script_dir/lib.sh"
 setup_work
 
 expect_ok "saved implementation benchmarks pass their structural contract" \
-  --stdout '12 benchmarks passed' -- \
+  --stdout '13 benchmarks passed' -- \
   "$checker"
 
 fixture="$work/evals"

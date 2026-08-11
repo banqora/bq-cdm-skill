@@ -1,0 +1,205 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "securities-loan-event-qualifier",
+  "recorded_at": "2026-08-11",
+  "fixture_version": "7.0.0",
+  "task_sha256": "c50875ba2f3d53a66310cdce531dedd8e0211ce9b9008d8997ebe1a0f34f2172",
+  "rubric_sha256": "8896b27c30d344ad85a24f640b7144e15b95b36965b16a41dbdc18b523d32c08",
+  "evaluator_probe_sha256": "22633b1fbb984009daf769d691e5f4a53318b0407f40758d5edd2840a2bc6fbe",
+  "review_sha256": "bbe3906147e4a264d1ce313cea34d641d794e5af6ec150019649d94603e01182",
+  "fable_raw_review_sha256": "0fd616b4862e2eeb6c158be1522817b7fec9976398dfe7c26405622a1ecfc3a7",
+  "skill_snapshot_commit": "c4edd52907cc5e500c3d0c15e4adf45f0985935d",
+  "skill_snapshot_sha256": "eed642d8d07203fb1b078c713e1003e44cd6830462e5d773a1c37cc0398a48d9",
+  "skill_snapshot_hash_method": "SHA-256 of sorted relative-path sha256sum lines for every file under skills/cdm-dev",
+  "production_tree_hash_method": "SHA-256 of each sorted repository-relative src/main path, a NUL separator, and that file's SHA-256 digest followed by a newline",
+  "raw_run_root": "/private/tmp/securities-loan-event-qualifier.Gfe2DB",
+  "raw_fable_review_root": "/private/tmp/securities-loan-qualifier-fable.0UG57G",
+  "note": "Four counted, sequential, context-isolated arms used Claude Code 2.1.228 with claude-sonnet-5 or Codex CLI 0.147.0 with gpt-5.4, all at high effort and authenticated through local Claude Max or ChatGPT subscriptions with API credential/provider overrides removed. Each received the identical frozen task and pinned CDM 7.0.0 artifacts; controls could not read cdm-dev, this repository, the rubric, evaluator probes, global skill/plugin roots, or sibling workspaces. All authored suites and clean-copy offline builds passed before evaluators were revealed. Strict frozen-probe scoring found Sonnet treatment/control at 81/71 and GPT-5.4 treatment/control at 78/89. Claude Fable 5 independently rebuilt, probed, and inspected all four without seeing those results and scored them 95/90 and 82/84 respectively. Fable adapted movement direction to candidate fixture vocabulary, while the primary evaluator populated contradictory real transfer payloads; both reviews agree that the skill improves Sonnet and regresses GPT-5.4. Post-run evidence-triangle, typed-leaf, decimal-comparison, compact inspection, function/qualification lookup, and parser-safety changes are not credited to treatment.",
+  "strict_evaluation": {
+    "scores": {
+      "sonnet-5-with-skill": 81,
+      "sonnet-5-control": 71,
+      "gpt-5.4-with-skill": 78,
+      "gpt-5.4-control": 89
+    },
+    "fatal_caps": "none",
+    "method": "Two evaluator owners mechanically adapted the pre-frozen probes to candidate APIs and independently mutated primitive envelope/cardinality, semantic payload direction and resolved identity, and before/after state delta.",
+    "probe_results": {
+      "sonnet-5-with-skill": "9/16 pass; missing quantity, duplicate quantity kinds, missing fee, split transfer instructions, and same-direction movements fail",
+      "sonnet-5-control": "10/19 pass; transfer content, quantity direction, duplicate kinds, missing fee, and intent-roster negatives fail",
+      "gpt-5.4-with-skill": "10/15 pass; quantity direction, quantity-plus-transfer population, transfer direction/completeness, and resolved identity fail",
+      "gpt-5.4-control": "13/16 pass; missing quantity, unrelated price change, and mutable diagnostic result fail"
+    }
+  },
+  "independent_review": {
+    "reviewer": "Claude Fable 5",
+    "model": "claude-fable-5",
+    "claude_code_version": "2.1.228",
+    "effort": "high",
+    "authentication": "local Claude Max subscription; API credential/provider overrides removed; trace apiKeySource=none",
+    "sessions": 1,
+    "turns": 67,
+    "wall_seconds": 1298,
+    "scores": {
+      "sonnet-5-with-skill": 95,
+      "sonnet-5-control": 90,
+      "gpt-5.4-with-skill": 82,
+      "gpt-5.4-control": 84
+    },
+    "fatal_caps": "none",
+    "probe_results": {
+      "sonnet-5-with-skill": "42/43 pass; missing quantity coerced to zero",
+      "sonnet-5-control": "50/50 pass under candidate-vocabulary adaptation; static review finds transfer payload is not inspected",
+      "gpt-5.4-with-skill": "39/43 pass; unrelated payout term, scale-only rate, and two same-direction movement cases fail",
+      "gpt-5.4-control": "39/42 pass; missing quantity, unrelated price, and scale-only rate cases fail"
+    },
+    "score_difference": "Fable represented Sonnet movement direction through before/after collateral sets where candidate fixtures lacked real transfer legs; the primary evaluator populated contradictory transfer payloads and also exercised split and duplicate instructions. Both score sets retain the same within-model treatment-effect signs."
+  },
+  "skill_revision_after_run": {
+    "pre_run_snapshot_sha256": "eed642d8d07203fb1b078c713e1003e44cd6830462e5d773a1c37cc0398a48d9",
+    "post_run_snapshot_sha256": "3e9a1fc45cf9b0570b54dc3e62baf4ff6114883ab2106cb404e075d5da30dc59",
+    "change": "Added a lifecycle evidence triangle across primitive envelope, semantic direction/identity payload, and state delta; clarified only-exists, typed-leaf/unit selection, missing-or-multiple fail-closed behavior, and BigDecimal.compareTo semantics; added 21 catalogue mutation checks. Added bounded members/path views, function and qualification inspection, kind-qualified collision handling, batch-wide preflight, capped in-memory search, imported/aliased/choice traversal, complete real-CDM member grammar cases, safe project discovery, and explicit JDK launcher diagnostics.",
+    "credit": "not credited to any recorded treatment arm; requires a fresh forward benchmark"
+  },
+  "harness_limitations": [
+    "Two excluded Sonnet-control wrapper attempts failed before a model process started or the worktree changed: the first omitted the CLI from PATH and the second denied fstat on its own stderr descriptor. Both traces are retained and neither is counted.",
+    "One excluded Fable wrapper attempt referenced a Gradle path denied by its sandbox and stopped before candidate or evaluator writes. The clean review was restarted once with a copied read-only Gradle distribution.",
+    "Claude safe mode disables native skill discovery, so treatment received the exact versioned task-local skill and was explicitly told to read it. This comparison tests skill content, not trigger routing.",
+    "Candidate APIs differ, so mechanically adapted evaluator test counts differ; correctness was scored criterion by criterion rather than by raw failure count.",
+    "Cross-vendor token and subscription-accounting values are not comparable."
+  ],
+  "runs": [
+    {
+      "arm": "sonnet-5-with-skill",
+      "vendor": "claude",
+      "model": "claude-sonnet-5",
+      "claude_code_version": "2.1.228",
+      "skill": true,
+      "authentication": "local Claude Max subscription; API credential/provider overrides removed; trace apiKeySource=none",
+      "deliverable_git_commit": "2f2022493a471420eb9744fea6da65a1c679db27",
+      "production_tree_sha256": "6b8ba11eca3d0036b95d6b42ba35782e72dc618998940040acfddc8af3f283df",
+      "authored_tests": {"passed": 19, "total": 19},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "strict_rubric_score": "81/100",
+        "fable_rubric_score": "95/100",
+        "fresh_clone_offline_build": "pass",
+        "main_findings": "real transfer identities and quantity direction; scoped generated validation; misses payer/receiver, duplicate and split primitives, and absence-vs-zero"
+      },
+      "metrics": {
+        "sessions": 1,
+        "effort": "high",
+        "turns": 98,
+        "tool_calls": 97,
+        "bash_calls": 67,
+        "tool_calls_before_first_production_write": 65,
+        "wall_seconds": 1056,
+        "api_duration_seconds": 883,
+        "output_tokens": 85181,
+        "production_files": 12,
+        "production_lines": 567
+      }
+    },
+    {
+      "arm": "sonnet-5-control",
+      "vendor": "claude",
+      "model": "claude-sonnet-5",
+      "claude_code_version": "2.1.228",
+      "skill": false,
+      "authentication": "local Claude Max subscription; API credential/provider overrides removed; trace apiKeySource=none",
+      "deliverable_git_commit": "43840332a67b3882a13a61f5b089baf05563e251",
+      "production_tree_sha256": "72b2fc1c8bd938d764ed83c33968d78541aabbbe2c2f972d7c2f6bbf4318386c",
+      "authored_tests": {"passed": 9, "total": 9},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "strict_rubric_score": "71/100",
+        "fable_rubric_score": "90/100",
+        "fresh_clone_offline_build": "pass",
+        "main_findings": "exact typed fee leaf and null propagation; substitution ignores transfer contents and no generated validation is run"
+      },
+      "metrics": {
+        "sessions": 1,
+        "effort": "high",
+        "turns": 85,
+        "tool_calls": 84,
+        "bash_calls": 60,
+        "tool_calls_before_first_production_write": 61,
+        "wall_seconds": 803,
+        "api_duration_seconds": 658,
+        "output_tokens": 66957,
+        "production_files": 13,
+        "production_lines": 669
+      }
+    },
+    {
+      "arm": "gpt-5.4-with-skill",
+      "vendor": "codex",
+      "model": "gpt-5.4",
+      "codex_cli_version": "0.147.0",
+      "skill": true,
+      "authentication": "local ChatGPT subscription; API credential/provider overrides removed",
+      "deliverable_git_commit": "1c76fc67e927f1de4ecb9d349b5465d4db80e0aa",
+      "production_tree_sha256": "e676188a46585ff63e71d46716e1d7fbafed7f93fad5178628c3115b9719d486",
+      "authored_tests": {"passed": 8, "total": 8},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "strict_rubric_score": "78/100",
+        "fable_rubric_score": "82/100",
+        "fresh_clone_offline_build": "pass",
+        "main_findings": "correct missing-quantity handling and immutable carrier; whole-payout equality and directionless object-identity substitution"
+      },
+      "metrics": {
+        "top_level_turns": 1,
+        "reasoning_effort": "high",
+        "completed_items": 80,
+        "commands": 49,
+        "file_change_events": 3,
+        "commands_before_first_production_write": 38,
+        "wall_seconds": 563,
+        "input_tokens": 3124287,
+        "cached_input_tokens": 2973568,
+        "output_tokens": 27040,
+        "reasoning_output_tokens": 12332,
+        "production_files": 3,
+        "production_lines": 365
+      }
+    },
+    {
+      "arm": "gpt-5.4-control",
+      "vendor": "codex",
+      "model": "gpt-5.4",
+      "codex_cli_version": "0.147.0",
+      "skill": false,
+      "authentication": "local ChatGPT subscription; API credential/provider overrides removed",
+      "deliverable_git_commit": "5b623b15799046f4bbb72b9e9d29a7e74a399f83",
+      "production_tree_sha256": "12d1fa2c78b75783e05621444cd04cb9ecde20554d57116e43a7a55f7328b320",
+      "authored_tests": {"passed": 6, "total": 6},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "strict_rubric_score": "89/100",
+        "fable_rubric_score": "84/100",
+        "fresh_clone_offline_build": "pass",
+        "main_findings": "strong resolved transfer direction and exact primitive population; missing quantity becomes zero and rate signature is unfiltered and scale-sensitive"
+      },
+      "metrics": {
+        "top_level_turns": 1,
+        "reasoning_effort": "high",
+        "completed_items": 93,
+        "commands": 67,
+        "file_change_events": 5,
+        "commands_before_first_production_write": 55,
+        "wall_seconds": 502,
+        "input_tokens": 3268476,
+        "cached_input_tokens": 3113984,
+        "output_tokens": 23783,
+        "reasoning_output_tokens": 8467,
+        "production_files": 3,
+        "production_lines": 360
+      }
+    }
+  ]
+}

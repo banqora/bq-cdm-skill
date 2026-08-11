@@ -8,7 +8,9 @@ Usage:
   cdm-source [--jar <cdm-java.jar>] jar
   cdm-source [--jar <cdm-java.jar>] list [regex]
   cdm-source [--jar <cdm-java.jar>] search <regex>
-  cdm-source [--jar <cdm-java.jar>] type <fully.qualified.Declaration|Declaration>...
+  cdm-source [--jar <cdm-java.jar>] type <[kind:]fully.qualified.Declaration|[kind:]Declaration>...
+  cdm-source [--jar <cdm-java.jar>] members <[kind:]fully.qualified.Declaration|[kind:]Declaration>...
+  cdm-source [--jar <cdm-java.jar>] path <[kind:]fully.qualified.Declaration|[kind:]Declaration> <member.path>
   cdm-source [--jar <cdm-java.jar>] show <cdm/rosetta/file.rosetta>
 
 The JAR is selected in this order:
@@ -17,6 +19,7 @@ The JAR is selected in this order:
   3. an unambiguous cdm-java JAR in a common build layout under the active project
 
 The helper never downloads or substitutes a CDM release.
+Use a type:, choice:, enum:, func:, or qualification: prefix only when declarations share a name.
 USAGE
 }
 
@@ -56,12 +59,16 @@ canonical_file() {
 project_root() {
   local candidate="$PWD"
   while :; do
-    if [[ -d "$candidate/.git" ||
+    if [[ -e "$candidate/.git" ||
       -f "$candidate/settings.gradle" ||
       -f "$candidate/settings.gradle.kts" ||
       -f "$candidate/pom.xml" ||
       -f "$candidate/build.gradle" ||
       -f "$candidate/build.gradle.kts" ]]; then
+      if [[ "$candidate" == "/" ||
+        (-n "${HOME:-}" && "$candidate" == "$HOME") ]]; then
+        return 1
+      fi
       printf '%s\n' "$candidate"
       return
     fi
@@ -70,12 +77,16 @@ project_root() {
     [[ "$parent" != "$candidate" ]] || break
     candidate="$parent"
   done
-  printf '%s\n' "$PWD"
+  return 1
 }
 
 discover_jar() {
   local root
-  root="$(project_root)"
+  if ! root="$(project_root)"; then
+    echo "cdm-source: no project root marker found at or above $PWD" >&2
+    echo "cdm-source: pass --jar or set CDM_JAVA_JAR; refusing an unbounded filesystem scan" >&2
+    return 1
+  fi
   local candidates=()
   local candidate
   local canonical
@@ -202,59 +213,146 @@ case "$command" in
       exit 1
     }
     pattern="$2"
-    source_dir="$(mktemp -d "${TMPDIR:-/tmp}/cdm-source.XXXXXX")"
-    cleanup() {
-      [[ -n "${source_dir:-}" && -d "$source_dir" ]] && rm -rf -- "$source_dir"
-    }
-    trap cleanup EXIT
-    unzip -q "$jar" 'cdm/rosetta/*.rosetta' -d "$source_dir"
-    (
-      cd "$source_dir"
-      rg -n -C 3 --glob '*.rosetta' -- "$pattern" cdm/rosetta
-    )
-    ;;
-
-  type)
-    [[ $# -ge 2 ]] || {
-      usage
-      exit 1
-    }
-    requested_declarations=("${@:2}")
-    for requested_declaration in "${requested_declarations[@]}"; do
-      if [[ ! "$requested_declaration" =~ ^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$ ]]; then
-        echo "cdm-source: invalid declaration name: $requested_declaration" >&2
-        exit 1
-      fi
-    done
-    python3 - "$jar" "${requested_declarations[@]}" <<'PY'
+    python3 - "$jar" "$pattern" <<'PY'
 from __future__ import annotations
 
 import re
 import sys
 import zipfile
+
+
+jar_path, pattern = sys.argv[1:]
+max_output_lines = 160
+context_lines = 3
+
+try:
+    matcher = re.compile(pattern)
+except re.error as error:
+    raise SystemExit(f"cdm-source: invalid search regex: {error}") from error
+
+rendered: list[str] = []
+match_count = 0
+truncated = False
+with zipfile.ZipFile(jar_path) as archive:
+    source_names = sorted(
+        name
+        for name in archive.namelist()
+        if name.startswith("cdm/rosetta/") and name.endswith(".rosetta")
+    )
+    for path in source_names:
+        lines = archive.read(path).decode("utf-8").splitlines()
+        matching_indexes = [index for index, line in enumerate(lines) if matcher.search(line)]
+        if not matching_indexes:
+            continue
+        match_count += len(matching_indexes)
+        matching_index_set = set(matching_indexes)
+
+        ranges: list[list[int]] = []
+        for index in matching_indexes:
+            start = max(0, index - context_lines)
+            end = min(len(lines), index + context_lines + 1)
+            if ranges and start <= ranges[-1][1]:
+                ranges[-1][1] = max(ranges[-1][1], end)
+            else:
+                ranges.append([start, end])
+
+        for start, end in ranges:
+            if rendered:
+                rendered.append("--")
+            for index in range(start, end):
+                separator = ":" if index in matching_index_set else "-"
+                rendered.append(f"{path}{separator}{index + 1}{separator}{lines[index]}")
+                if len(rendered) > max_output_lines:
+                    truncated = True
+                    break
+            if truncated:
+                break
+        if truncated:
+            break
+
+if match_count == 0:
+    raise SystemExit(1)
+
+if truncated:
+    marker = (
+        f"# cdm-source: search output truncated at {max_output_lines} lines; "
+        "refine the regex"
+    )
+    rendered = rendered[: max_output_lines - 1] + [marker]
+
+print("\n".join(rendered))
+PY
+    ;;
+
+  type | members | path)
+    if [[ "$command" == "path" ]]; then
+      [[ $# -eq 3 ]] || {
+        usage
+        exit 1
+      }
+    elif [[ $# -lt 2 ]]; then
+      usage
+      exit 1
+    fi
+    python3 - "$jar" "$command" "${@:2}" <<'PY'
+from __future__ import annotations
+
+import re
+import sys
+import zipfile
+from contextlib import redirect_stdout
 from dataclasses import dataclass
+from io import StringIO
+
+
+@dataclass(frozen=True)
+class RuneImport:
+    target: str
+    alias: str | None
+
+
+@dataclass(frozen=True)
+class FunctionVariant:
+    namespace: str
+    name: str
+    imports: tuple[RuneImport, ...]
+    path: str
+    line: int
+    block: tuple[str, ...]
 
 
 @dataclass(frozen=True)
 class Declaration:
     kind: str
+    syntax_kind: str
     namespace: str
     name: str
     base: str | None
-    imports: tuple[str, ...]
+    imports: tuple[RuneImport, ...]
     path: str
     line: int
     block: tuple[str, ...]
 
 
 jar_path = sys.argv[1]
-requested_declarations = sys.argv[2:]
+view = sys.argv[2]
+arguments = sys.argv[3:]
+requested_declarations = arguments[:1] if view == "path" else arguments
+requested_path = arguments[1] if view == "path" else None
+name_re = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$")
+path_re = re.compile(r"^[a-z][A-Za-z0-9_]*(?:\.[a-z][A-Za-z0-9_]*)*$")
+kind_selectors = {"type", "choice", "enum", "func", "qualification"}
+model_syntax_kinds = {"type", "choice", "enum"}
 declaration_re = re.compile(
-    r"^(type|choice|enum)\s+([A-Za-z_][A-Za-z0-9_]*)"
-    r"(?:\s+extends\s+([A-Za-z_][A-Za-z0-9_]*))?\s*:"
+    r"^(type|choice|enum|func|qualification)\s+([A-Za-z_][A-Za-z0-9_]*)"
+    r"(?:\s+extends\s+([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*))?\s*:"
+)
+function_variant_re = re.compile(
+    r"^func\s+([A-Za-z_][A-Za-z0-9_]*)\s*\([^)]*\)\s*:"
 )
 top_level_re = re.compile(r"^(?:type|enum|choice|func|qualification|report|rule)\s+")
 declarations: list[Declaration] = []
+function_variants: list[FunctionVariant] = []
 
 with zipfile.ZipFile(jar_path) as archive:
     source_names = sorted(
@@ -271,15 +369,35 @@ with zipfile.ZipFile(jar_path) as archive:
                 namespace = match.group(1)
                 break
         imports = tuple(
-            match.group(1)
+            RuneImport(match.group(1), match.group(2))
             for line in lines
             if (
                 match := re.match(
-                    r"^import\s+([A-Za-z_][A-Za-z0-9_.]*(?:\.\*)?)\s*$", line
+                    r"^import\s+([A-Za-z_][A-Za-z0-9_.]*(?:\.\*)?)"
+                    r"(?:\s+as\s+([A-Za-z_][A-Za-z0-9_]*))?\s*$",
+                    line,
                 )
             )
         )
         for index, line in enumerate(lines):
+            variant_match = function_variant_re.match(line)
+            if variant_match:
+                end = index + 1
+                while end < len(lines) and not top_level_re.match(lines[end]):
+                    end += 1
+                while end > index + 1 and not lines[end - 1].strip():
+                    end -= 1
+                function_variants.append(
+                    FunctionVariant(
+                        namespace,
+                        variant_match.group(1),
+                        imports,
+                        path,
+                        index + 1,
+                        tuple(lines[index:end]),
+                    )
+                )
+                continue
             match = declaration_re.match(line)
             if not match:
                 continue
@@ -288,16 +406,25 @@ with zipfile.ZipFile(jar_path) as archive:
                 end += 1
             while end > index + 1 and not lines[end - 1].strip():
                 end -= 1
+            block = tuple(lines[index:end])
+            syntax_kind = match.group(1)
+            kind = syntax_kind
+            if syntax_kind == "func" and any(
+                re.match(r"^\s+\[qualification\b", block_line)
+                for block_line in block
+            ):
+                kind = "qualification"
             declarations.append(
                 Declaration(
-                    match.group(1),
+                    kind,
+                    syntax_kind,
                     namespace,
                     match.group(2),
                     match.group(3),
                     imports,
                     path,
                     index + 1,
-                    tuple(lines[index:end]),
+                    block,
                 )
             )
 
@@ -306,92 +433,204 @@ def qualified(declaration: Declaration) -> str:
     return f"{declaration.namespace}.{declaration.name}" if declaration.namespace else declaration.name
 
 
-def resolve_requested(requested: str) -> Declaration:
-    if "." in requested:
-        requested_namespace, requested_name = requested.rsplit(".", 1)
-        matches = [
+def generated_java_name(declaration: Declaration) -> str:
+    namespace = declaration.namespace
+    if declaration.syntax_kind in {"func", "qualification"}:
+        namespace = f"{namespace}.functions" if namespace else "functions"
+    return f"{namespace}.{declaration.name}" if namespace else declaration.name
+
+
+def declaration_selector(declaration: Declaration) -> str:
+    return "qualification" if declaration.kind == "qualification" else declaration.syntax_kind
+
+
+def disambiguated_name(declaration: Declaration) -> str:
+    return f"{declaration_selector(declaration)}:{qualified(declaration)}"
+
+
+def parse_requested(requested: str) -> tuple[str | None, str] | None:
+    selector, separator, name = requested.partition(":")
+    if not separator:
+        return None, requested
+    if selector not in kind_selectors:
+        return None
+    return selector, name
+
+
+def selector_matches(selector: str | None, declaration: Declaration) -> bool:
+    if selector is None:
+        return True
+    if selector == "func":
+        return declaration.syntax_kind == "func"
+    if selector == "qualification":
+        return declaration.kind == "qualification"
+    return declaration.syntax_kind == selector
+
+
+def requested_matches(name: str, selector: str | None) -> list[Declaration]:
+    if "." in name:
+        requested_namespace, requested_name = name.rsplit(".", 1)
+        return [
             declaration
             for declaration in declarations
             if declaration.name == requested_name
             and declaration.namespace == requested_namespace
+            and selector_matches(selector, declaration)
         ]
-    else:
-        matches = [
-            declaration for declaration in declarations if declaration.name == requested
-        ]
+    return [
+        declaration
+        for declaration in declarations
+        if declaration.name == name and selector_matches(selector, declaration)
+    ]
 
+
+# Resolve and validate the complete batch before printing. Report every bad name together so a
+# caller does not need a type-by-type retry loop, and never leak a plausible partial main report.
+targets: list[tuple[str, Declaration]] = []
+resolution_errors: list[tuple[str, str, tuple[str, ...]]] = []
+for requested in requested_declarations:
+    parsed_request = parse_requested(requested)
+    if parsed_request is None:
+        resolution_errors.append((requested, "invalid declaration kind selector", ()))
+        continue
+    selector, requested_name = parsed_request
+    if not name_re.fullmatch(requested_name):
+        resolution_errors.append((requested, "invalid declaration name", ()))
+        continue
+    matches = requested_matches(requested_name, selector)
     if not matches:
-        raise SystemExit(f"cdm-source: declaration not found: {requested}")
-    if len(matches) > 1:
-        options = "\n  ".join(sorted(qualified(declaration) for declaration in matches))
-        raise SystemExit(
-            "cdm-source: declaration name is ambiguous; use a fully qualified name:"
-            f"\n  {options}"
+        resolution_errors.append((requested, "declaration not found", ()))
+    elif len(matches) > 1:
+        resolution_errors.append(
+            (
+                requested,
+                "declaration name is ambiguous; use a kind-qualified candidate",
+                tuple(sorted(disambiguated_name(declaration) for declaration in matches)),
+            )
         )
-    return matches[0]
+    else:
+        targets.append((requested, matches[0]))
+
+if requested_path is not None and not path_re.fullmatch(requested_path):
+    resolution_errors.append((requested_path, "invalid member path", ()))
+
+if resolution_errors:
+    print("cdm-source: declaration batch preflight failed:", file=sys.stderr)
+    for requested, reason, candidates in resolution_errors:
+        if reason == "declaration not found":
+            print(f"  declaration not found: {requested}", file=sys.stderr)
+        else:
+            print(f"  {requested}: {reason}", file=sys.stderr)
+        for candidate in candidates:
+            print(f"    {candidate}", file=sys.stderr)
+    raise SystemExit(1)
 
 
-# Resolve the complete batch before printing, so an invalid later request cannot leave a
-# plausible-looking partial result on stdout.
-targets = [(requested, resolve_requested(requested)) for requested in requested_declarations]
+def model_declarations() -> list[Declaration]:
+    return [
+        declaration
+        for declaration in declarations
+        if declaration.syntax_kind in model_syntax_kinds
+    ]
 
 
-def resolve_base(declaration: Declaration) -> Declaration | None:
-    if declaration.base is None:
-        return None
+def resolve_model_type(owner: Declaration, reference: str) -> Declaration | None:
+    models = model_declarations()
+
+    if "." in reference:
+        direct = [candidate for candidate in models if qualified(candidate) == reference]
+        if len(direct) == 1:
+            return direct[0]
+
+        alias, suffix = reference.split(".", 1)
+        aliased_names: set[str] = set()
+        for declaration_import in owner.imports:
+            if declaration_import.alias != alias:
+                continue
+            if declaration_import.target.endswith(".*"):
+                aliased_names.add(f"{declaration_import.target[:-2]}.{suffix}")
+            else:
+                imported_simple_name = declaration_import.target.rsplit(".", 1)[-1]
+                if suffix == imported_simple_name:
+                    aliased_names.add(declaration_import.target)
+        aliased = [
+            candidate for candidate in models if qualified(candidate) in aliased_names
+        ]
+        return aliased[0] if len(aliased) == 1 else None
+
     same_namespace = [
         candidate
-        for candidate in declarations
-        if candidate.name == declaration.base and candidate.namespace == declaration.namespace
+        for candidate in models
+        if candidate.name == reference and candidate.namespace == owner.namespace
     ]
     if len(same_namespace) == 1:
         return same_namespace[0]
-    global_matches = [candidate for candidate in declarations if candidate.name == declaration.base]
-    return global_matches[0] if len(global_matches) == 1 else None
 
-
-def resolve_field_type(owner: Declaration, name: str) -> Declaration | None:
-    same_namespace = [
-        candidate
-        for candidate in declarations
-        if candidate.name == name and candidate.namespace == owner.namespace
-    ]
-    if len(same_namespace) == 1:
-        return same_namespace[0]
-
-    imported: list[Declaration] = []
+    imported_names: set[str] = set()
     for declaration_import in owner.imports:
-        if declaration_import.endswith(".*"):
-            imported_namespace = declaration_import[:-2]
-            imported.extend(
-                candidate
-                for candidate in declarations
-                if candidate.name == name and candidate.namespace == imported_namespace
-            )
-        elif declaration_import.endswith(f".{name}"):
-            imported.extend(
-                candidate for candidate in declarations if qualified(candidate) == declaration_import
-            )
-    imported = list({qualified(candidate): candidate for candidate in imported}.values())
+        if declaration_import.alias is not None:
+            continue
+        if declaration_import.target.endswith(".*"):
+            imported_names.add(f"{declaration_import.target[:-2]}.{reference}")
+        elif declaration_import.target.endswith(f".{reference}"):
+            imported_names.add(declaration_import.target)
+    imported = [
+        candidate for candidate in models if qualified(candidate) in imported_names
+    ]
     if len(imported) == 1:
         return imported[0]
 
-    global_matches = [candidate for candidate in declarations if candidate.name == name]
+    global_matches = [candidate for candidate in models if candidate.name == reference]
     return global_matches[0] if len(global_matches) == 1 else None
 
 
-condition_re = re.compile(r"^\s+condition\s+([A-Za-z_][A-Za-z0-9_]*)\s*:")
+def resolve_base(declaration: Declaration) -> Declaration | None:
+    return (
+        resolve_model_type(declaration, declaration.base)
+        if declaration.base is not None
+        else None
+    )
+
+
+def resolve_field_type(owner: Declaration, name: str) -> Declaration | None:
+    return resolve_model_type(owner, name)
+
+
+condition_re = re.compile(
+    r"^\s+condition(?:\s+([A-Za-z_][A-Za-z0-9_]*))?\s*:"
+)
 field_re = re.compile(
-    r"^\s+(?:override\s+)?([a-z][A-Za-z0-9_]*)\s+([A-Z][A-Za-z0-9_]*)\s+\([^)]+\)"
+    r"^\s+(?:override\s+)?([a-z][A-Za-z0-9_]*)\s+"
+    r"([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)\s+"
+    r"(\([0-9]+\.\.(?:[0-9]+|\*)\))"
+)
+identifier_re = r"[A-Za-z_][A-Za-z0-9_]*"
+type_reference_re = rf"{identifier_re}(?:\.{identifier_re})*"
+choice_alternative_re = re.compile(rf"^({type_reference_re})(?:\s|$)")
+enum_value_re = re.compile(rf"^({identifier_re})(?:\s|$)")
+annotation_re = re.compile(rf"^\[{identifier_re}(?:\s|\]|$)")
+function_header_re = re.compile(
+    rf"^(?:inputs|output)\s*:"
+    rf"|^alias\s+{identifier_re}\s*:"
+    rf"|^(?:set|add)\s+{identifier_re}"
+    rf"(?:\s*->>?\s*{identifier_re})*\s*:"
+    rf"|^post-condition(?:\s+{identifier_re})?\s*:"
 )
 
 
 def declared_conditions(declaration: Declaration) -> tuple[str, ...]:
-    return tuple(
-        match.group(1)
-        for line in declaration.block
-        if (match := condition_re.match(line))
-    )
+    conditions: list[str] = []
+    anonymous_index = 0
+    for line in declaration.block:
+        match = condition_re.match(line)
+        if not match:
+            continue
+        if match.group(1) is not None:
+            conditions.append(match.group(1))
+        else:
+            anonymous_index += 1
+            conditions.append(f"anonymous_{anonymous_index}")
+    return tuple(conditions)
 
 
 def condition_chain(declaration: Declaration) -> list[tuple[Declaration, tuple[str, ...]]]:
@@ -413,10 +652,26 @@ def print_declaration(label: str, declaration: Declaration) -> None:
     print("\n".join(declaration.block))
 
 
+def variants_for(declaration: Declaration) -> list[FunctionVariant]:
+    if declaration.syntax_kind != "func":
+        return []
+    return [
+        variant
+        for variant in function_variants
+        if variant.namespace == declaration.namespace and variant.name == declaration.name
+    ]
+
+
 def print_target(requested: str, target: Declaration) -> None:
     print(f"# requested={requested}")
     print(f"# resolved={qualified(target)} kind={target.kind}")
+    print(f"# java={generated_java_name(target)}")
     print_declaration("declaration", target)
+    for variant in variants_for(target):
+        print()
+        print(f"## function dispatch: {qualified(target)}")
+        print(f"# source={variant.path}:{variant.line}")
+        print("\n".join(variant.block))
     seen = {qualified(target)}
     owners = [target]
     base = resolve_base(target)
@@ -433,7 +688,8 @@ def print_target(requested: str, target: Declaration) -> None:
             (
                 candidate
                 for candidate in declarations
-                if candidate.base == direct_base.name
+                if candidate.syntax_kind in model_syntax_kinds
+                and candidate.base == direct_base.name
                 and candidate.namespace == target.namespace
             ),
             key=lambda candidate: candidate.name,
@@ -449,9 +705,13 @@ def print_target(requested: str, target: Declaration) -> None:
 
     if target.kind == "choice":
         alternatives: dict[str, Declaration] = {}
+        target_body_indent = body_indent(target)
         for line in target.block[1:]:
-            alternative_match = re.match(r"^\s+([A-Z][A-Za-z0-9_]*)\b", line)
-            if not alternative_match:
+            indent = len(line) - len(line.lstrip())
+            if target_body_indent is None or indent != target_body_indent:
+                continue
+            alternative_match = choice_alternative_re.match(line.strip())
+            if not alternative_match or line.strip().startswith("["):
                 continue
             alternative = resolve_field_type(target, alternative_match.group(1))
             if alternative is not None:
@@ -478,7 +738,7 @@ def print_target(requested: str, target: Declaration) -> None:
             field_match = field_re.match(line)
             if not field_match:
                 continue
-            field_name, field_type_name = field_match.groups()
+            field_name, field_type_name, _cardinality = field_match.groups()
             child = resolve_field_type(owner, field_type_name)
             if child is None:
                 continue
@@ -501,13 +761,227 @@ def print_target(requested: str, target: Declaration) -> None:
                 )
 
 
-for index, (requested, target) in enumerate(targets):
-    if index:
-        print("\n# ---- next requested declaration ----")
-    print_target(requested, target)
+def owner_chain(declaration: Declaration) -> list[Declaration]:
+    result: list[Declaration] = []
+    seen: set[str] = set()
+    current: Declaration | None = declaration
+    while current is not None and qualified(current) not in seen:
+        seen.add(qualified(current))
+        result.append(current)
+        current = resolve_base(current)
+    return result
 
-print()
-print("# next=use one cdm-inspect batch, then compile a populated slice")
+
+def body_indent(declaration: Declaration) -> int | None:
+    indents: list[int] = []
+    for line in declaration.block[1:]:
+        stripped = line.strip()
+        if not stripped or len(line) == len(line.lstrip()):
+            continue
+        recognized = bool(field_re.match(line))
+        if declaration.kind in {"func", "qualification"}:
+            recognized = recognized or bool(function_header_re.match(stripped))
+        elif declaration.syntax_kind == "enum":
+            recognized = recognized or (
+                not stripped.startswith("[") and bool(enum_value_re.match(stripped))
+            )
+        elif declaration.syntax_kind == "choice":
+            recognized = recognized or (
+                not stripped.startswith("[")
+                and bool(choice_alternative_re.match(stripped))
+            )
+        recognized = recognized or bool(
+            re.match(rf"^condition(?:\s+{identifier_re})?\s*:", stripped)
+        )
+        recognized = recognized or bool(annotation_re.match(stripped))
+        if recognized:
+            indents.append(len(line) - len(line.lstrip()))
+    return min(indents) if indents else None
+
+
+def member_lines(declaration: Declaration) -> list[tuple[int, str]]:
+    result: list[tuple[int, str]] = []
+    declaration_body_indent = body_indent(declaration)
+    annotation_continuation = False
+    for offset, line in enumerate(declaration.block):
+        stripped = line.strip()
+        indent = len(line) - len(line.lstrip())
+        is_body_level = declaration_body_indent is not None and indent == declaration_body_indent
+        if annotation_continuation:
+            result.append((declaration.line + offset, line))
+            annotation_continuation = "]" not in stripped
+            continue
+        if offset == 0:
+            result.append((declaration.line, line))
+        elif field_re.match(line):
+            result.append((declaration.line + offset, line))
+        elif (
+            declaration.kind in {"func", "qualification"}
+            and is_body_level
+            and function_header_re.match(stripped)
+        ):
+            result.append((declaration.line + offset, line))
+        elif (
+            declaration.syntax_kind == "enum"
+            and is_body_level
+            and not stripped.startswith("[")
+            and enum_value_re.match(stripped)
+        ):
+            result.append((declaration.line + offset, line))
+        elif (
+            declaration.syntax_kind == "choice"
+            and is_body_level
+            and not stripped.startswith("[")
+            and choice_alternative_re.match(stripped)
+        ):
+            result.append((declaration.line + offset, line))
+        elif is_body_level and re.match(
+            rf"^condition(?:\s+{identifier_re})?\s*:", stripped
+        ):
+            result.append((declaration.line + offset, line))
+        elif is_body_level and annotation_re.match(stripped):
+            result.append((declaration.line + offset, line))
+            annotation_continuation = "]" not in stripped
+    return result
+
+
+def print_members(requested: str, target: Declaration) -> None:
+    print(f"# requested={requested}")
+    print(f"# resolved={qualified(target)} kind={target.kind}")
+    print(f"# java={generated_java_name(target)}")
+    for owner_index, owner in enumerate(owner_chain(target)):
+        label = "members" if owner_index == 0 else "inherited-members"
+        print(f"## {label}: {qualified(owner)}")
+        for line_number, line in member_lines(owner):
+            print(f"{line}  # {owner.path}:{line_number}")
+    for variant in variants_for(target):
+        variant_declaration = Declaration(
+            target.kind,
+            target.syntax_kind,
+            target.namespace,
+            target.name,
+            None,
+            variant.imports,
+            variant.path,
+            variant.line,
+            variant.block,
+        )
+        print(f"## dispatch-members: {qualified(target)}")
+        for line_number, line in member_lines(variant_declaration):
+            print(f"{line}  # {variant.path}:{line_number}")
+
+
+def declared_fields(declaration: Declaration) -> list[tuple[str, str, str, str, int]]:
+    result: list[tuple[str, str, str, str, int]] = []
+    declaration_body_indent = body_indent(declaration)
+    for offset, line in enumerate(declaration.block):
+        match = field_re.match(line)
+        if match:
+            field_name, type_name, cardinality = match.groups()
+            result.append(
+                (field_name, type_name, cardinality, line.strip(), declaration.line + offset)
+            )
+            continue
+        indent = len(line) - len(line.lstrip())
+        if (
+            declaration.syntax_kind == "choice"
+            and declaration_body_indent is not None
+            and indent == declaration_body_indent
+            and not line.strip().startswith("[")
+            and (alternative_match := choice_alternative_re.match(line.strip()))
+        ):
+            type_name = alternative_match.group(1)
+            simple_name = type_name.rsplit(".", 1)[-1]
+            field_name = simple_name[:1].lower() + simple_name[1:]
+            result.append(
+                (
+                    field_name,
+                    type_name,
+                    "(choice)",
+                    line.strip(),
+                    declaration.line + offset,
+                )
+            )
+    return result
+
+
+def print_path(requested: str, target: Declaration, member_path: str) -> None:
+    segments = member_path.split(".")
+    if len(segments) > 16:
+        raise SystemExit("cdm-source: member path exceeds the 16-segment inspection limit")
+
+    steps: list[tuple[Declaration, str, str, str, int, Declaration | None]] = []
+    current = target
+    for index, segment in enumerate(segments):
+        available: dict[str, tuple[Declaration, str, str, str, int]] = {}
+        for owner in owner_chain(current):
+            for field_name, type_name, cardinality, line, line_number in declared_fields(owner):
+                available.setdefault(
+                    field_name, (owner, type_name, cardinality, line, line_number)
+                )
+        if segment not in available:
+            names = sorted(available)
+            shown = ", ".join(names[:40])
+            suffix = ", ..." if len(names) > 40 else ""
+            print(
+                f"cdm-source: member path not found at {qualified(current)}.{segment}",
+                file=sys.stderr,
+            )
+            if shown:
+                print(f"cdm-source: available members: {shown}{suffix}", file=sys.stderr)
+            raise SystemExit(1)
+
+        owner, type_name, cardinality, line, line_number = available[segment]
+        child = resolve_field_type(owner, type_name)
+        steps.append((owner, segment, type_name, cardinality, line_number, child))
+        if index < len(segments) - 1:
+            if child is None:
+                raise SystemExit(
+                    "cdm-source: cannot traverse through scalar or unresolved member "
+                    f"{qualified(owner)}.{segment} ({type_name})"
+                )
+            current = child
+
+    print(f"# requested={requested} path={member_path}")
+    print(f"# resolved={qualified(target)} kind={target.kind}")
+    print(f"# java={generated_java_name(target)}")
+    print(f"## member-path: {qualified(target)}.{member_path}")
+    for owner, segment, type_name, cardinality, line_number, child in steps:
+        resolved = f" -> {qualified(child)}" if child is not None else ""
+        print(
+            f"{qualified(owner)}.{segment} {type_name} {cardinality}{resolved}"
+            f"  # {owner.path}:{line_number}"
+        )
+
+
+if view == "type":
+    for index, (requested, target) in enumerate(targets):
+        if index:
+            print("\n# ---- next requested declaration ----")
+        print_target(requested, target)
+    print()
+    print("# next=use one cdm-inspect batch, then compile a populated slice")
+elif view == "members":
+    reports: list[str] = []
+    for requested, target in targets:
+        output = StringIO()
+        with redirect_stdout(output):
+            print_members(requested, target)
+        reports.append(output.getvalue().rstrip())
+    result = "\n\n# ---- next requested declaration ----\n".join(reports)
+    line_count = len(result.splitlines())
+    if line_count > 400:
+        raise SystemExit(
+            "cdm-source: compact member inspection would emit "
+            f"{line_count} lines (limit 400); use the path command"
+        )
+    print(result)
+elif view == "path":
+    requested, target = targets[0]
+    assert requested_path is not None
+    print_path(requested, target, requested_path)
+else:
+    raise AssertionError(f"unexpected view: {view}")
 PY
     printf '# artifact-version=%s\n# artifact-jar=%s\n' "$cdm_version" "$jar"
     ;;

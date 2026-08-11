@@ -1,8 +1,9 @@
 {
   "schema_version": 1,
   "benchmark_id": "securities-loan-event-qualifier",
-  "status": "sealed-unrun",
+  "status": "recorded",
   "sealed_at": "2026-08-11",
+  "recorded_at": "2026-08-11",
   "model_facing_file": "TASK.md",
   "fixture": {
     "id": "java-21-cdm-7.0.0",
@@ -26,5 +27,15 @@
       "sha256": "22633b1fbb984009daf769d691e5f4a53318b0407f40758d5edd2840a2bc6fbe"
     }
   },
-  "registration": "deferred until a genuine skill/control baseline is recorded"
+  "recorded_files": {
+    "baseline": {
+      "path": "baseline.json",
+      "sha256": "cbad5861a54183c4078cdc310a7c78668c68c3c35e2556198d78a4e76b2811b1"
+    },
+    "review": {
+      "path": "REVIEW.md",
+      "sha256": "bbe3906147e4a264d1ce313cea34d641d794e5af6ec150019649d94603e01182"
+    }
+  },
+  "registration": "evals/benchmarks/index.json"
 }

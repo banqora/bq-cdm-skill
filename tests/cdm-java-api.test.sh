@@ -24,7 +24,17 @@ printf '%s\n' \
   '    WidgetBuilder setValue(String value);' \
   '  }' \
   '}' >"$work/api-src/cdm/fixture/Widget.java"
-javac -d "$work/api-classes" "$work/api-src/cdm/fixture/Widget.java"
+printf '%s\n' \
+  'package cdm.fixture;' \
+  'public interface Calculate {' \
+  '  String evaluate(String input);' \
+  '  class CalculateDefault implements Calculate {' \
+  '    public String evaluate(String input) { return input; }' \
+  '  }' \
+  '}' >"$work/api-src/cdm/fixture/Calculate.java"
+javac -d "$work/api-classes" \
+  "$work/api-src/cdm/fixture/Widget.java" \
+  "$work/api-src/cdm/fixture/Calculate.java"
 jar --update --file "$fixture_jar" -C "$work/api-classes" .
 
 mkdir -p "$work/api-src/cdm/other"
@@ -57,6 +67,11 @@ expect_ok "one pass prints a generated type and its matching builder" \
 expect_ok "the generated getter is visible" \
   --stdout 'public abstract java\.lang\.String getValue\(\)' -- \
   "$cdm_api" --jar "$fixture_jar" cdm.fixture.Widget
+
+# shellcheck disable=SC2016  # the dollar sign is part of javap's nested-type name
+expect_ok "a generated function includes its matching default implementation" \
+  --stdout 'public class cdm\.fixture\.Calculate\$CalculateDefault' -- \
+  "$cdm_api" --jar "$fixture_jar" cdm.fixture.Calculate
 
 expect_ok "an unambiguous simple name resolves to its exact Java package" \
   --stdout '^# requested=Widget resolved=cdm\.fixture\.Widget$' -- \
@@ -97,6 +112,25 @@ expect_fail "a missing runtime forbids global-cache scavenging" \
   --stderr 'do not search global caches or guess a runtime version' -- \
   "$cdm_api" --jar "$fixture_jar" com.rosetta.model.lib.records.Date
 
+stub_bin="$work/stub-bin"
+mkdir -p "$stub_bin"
+printf '%s\n' \
+  '#!/usr/bin/env bash' \
+  'echo "Unable to locate a Java Runtime." >&2' \
+  'exit 1' >"$stub_bin/javap"
+chmod +x "$stub_bin/javap"
+javap_stub_gets_jdk_guidance() {
+  local output
+  if output="$(PATH="$stub_bin:$PATH" \
+    "$cdm_api" --jar "$fixture_jar" cdm.fixture.Widget 2>&1)"; then
+    return 1
+  fi
+  ! rg 'add the project.s resolved rune-runtime' <<<"$output" >/dev/null || return
+  printf '%s\n' "$output"
+}
+expect_ok "a platform javap launcher without a JDK gets configuration guidance" \
+  --stdout 'install a JDK, then set JAVA_HOME' -- javap_stub_gets_jdk_guidance
+
 expect_fail "at least one Java type is required" \
   --stderr 'provide at least one Java type' -- \
   "$cdm_api" --jar "$fixture_jar"
@@ -104,5 +138,23 @@ expect_fail "at least one Java type is required" \
 expect_fail "malformed type names are rejected before javap" \
   --stderr 'invalid Java type' -- \
   "$cdm_api" --jar "$fixture_jar" cdm/fixture/Widget
+
+api_preflight_is_atomic() {
+  local stdout_file="$work/api-preflight.stdout"
+  local stderr_file="$work/api-preflight.stderr"
+  if "$cdm_api" --jar "$fixture_jar" \
+    Widget Missing Duplicate bad/name AlsoMissing \
+    >"$stdout_file" 2>"$stderr_file"; then
+    return 1
+  fi
+  [[ ! -s "$stdout_file" ]] || return
+  rg 'Java type not found in selected JAR: Missing' "$stderr_file" >/dev/null || return
+  rg 'Java type name is ambiguous.*Duplicate' "$stderr_file" >/dev/null || return
+  rg 'invalid Java type: bad/name' "$stderr_file" >/dev/null || return
+  rg 'Java type not found in selected JAR: AlsoMissing' "$stderr_file" >/dev/null || return
+  printf '%s\n' "$(<"$stderr_file")"
+}
+expect_ok "type preflight reports every bad simple name without partial API output" \
+  --stdout 'type batch preflight failed' -- api_preflight_is_atomic
 
 finish

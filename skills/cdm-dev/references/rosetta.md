@@ -35,8 +35,9 @@ possibly different CDM branch or passing the generated-Java `-sources.jar`.
 ```bash
 CDM_SOURCE=/path/to/cdm-dev/scripts/cdm-source
 "$CDM_SOURCE" --jar path/to/cdm-java.jar version
-"$CDM_SOURCE" --jar path/to/cdm-java.jar search '^type TradeState:'
-"$CDM_SOURCE" --jar path/to/cdm-java.jar search 'func Qualify_'
+"$CDM_SOURCE" --jar path/to/cdm-java.jar members TradeState PrimitiveInstruction
+"$CDM_SOURCE" --jar path/to/cdm-java.jar path TradeState trade.product.economicTerms
+"$CDM_SOURCE" --jar path/to/cdm-java.jar type Qualify_FullReturn
 "$CDM_SOURCE" --jar path/to/cdm-java.jar list 'event.*func'
 "$CDM_SOURCE" --jar path/to/cdm-java.jar show cdm/rosetta/event-common-type.rosetta
 ```
@@ -45,8 +46,14 @@ The helper also accepts `CDM_JAVA_JAR` and can discover an unambiguous JAR in co
 layouts. If the project has several versions or copies, pass the one resolved by its build.
 The helper never downloads a replacement.
 
-Use `search` to locate a declaration before opening a consolidated model file. Record the
-reported version and JAR path in bug reports and upgrade evidence.
+Use `members` first when you need exact fields, cardinalities, conditions, function inputs/output,
+or generated Java names without a whole declaration. Use `path` for one inherited member route and
+`type` for the complete declaration. All three resolve simple names against the embedded model and
+preflight a batch before emitting a report. If a type and function share a Rune name, use the
+copyable `type:fully.qualified.Name` or `func:fully.qualified.Name` candidate printed by the helper.
+`search` is a capped discovery fallback; refine its regular expression when it prints the
+truncation marker rather than opening a consolidated model file. Record the reported version and
+JAR path in bug reports and upgrade evidence.
 
 Bound the evidence pass before opening generated sources. Inspect the owning declaration, its
 inheritance chain, its conditions and direct function callees, the generated interface/builder,
@@ -105,7 +112,15 @@ helper, which prints each public API and matching generated builder in one `java
 CDM_API=/path/to/cdm-dev/scripts/cdm-java-api
 "$CDM_API" --jar path/to/cdm-java.jar \
   TradeState Trade InterestRatePayout
+
+/path/to/cdm-dev/scripts/cdm-inspect --jar path/to/cdm-java.jar \
+  TradeState PrimitiveInstruction Qualify_FullReturn
 ```
+
+`cdm-inspect` accepts Rune types, choices, enums, functions, and qualification functions. For a
+function it prints the exact Rune body, generated abstract API, and generated `$NameDefault`
+implementation; for model types it also reports relevant generated metadata and validators. Use
+the compact `members`/`path` views first so this full vertical-slice report stays one bounded batch.
 
 Use unqualified names when the owning Rune declaration is known but its generated Java package is
 not: the helper prints the one exact fully qualified match. If more than one class shares the name,

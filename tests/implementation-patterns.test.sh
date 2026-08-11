@@ -151,6 +151,133 @@ expect_fail "each card retains a distinct non-application boundary" \
   run_fixture
 
 fresh_fixture
+python3 - "$work/fixture/skills/cdm-dev/references/implementation-patterns.md" <<'PY'
+import sys
+from pathlib import Path
+path = Path(sys.argv[1])
+text = path.read_text()
+old = "primitive envelope and cardinality"
+assert old in text
+path.write_text(text.replace(old, "primitive envelope", 1))
+PY
+expect_fail "PAT-003 keeps primitive cardinality as independent classifier evidence" \
+  --stderr 'PAT-003 Pattern must require primitive-envelope cardinality evidence' -- \
+  run_fixture
+
+fresh_fixture
+python3 - "$work/fixture/skills/cdm-dev/references/implementation-patterns.md" <<'PY'
+import sys
+from pathlib import Path
+path = Path(sys.argv[1])
+text = path.read_text()
+old = "semantic payload direction/roles and identity"
+assert old in text
+path.write_text(text.replace(old, "semantic payload direction/roles", 1))
+PY
+expect_fail "PAT-003 keeps semantic identity alongside payload direction" \
+  --stderr 'PAT-003 Pattern must require semantic direction/role and identity evidence' -- \
+  run_fixture
+
+fresh_fixture
+python3 - "$work/fixture/skills/cdm-dev/references/implementation-patterns.md" <<'PY'
+import sys
+from pathlib import Path
+path = Path(sys.argv[1])
+text = path.read_text()
+old = "the corresponding before/after state delta"
+assert old in text
+path.write_text(text.replace(old, "the resulting state", 1))
+PY
+expect_fail "PAT-003 keeps before/after state delta as the third evidence class" \
+  --stderr 'PAT-003 Pattern must require corresponding before/after state-delta evidence' -- \
+  run_fixture
+
+fresh_fixture
+python3 - "$work/fixture/skills/cdm-dev/references/implementation-patterns.md" <<'PY'
+import sys
+from pathlib import Path
+path = Path(sys.argv[1])
+text = path.read_text()
+old = "; CDM `only exists` constrains populated field names, not payload correctness or instruction cardinality"
+assert old in text
+path.write_text(text.replace(old, "", 1))
+PY
+expect_fail "PAT-003 does not equate only-exists with payload or cardinality proof" \
+  --stderr 'PAT-003 Pattern must clarify that only-exists is field-presence, not payload/cardinality proof' -- \
+  run_fixture
+
+fresh_fixture
+python3 - "$work/fixture/skills/cdm-dev/references/implementation-patterns.md" <<'PY'
+import sys
+from pathlib import Path
+path = Path(sys.argv[1])
+text = path.read_text()
+old = "For a classifier, independently mutate the envelope, payload direction/identity, and state delta and require each disagreement to fail closed."
+assert old in text
+path.write_text(text.replace(old, "For a classifier, test representative positive and negative examples.", 1))
+PY
+expect_fail "PAT-003 keeps independent fail-closed mutations across all three evidence classes" \
+  --stderr 'PAT-003 Proof must independently mutate envelope, direction/identity, and state delta and fail closed' -- \
+  run_fixture
+
+fresh_fixture
+python3 - "$work/fixture/skills/cdm-dev/references/implementation-patterns.md" <<'PY'
+import sys
+from pathlib import Path
+path = Path(sys.argv[1])
+text = path.read_text()
+old = "Select the intended typed economic leaf"
+assert old in text
+path.write_text(text.replace(old, "Select an economic value", 1))
+PY
+expect_fail "PAT-005 keeps typed-leaf selection coupled to unit handling" \
+  --stderr 'PAT-005 Pattern must select an intended typed economic leaf and its unit' -- \
+  run_fixture
+
+fresh_fixture
+python3 - "$work/fixture/skills/cdm-dev/references/implementation-patterns.md" <<'PY'
+import sys
+from pathlib import Path
+path = Path(sys.argv[1])
+text = path.read_text()
+old = "fail closed when it is missing or ambiguous"
+assert old in text
+path.write_text(text.replace(old, "use zero when it is missing or the first value when ambiguous", 1))
+PY
+expect_fail "PAT-005 keeps missing and multiple-value handling fail closed" \
+  --stderr 'PAT-005 Pattern must fail closed for missing or multiple typed values' -- \
+  run_fixture
+
+fresh_fixture
+python3 - "$work/fixture/skills/cdm-dev/references/implementation-patterns.md" <<'PY'
+import sys
+from pathlib import Path
+path = Path(sys.argv[1])
+text = path.read_text()
+old = "In Java, compare economic `BigDecimal` values numerically with `compareTo` after checking their units rather than using scale-sensitive `equals`."
+assert old in text
+new = "In Java, compare economic `BigDecimal` values with scale-sensitive `equals` after checking their units."
+path.write_text(text.replace(old, new, 1))
+PY
+expect_fail "PAT-005 keeps numeric BigDecimal compareTo semantics rather than equals" \
+  --stderr 'PAT-005 Pattern must prefer Java BigDecimal.compareTo over equals' -- \
+  run_fixture
+
+fresh_fixture
+python3 - "$work/fixture/skills/cdm-dev/references/implementation-patterns.md" <<'PY'
+import sys
+from pathlib import Path
+path = Path(sys.argv[1])
+text = path.read_text()
+old = "scale-equivalent decimals"
+assert old in text
+path.write_text(text.replace(old, "representative decimals", 1))
+PY
+expect_fail "PAT-005 proof retains a scale-equivalent decimal case" \
+  --stderr 'PAT-005 Proof must include an executable scale-equivalent decimal case' -- \
+  run_fixture
+
+fresh_fixture
 printf '\nmodel-visible evaluator detail\n' >> \
   "$work/fixture/evals/patterns/forward/settlement-status-reconciliation/TASK.md"
 expect_fail "sealed forward tasks fail after an unrecorded mutation" \

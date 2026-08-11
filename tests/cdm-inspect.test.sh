@@ -32,6 +32,15 @@ type Amount:
 type Base:
   amount Amount (1..1)
 
+type AnonymousChild:
+  left string (0..1)
+  right string (0..1)
+  condition:
+    one-of
+
+type AnonymousParent:
+  child AnonymousChild (1..1)
+
 type Envelope extends Base:
   label string (1..1)
   code string (0..1)
@@ -54,6 +63,34 @@ choice Transfer:
 enum Mode:
   Gross
   Netted
+
+func InspectAmount:
+  inputs:
+    envelope Envelope (1..1)
+  output:
+    result string (1..1)
+  set result:
+    envelope -> label
+
+func Qualify_Envelope:
+  [qualification Envelope]
+  inputs:
+    envelope Envelope (1..1)
+  output:
+    is_event boolean (1..1)
+  set is_event:
+    envelope exists
+
+type SharedDeclaration:
+  value string (1..1)
+
+func SharedDeclaration:
+  inputs:
+    amount Amount (1..1)
+  output:
+    result number (1..1)
+  set result:
+    amount -> value
 """,
     )
     jar.writestr(
@@ -75,6 +112,7 @@ PY
 
 mkdir -p \
   "$work/api-src/cdm/inspect" \
+  "$work/api-src/cdm/inspect/functions" \
   "$work/api-src/cdm/inspect/meta" \
   "$work/api-src/cdm/inspect/validation/exists" \
   "$work/api-src/cdm/inspect/validation/datarule" \
@@ -108,6 +146,51 @@ printf '%s\n' \
   'package cdm.inspect;' \
   'public interface Huge {}' >"$work/api-src/cdm/inspect/Huge.java"
 printf '%s\n' \
+  'package cdm.inspect;' \
+  'public interface Amount {' \
+  '  java.math.BigDecimal getValue();' \
+  '}' >"$work/api-src/cdm/inspect/Amount.java"
+printf '%s\n' \
+  'package cdm.inspect;' \
+  'public interface AnonymousChild {' \
+  '  String getLeft();' \
+  '  String getRight();' \
+  '}' >"$work/api-src/cdm/inspect/AnonymousChild.java"
+printf '%s\n' \
+  'package cdm.inspect;' \
+  'public interface AnonymousParent {' \
+  '  AnonymousChild getChild();' \
+  '}' >"$work/api-src/cdm/inspect/AnonymousParent.java"
+printf '%s\n' \
+  'package cdm.inspect;' \
+  'public interface SharedDeclaration {' \
+  '  String getValue();' \
+  '}' >"$work/api-src/cdm/inspect/SharedDeclaration.java"
+printf '%s\n' \
+  'package cdm.inspect.functions;' \
+  'public interface InspectAmount {' \
+  '  String evaluate(cdm.inspect.Envelope envelope);' \
+  '  class InspectAmountDefault implements InspectAmount {' \
+  '    public String evaluate(cdm.inspect.Envelope envelope) { return envelope.getLabel(); }' \
+  '  }' \
+  '}' >"$work/api-src/cdm/inspect/functions/InspectAmount.java"
+printf '%s\n' \
+  'package cdm.inspect.functions;' \
+  'public interface Qualify_Envelope {' \
+  '  boolean evaluate(cdm.inspect.Envelope envelope);' \
+  '  class Qualify_EnvelopeDefault implements Qualify_Envelope {' \
+  '    public boolean evaluate(cdm.inspect.Envelope envelope) { return envelope != null; }' \
+  '  }' \
+  '}' >"$work/api-src/cdm/inspect/functions/Qualify_Envelope.java"
+printf '%s\n' \
+  'package cdm.inspect.functions;' \
+  'public interface SharedDeclaration {' \
+  '  java.math.BigDecimal evaluate(cdm.inspect.Amount amount);' \
+  '  class SharedDeclarationDefault implements SharedDeclaration {' \
+  '    public java.math.BigDecimal evaluate(cdm.inspect.Amount amount) { return amount.getValue(); }' \
+  '  }' \
+  '}' >"$work/api-src/cdm/inspect/functions/SharedDeclaration.java"
+printf '%s\n' \
   'package cdm.inspect.meta;' \
   'class EnvelopeMeta {' \
   '  cdm.inspect.validation.datarule.EnvelopeOneOf0 anonymousRule;' \
@@ -115,6 +198,11 @@ printf '%s\n' \
   'class EnvelopeDetailMeta {' \
   '  cdm.inspect.validation.datarule.EnvelopeDetailSpecific specificRule;' \
   '}' \
+  'class SharedDeclarationMeta {}' \
+  'class AnonymousChildMeta {' \
+  '  cdm.inspect.validation.datarule.AnonymousChildOneOf0 anonymousRule;' \
+  '}' \
+  'class AnonymousParentMeta {}' \
   'class BaseMeta {}' \
   'class AmountMeta {' \
   '  cdm.inspect.validation.datarule.AmountPositive positiveRule;' \
@@ -130,6 +218,10 @@ printf '%s\n' \
   'class BaseTypeFormatValidator {}' \
   'class AmountValidator {}' \
   'class AmountTypeFormatValidator {}' \
+  'class AnonymousChildValidator {}' \
+  'class AnonymousChildTypeFormatValidator {}' \
+  'class AnonymousParentValidator {}' \
+  'class AnonymousParentTypeFormatValidator {}' \
   'class TransferValidator {}' \
   'class TransferTypeFormatValidator {}' >"$work/api-src/cdm/inspect/validation/Support.java"
 printf '%s\n' \
@@ -137,8 +229,10 @@ printf '%s\n' \
   'class EnvelopeOnlyExistsValidator {}' \
   'class BaseOnlyExistsValidator {}' \
   'class AmountOnlyExistsValidator {}' \
+  'class AnonymousChildOnlyExistsValidator {}' \
+  'class AnonymousParentOnlyExistsValidator {}' \
   'class TransferOnlyExistsValidator {}' >"$work/api-src/cdm/inspect/validation/exists/Support.java"
-for rule_class in AmountPositive EnvelopeDetailSpecific EnvelopeOneOf0 TransferChoice; do
+for rule_class in AmountPositive AnonymousChildOneOf0 EnvelopeDetailSpecific EnvelopeOneOf0 TransferChoice; do
   printf '%s\n' \
     'package cdm.inspect.validation.datarule;' \
     "public class $rule_class {}" \
@@ -147,6 +241,7 @@ done
 
 javac -d "$work/api-classes" \
   "$work/api-src/cdm/inspect/"*.java \
+  "$work/api-src/cdm/inspect/functions/"*.java \
   "$work/api-src/cdm/inspect/meta/"*.java \
   "$work/api-src/cdm/inspect/validation/"*.java \
   "$work/api-src/cdm/inspect/validation/exists/"*.java \
@@ -180,6 +275,17 @@ expect_ok "anonymous Rune conditions use the exact generated numbered data-rule 
   --stdout '^data_rule=cdm\.inspect\.validation\.datarule\.EnvelopeOneOf0$' -- \
   inspect_slice
 
+inspect_anonymous_child() {
+  "$cdm_inspect" --jar "$fixture_jar" AnonymousParent
+}
+expect_ok "anonymous conditions on child fields are surfaced as validation evidence" \
+  --stdout '^  cdm\.inspect\.AnonymousChild conditions: anonymous_1  #' -- \
+  inspect_anonymous_child
+
+expect_ok "anonymous child evidence reaches the exact generated data rule" \
+  --stdout '^data_rule=cdm\.inspect\.validation\.datarule\.AnonymousChildOneOf0$' -- \
+  inspect_anonymous_child
+
 longest_owner_assignment() {
   local output envelope_block detail_block
   output="$(inspect_slice)" || return
@@ -208,6 +314,65 @@ expect_ok "one invocation lists exact metadata and structural validators" \
   --stdout '^structural_validator=cdm\.inspect\.validation\.EnvelopeValidator$' -- \
   inspect_slice
 
+inspect_functions() {
+  "$cdm_inspect" --jar "$fixture_jar" InspectAmount Qualify_Envelope
+}
+expect_ok "one invocation inspects an exact Rune function and generated Java API" \
+  --stdout 'public abstract java\.lang\.String evaluate\(cdm\.inspect\.Envelope\)' -- \
+  inspect_functions
+
+expect_ok "qualification annotations are distinguished from ordinary functions" \
+  --stdout '^# resolved=cdm\.inspect\.Qualify_Envelope kind=qualification$' -- \
+  inspect_functions
+
+# shellcheck disable=SC2016  # the dollar sign is part of javap's nested-type name
+expect_ok "function inspection includes the exact generated default implementation" \
+  --stdout 'public class cdm\.inspect\.functions\.Qualify_Envelope\$Qualify_EnvelopeDefault' -- \
+  inspect_functions
+
+inspect_kind_collision() {
+  "$cdm_inspect" --jar "$fixture_jar" \
+    type:cdm.inspect.SharedDeclaration func:cdm.inspect.SharedDeclaration
+}
+expect_ok "kind selectors inspect a same-name Rune type and function in one batch" \
+  --stdout '^# requested=func:cdm\.inspect\.SharedDeclaration$' -- \
+  inspect_kind_collision
+
+expect_ok "kind-qualified inspection reaches the colliding generated function API" \
+  --stdout 'public interface cdm\.inspect\.functions\.SharedDeclaration' -- \
+  inspect_kind_collision
+
+inspect_collision_function_support() {
+  local output
+  output="$("$cdm_inspect" --jar "$fixture_jar" \
+    func:cdm.inspect.SharedDeclaration)" || return
+  ! rg '^### cdm\.inspect\.SharedDeclaration$' <<<"$output" >/dev/null || return
+  rg '^### cdm\.inspect\.Amount$' <<<"$output" >/dev/null || return
+  printf '%s\n' "$output"
+}
+expect_ok "function support scan excludes a colliding model owner but keeps model inputs" \
+  --stdout '^data_rule=cdm\.inspect\.validation\.datarule\.AmountPositive$' -- \
+  inspect_collision_function_support
+
+inspect_kind_collision_is_atomic() {
+  local stdout_file="$work/inspect-kind-collision.stdout"
+  local stderr_file="$work/inspect-kind-collision.stderr"
+  if "$cdm_inspect" --jar "$fixture_jar" cdm.inspect.SharedDeclaration \
+    >"$stdout_file" 2>"$stderr_file"; then
+    return 1
+  fi
+  [[ ! -s "$stdout_file" ]] || return
+  rg '^    type:cdm\.inspect\.SharedDeclaration$' "$stderr_file" >/dev/null || return
+  rg '^    func:cdm\.inspect\.SharedDeclaration$' "$stderr_file" >/dev/null || return
+  printf '%s\n' "$(<"$stderr_file")"
+}
+expect_ok "one-shot ambiguity diagnostics distinguish colliding declaration kinds" \
+  --stdout 'kind-qualified candidate' -- inspect_kind_collision_is_atomic
+
+expect_ok "help explains kind prefixes for fully-qualified collisions" \
+  --stdout 'prefix it with type:, choice:, enum:, func:, or qualification:' -- \
+  "$cdm_inspect" --help
+
 fake_bin="$work/fake-bin"
 mkdir -p "$fake_bin"
 printf '%s\n' '#!/usr/bin/env bash' 'exit 97' >"$fake_bin/unzip"
@@ -222,6 +387,22 @@ expect_ok "the one-shot batch succeeds when archive extraction is forbidden" \
 expect_fail "ambiguous Rune names fail rather than guessing a Java package" \
   --stderr 'declaration name is ambiguous' -- \
   "$cdm_inspect" --jar "$fixture_jar" TradeState
+
+inspect_preflight_is_atomic() {
+  local stdout_file="$work/inspect-preflight.stdout"
+  local stderr_file="$work/inspect-preflight.stderr"
+  if "$cdm_inspect" --jar "$fixture_jar" \
+    Envelope Missing TradeState AlsoMissing >"$stdout_file" 2>"$stderr_file"; then
+    return 1
+  fi
+  [[ ! -s "$stdout_file" ]] || return 1
+  rg 'declaration not found: Missing' "$stderr_file" >/dev/null || return 1
+  rg 'TradeState: declaration name is ambiguous' "$stderr_file" >/dev/null || return 1
+  rg 'declaration not found: AlsoMissing' "$stderr_file" >/dev/null || return 1
+  printf '%s\n' "$(<"$stderr_file")"
+}
+expect_ok "one-shot inspection preflights the complete batch without partial output" \
+  --stdout 'declaration batch preflight failed' -- inspect_preflight_is_atomic
 
 expect_fail "the request bound rejects an over-broad slice before inspection" \
   --stderr 'at most 8 declarations' -- \

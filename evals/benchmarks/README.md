@@ -18,6 +18,7 @@ these cases require an agent to write and test Java code.
 - [Manufactured-payment engine with reversal support](manufactured-payment-reversal/)
 - [Intraday repo interest calculator](intraday-repo-interest/)
 - [Repo fail and mini close-out engine](repo-fail-mini-closeout/)
+- [Securities-loan event qualifier](securities-loan-event-qualifier/)
 
 ## Contents
 

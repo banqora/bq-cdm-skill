@@ -37,11 +37,11 @@ If CDM is not installed, its distribution is unclear, or a language must be sele
 2. Trace the value end to end with `rg`: external input, normalization or mapping, generated
    builder, typed CDM object, serialization, validation/functions, and downstream storage or
    API behavior. Name any project-specific stages instead of treating them as CDM.
-3. Run one bounded set of owning types/choices through `scripts/cdm-inspect`; it returns their
-   version-matched declarations, inheritance and conditioned children, exact Java APIs, and relevant
-   validator/meta classes, or fails on ambiguity. Use `cdm-source` or `cdm-java-api` only for a
-   remaining question. Use `--help`; never scan `/`, home, or global caches. Keep inspection JARs
-   out of builds; use [Rosetta](references/rosetta.md) only for remaining ambiguity.
+3. Start with `scripts/cdm-source members` or `path` for a compact typed outline. Escalate only the
+   owning types, choices, functions, or qualifications to `cdm-inspect` for exact declarations,
+   Java APIs, and validator/meta classes. Both fail boundedly on ambiguity. Use `--help`; never scan
+   `/`, home, or global caches. Keep inspection JARs out of builds; use
+   [Rosetta](references/rosetta.md) only for remaining ambiguity.
 4. Build or compile the smallest typed vertical slice early: exercise at least one production
    getter or builder and the first real branch. Compiling empty directories, records, or signatures
    alone is not evidence. Let errors identify API details that still need inspection.
@@ -109,8 +109,8 @@ neighbors or rewind and compare the whole object. Use [Day-to-day workflows](ref
   closed on resolution failure. Resolve each reference inside its owning root, then compare the
   resolved business identifiers; raw external, scoped, or global reference strings are not
   cross-root party identity unless the application explicitly defines that shared namespace.
-- A qualifier's existence does not prove reachability. Read its predicate and execute positive
-  and negative cases.
+- For a lifecycle qualifier, execute a predicate matrix that reconciles exact primitive envelope/cardinality,
+  payload direction/roles and resolved identity, and matching before/after state delta. `only exists` proves populated fields, not payload or cardinality; mutate each column and fail closed on missing, multiple, or unreachable facts.
 - Optional cardinality does not override conditional or inherited base-type rules, and an empty
   failure message does not mean no validation failure occurred. Preserve structured finding fields.
 - Missing injection is not validation success. Never suppress its exception or failed result; wire
