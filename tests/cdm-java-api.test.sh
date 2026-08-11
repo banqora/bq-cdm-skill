@@ -27,6 +27,17 @@ printf '%s\n' \
 javac -d "$work/api-classes" "$work/api-src/cdm/fixture/Widget.java"
 jar --update --file "$fixture_jar" -C "$work/api-classes" .
 
+mkdir -p "$work/api-src/cdm/other"
+printf '%s\n' \
+  'package cdm.other;' \
+  'public interface Duplicate {}' >"$work/api-src/cdm/other/Duplicate.java"
+printf '%s\n' \
+  'package cdm.fixture;' \
+  'public interface Duplicate {}' >"$work/api-src/cdm/fixture/Duplicate.java"
+javac -d "$work/api-classes" \
+  "$work/api-src/cdm/other/Duplicate.java" "$work/api-src/cdm/fixture/Duplicate.java"
+jar --update --file "$fixture_jar" -C "$work/api-classes" .
+
 mkdir -p "$work/runtime-src/com/rosetta/model/lib/records" "$work/runtime-classes"
 printf '%s\n' \
   'package com.rosetta.model.lib.records;' \
@@ -46,6 +57,18 @@ expect_ok "one pass prints a generated type and its matching builder" \
 expect_ok "the generated getter is visible" \
   --stdout 'public abstract java\.lang\.String getValue\(\)' -- \
   "$cdm_api" --jar "$fixture_jar" cdm.fixture.Widget
+
+expect_ok "an unambiguous simple name resolves to its exact Java package" \
+  --stdout '^# requested=Widget resolved=cdm\.fixture\.Widget$' -- \
+  "$cdm_api" --jar "$fixture_jar" Widget
+
+expect_fail "an ambiguous simple name lists candidates instead of guessing a package" \
+  --stderr 'Java type name is ambiguous; use a fully qualified name' -- \
+  "$cdm_api" --jar "$fixture_jar" Duplicate
+
+expect_fail "an absent simple name fails before javap" \
+  --stderr 'Java type not found in selected JAR: Missing' -- \
+  "$cdm_api" --jar "$fixture_jar" Missing
 
 env_jar() {
   CDM_JAVA_JAR="$fixture_jar" "$cdm_api" cdm.fixture.Widget
@@ -74,12 +97,12 @@ expect_fail "a missing runtime forbids global-cache scavenging" \
   --stderr 'do not search global caches or guess a runtime version' -- \
   "$cdm_api" --jar "$fixture_jar" com.rosetta.model.lib.records.Date
 
-expect_fail "at least one fully qualified type is required" \
-  --stderr 'provide at least one fully qualified Java type' -- \
+expect_fail "at least one Java type is required" \
+  --stderr 'provide at least one Java type' -- \
   "$cdm_api" --jar "$fixture_jar"
 
 expect_fail "malformed type names are rejected before javap" \
-  --stderr 'invalid fully qualified Java type' -- \
+  --stderr 'invalid Java type' -- \
   "$cdm_api" --jar "$fixture_jar" cdm/fixture/Widget
 
 finish

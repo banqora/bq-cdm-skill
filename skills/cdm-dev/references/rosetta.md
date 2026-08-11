@@ -104,8 +104,15 @@ helper, which prints each public API and matching generated builder in one `java
 ```bash
 CDM_API=/path/to/cdm-dev/scripts/cdm-java-api
 "$CDM_API" --jar path/to/cdm-java.jar \
-  cdm.event.common.TradeState cdm.event.common.Trade
+  TradeState Trade InterestRatePayout
 ```
+
+Use unqualified names when the owning Rune declaration is known but its generated Java package is
+not: the helper prints the one exact fully qualified match. If more than one class shares the name,
+it lists candidates and requires a fully qualified choice rather than guessing a package.
+After the initial declaration and API batches, compile. Batch only the unresolved symbols named by
+that compile once per cycle; if five helper batches have not exposed a viable vertical slice, stop
+and re-check the boundary and validation claim instead of continuing symbol-by-symbol exploration.
 
 Generated CDM types and `com.rosetta.model.metafields.*` are in the selected binary. A
 `com.rosetta.model.lib.*` support type belongs to the project's resolved Rune runtime; pass that
@@ -117,7 +124,7 @@ another version.
 Validation is an object-graph obligation, not a root-type checkbox. A generated structural
 validator and the root `Meta.dataRules()` cover only the type on which they are registered; they do
 not recursively execute conditions declared by populated child types. For each accepted or emitted
-boundary:
+boundary that is claimed complete:
 
 1. run its structural, type-format, and applicable inherited data rules;
 2. enumerate every populated generated child and run that child's registered conditions, including
@@ -129,6 +136,19 @@ Query the child's declaration when its condition is not already shown by `cdm-so
 guess the generated rule name. Validate the complete caller contract before taking a zero, empty,
 replay, or no-op shortcut, because an unrelated result value must not make an unsupported choice
 valid.
+
+An intentionally partial generated root is different: label it as a typed fixture, validate the
+complete child nodes and lifecycle leaves actually relied on, and do not claim the whole root
+qualifies or validates. Expanding a partial trade merely to make unrelated required branches pass
+adds risk without strengthening an application-owned calculation.
+
+A claimed-complete boundary has a minimum floor: the root's own validator and the validators of
+every populated generated child must pass. Do not add an empty generated shell merely to satisfy a
+parent cardinality; either populate and validate that branch or expose a narrower, honestly partial
+boundary. A practical graph walk should visit each `RosettaModelObject` identity once and, for every
+visited type, execute its generated structural validator, type-format validator, and
+`RosettaMetaData.dataRules()`. Assert the visited validator/type set so a newly populated child
+cannot silently escape coverage.
 
 Which annotations the generated code carries depends on the release; enumerate them from the
 active JAR instead of assuming. Older releases (4.x) generate only type-level annotations such
@@ -171,6 +191,9 @@ injection happened; a constructed object with null injected fields is not a mode
 silently skip registered rules. If project wiring is unavailable, instantiate a concrete generated
 leaf only after version-matched source shows it has no injected dependencies, and document the
 narrower claim. Do not guess or pin a different runtime merely to make injection appear successful.
+Never catch a null dependency failure or string-match a generated failure reason and classify the
+rule as passed. Either provide the production-equivalent dependency and prove it with a negative
+control, select a source-proven dependency-free implementation, or narrow the validation claim.
 
 Wire that runtime only when the generated function's behavior is part of the requested path. For
 application-owned selection, arithmetic, or mechanical construction, prove the model boundary and

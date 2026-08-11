@@ -117,6 +117,16 @@
       "task": "benchmarks/intraday-repo-interest/TASK.md",
       "rubric": "benchmarks/intraday-repo-interest/rubric.json",
       "baseline": "benchmarks/intraday-repo-interest/baseline.json"
+    },
+    {
+      "id": "repo-fail-mini-closeout",
+      "title": "Repo fail and mini close-out engine",
+      "kind": "implementation-forward-test",
+      "artifact_version": "7.0.0",
+      "language": "java",
+      "task": "benchmarks/repo-fail-mini-closeout/TASK.md",
+      "rubric": "benchmarks/repo-fail-mini-closeout/rubric.json",
+      "baseline": "benchmarks/repo-fail-mini-closeout/baseline.json"
     }
   ]
 }

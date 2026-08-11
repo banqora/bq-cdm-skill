@@ -108,6 +108,13 @@ CDM provides product predicates and lifecycle functions, but the application own
 eligibility rules, authorised notices, market/reference data, substitutions, settlement status,
 inventory, dispute policy and operational sequencing.
 
+Settlement-fail windows, cure or continuation policy, fail-period rate treatment, valuation source
+and side, and the scope of a transaction remedy are application or agreement facts unless the
+active model and project explicitly execute them. Keep the selected transaction identity and party
+direction explicit; do not widen a transaction-level settlement remedy into a counterparty-wide
+default close-out, and do not encode signed economics by taking an absolute value without named
+payer and receiver roles.
+
 Do not assume a function's name predicts its event qualifier. In the 7.0.0 baseline, a tested
 collateral-substitution path can qualify as `Renegotiation` rather than `Substitution` after the
 event predicate inspects the produced primitives. Execute all relevant event qualifiers and keep

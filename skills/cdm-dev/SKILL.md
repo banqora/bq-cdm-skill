@@ -5,13 +5,13 @@ description: Develop, debug, test, upgrade, and review FINOS Common Domain Model
 
 # Develop with CDM
 
-Treat a CDM task as a change through a model-backed application, not as a sequence of
-lookups. First establish which layer owns the behavior.
+Treat a CDM task as a change through a model-backed application. First establish which layer owns
+the behavior.
 
-Before inspecting generated internals, write down the input path and choices, units or direction,
-output contract, and owning layer. Make one declaration query and one combined generated-API query,
-then compile a populated vertical slice. Let the compiler name the next symbol; do not open more
-source, validators, functions, or runtime wiring unless the requested contract executes them.
+Before inspecting generated internals, write down the input path and choices, units/direction,
+output, and owner. Make one declaration and one combined API query, then compile a populated slice.
+Batch only compiler-named symbols once per compile cycle; after five helper batches, narrow the
+boundary instead of browsing further. Inspect no runtime machinery the contract does not execute.
 
 ## Choose the authority
 
@@ -23,9 +23,8 @@ source, validators, functions, or runtime wiring unless the requested contract e
 | How does external data become CDM, and what policy applies? | The consuming project's mapping, services, configuration, fixtures, and tests |
 | What is accepted market practice or the business rationale? | The relevant dated ISDA, ISLA, or ICMA source, with its version and access limits recorded |
 
-Do not replace one authority with another. A Rune declaration expresses model intent; a
-generated runtime probe establishes executable behavior; application code explains only that
-application's choices.
+Do not replace one authority with another. Rune declares model intent, the generated runtime proves
+executable behavior, and application code explains only that application's choices.
 
 ## Follow the application path
 
@@ -38,31 +37,32 @@ If CDM is not installed, its distribution is unclear, or a language must be sele
 2. Trace the value end to end with `rg`: external input, normalization or mapping, generated
    builder, typed CDM object, serialization, validation/functions, and downstream storage or
    API behavior. Name any project-specific stages instead of treating them as CDM.
-3. Query version-matched `.rosetta` source from the binary `cdm-java` JAR with `scripts/cdm-source type`;
-   it includes inherited conditions and sibling choices. Put all owning types in one `scripts/cdm-java-api`
-   call; use `--help` instead of reading either helper. Never scan `/`, home, or global caches. Keep
-   inspection JARs out of builds; use [Rosetta](references/rosetta.md) only for remaining ambiguity.
+3. Batch version-matched owning declarations through `scripts/cdm-source type`, including inherited
+   conditions and sibling choices. Put their simple or qualified Java names in one
+   `scripts/cdm-java-api` call; it resolves one exact package or fails with candidates. Use `--help`
+   instead of reading helpers. Never scan `/`, home, or global caches. Keep inspection JARs out of
+   builds; use [Rosetta](references/rosetta.md) only for remaining ambiguity.
 4. Build or compile the smallest typed vertical slice early: exercise at least one production
    getter or builder and the first real branch. Compiling empty directories, records, or signatures
    alone is not evidence. Let errors identify API details that still need inspection.
-5. Add the smallest test that proves meaningful content, the changed economic leaf, and a close
-   negative. Validate every accepted and emitted boundary with structural and inherited rules, then
-   each populated child's own choice/condition rules because parent validation is not recursive.
-   Keep application checks beside generated validation; validate inputs before zero/empty/replay/no-op
-   returns. Never infer requiredness from Java annotations. Use one reversible mutation only when needed.
+5. Add the smallest meaningful-content, changed-leaf, and close-negative test. For a claimed-complete
+   boundary, run structural/inherited and every populated-child rule; parent validation is not
+   recursive, and an empty child added only to satisfy it is invalid evidence. For a partial typed
+   boundary, validate complete relied-on nodes without claiming root validity. Validate application
+   checks before shortcuts. Never treat annotations or validator exceptions as proof. Use one mutation.
 6. Change the narrowest owning layer. Keep source-system conversions in the application,
    model semantics in generated CDM code, and explicit business guards labelled as application
    policy.
 7. Run the repository's focused check, then its normal offline suite and formatter/linter.
    Inspect data-driven inputs and snapshot diffs; do not invent a universal build command.
 
-For a typed application-owned calculation or supplied state machine, never fully qualify a partial
-fixture as ceremony. Use one combined declaration/builder query, one real vertical slice, then its
-test. A product, lifecycle, or reporting
-label alone does not require its domain, workflow, or DRR guide when the supplied contract owns the
-policy and does not execute or emit those artefacts. Inspect only members the function reads or rebuilds;
-for a single-leaf rebuild, assert untouched neighbors or rewind the leaf and compare the
-whole object. Use [Day-to-day workflows](references/workflows.md) only for broader routes.
+For a typed application-owned calculation or state machine, never fully qualify a partial fixture as
+ceremony. Label it, validate complete relied-on nodes, and keep economics in the application unless
+CDM carries them. Record date-scoped policy as start/end state, not a per-call flag; derive behavior
+per processed date and keep closed windows reconstructible. Use one bounded multi-type API/source
+pass, one vertical slice, then its test. A domain label alone does not require its guide when policy
+emits no model artefact. Inspect only members read or rebuilt; for a leaf rebuild, assert untouched
+neighbors or rewind and compare the whole object. Use [Day-to-day workflows](references/workflows.md).
 
 ## Load only what the task needs
 
@@ -113,7 +113,8 @@ whole object. Use [Day-to-day workflows](references/workflows.md) only for broad
   and negative cases.
 - Optional cardinality does not override conditional or inherited base-type rules, and an empty
   failure message does not mean no validation failure occurred. Preserve structured finding fields.
+- Missing injection is not validation success. Never suppress its exception or failed result; wire
+  the required dependency when in scope, otherwise narrow and document the validation claim.
 - Lifecycle legality is not implied by document validity. Keep application transition guards
   distinct from generated CDM validation.
-- Record the exact CDM version with every durable finding. Re-query the active JAR during an
-  upgrade instead of carrying model facts forward as timeless prose.
+- Record the exact CDM version with every durable finding; re-query it during upgrades.

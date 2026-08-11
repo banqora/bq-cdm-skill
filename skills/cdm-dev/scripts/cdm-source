@@ -8,7 +8,7 @@ Usage:
   cdm-source [--jar <cdm-java.jar>] jar
   cdm-source [--jar <cdm-java.jar>] list [regex]
   cdm-source [--jar <cdm-java.jar>] search <regex>
-  cdm-source [--jar <cdm-java.jar>] type <fully.qualified.Type|Type>
+  cdm-source [--jar <cdm-java.jar>] type <fully.qualified.Type|Type>...
   cdm-source [--jar <cdm-java.jar>] show <cdm/rosetta/file.rosetta>
 
 The JAR is selected in this order:
@@ -215,10 +215,21 @@ case "$command" in
     ;;
 
   type)
-    [[ $# -eq 2 ]] || {
+    [[ $# -ge 2 ]] || {
       usage
       exit 1
     }
+    if [[ $# -gt 2 ]]; then
+      first=true
+      for requested_type in "${@:2}"; do
+        if [[ "$first" == false ]]; then
+          printf '\n# ---- next requested type ----\n'
+        fi
+        first=false
+        "$0" --jar "$jar" type "$requested_type"
+      done
+      exit 0
+    fi
     requested_type="$2"
     if [[ ! "$requested_type" =~ ^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$ ]]; then
       echo "cdm-source: invalid type name: $requested_type" >&2

@@ -1,0 +1,210 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "repo-fail-mini-closeout",
+  "recorded_at": "2026-08-11",
+  "fixture_version": "7.0.0",
+  "task_sha256": "03f6ff6d87eeecc3905b7ff362b02ce1cb62640f4eddc3af07246f1c74c2cdc4",
+  "rubric_sha256": "53bdfc0ddd1d8a935397e9322028f07f51eac5aa8fe6d22f5b8cff5fb01dac9e",
+  "adaptive_probe_sha256": "1a70a5cecb4aaabda239d5aa450a9ad44a69ff52e78b6e0d20a0bd349d8e9997",
+  "review_sha256": "15b6bb0a69daf93f5711b114c35a17d896d18c7784dc69eff335c7fbdcf95575",
+  "skill_snapshot_sha256": "b9bbb6fa0eaa74deac2276dc7d677fb3df08f557dccbf140e30291886be12470",
+  "skill_snapshot_hash_method": "SHA-256 of sorted relative-path sha256sum lines for every file under skills/cdm-dev",
+  "production_tree_hash_method": "SHA-256 of each sorted repository-relative src/main path, a NUL separator, and that file's SHA-256 digest followed by a newline",
+  "raw_run_root": "/private/tmp/repo-fail-mini-closeout-counted.ETWsan",
+  "note": "Four counted, sequential, context-isolated arms used Claude Code 2.1.227 with claude-sonnet-5 or Codex CLI 0.147.0 with gpt-5.4, all at high effort and authenticated through local Claude Max or ChatGPT subscriptions with API credential/provider overrides removed. Each received the identical checksummed open-design task and pinned CDM 7.0.0 artifacts; controls could not read cdm-dev, this repository, the rubric, evaluator probes, or sibling workspaces. Every candidate was committed before evaluator tests were adapted to its public API. Claude Fable 5 independently rebuilt and inspected all four, executed generated child validators, ran the fixed probes, and scored Sonnet treatment/control 99/94 and GPT-5.4 treatment/control 87/93. The skill gave Sonnet a materially better CDM graph and validator boundary but cost 30 percent more wall time; GPT treatment was cheaper than its control but introduced a skipped-date fail-window bug. The bounded query ceiling, simple-name API lookup, complete-boundary floor, populated-child validation recipe, dated policy-window rule, monetary-scale assertion, and repo remedy-scope guidance added after the run are not credited to treatment.",
+  "independent_review": {
+    "reviewer": "Claude Fable 5",
+    "model": "claude-fable-5",
+    "claude_code_version": "2.1.227",
+    "effort": "high",
+    "authentication": "local Claude Max subscription; API credential/provider overrides removed",
+    "sessions": 1,
+    "wall_seconds": 1109,
+    "scores": {
+      "sonnet-5-with-skill": 99,
+      "sonnet-5-control": 94,
+      "gpt-5.4-with-skill": 87,
+      "gpt-5.4-control": 93
+    },
+    "fatal_caps": "none",
+    "leakage_verdict": "no content leakage; one shared Gradle daemon exposed sibling path names only after design completion",
+    "findings": [
+      "All four arms pass the public economic, direction, scope-isolation, identity, and deterministic-state probes with exact decimal arithmetic.",
+      "Sonnet treatment is the only implementation whose terminated TradeState, populated children, and emitted CDM Money all pass the generated validator sweep.",
+      "Sonnet control omits required ClosedState.activityDate and its root-only validation never runs ClosedStateValidator.",
+      "GPT treatment models a dated fail window as a current-call flag, so a skipped failed day is accrued unfloored when the landing date resolves the fail.",
+      "Both GPT boundaries contain incomplete generated Trade graphs; treatment's identity shell fails TradeValidator and control's empty populated children fail their own validators.",
+      "The skill improves Sonnet correctness by five points but makes GPT-5.4 six points worse despite reducing that arm's input tokens and commands."
+    ]
+  },
+  "reviewer_probes": {
+    "end_leg_single_net_and_reinspection": {
+      "sonnet-5-with-skill": "pass",
+      "sonnet-5-control": "pass",
+      "gpt-5.4-with-skill": "pass",
+      "gpt-5.4-control": "pass"
+    },
+    "scope_alias_reorder_and_identity": {
+      "sonnet-5-with-skill": "pass",
+      "sonnet-5-control": "pass",
+      "gpt-5.4-with-skill": "pass",
+      "gpt-5.4-control": "pass"
+    },
+    "negative_rate_window_and_resumption": {
+      "sonnet-5-with-skill": "pass",
+      "sonnet-5-control": "pass",
+      "gpt-5.4-with-skill": "public sequence passes; skipped-date resolution probe fails with EUR 277.78 paid to failing seller",
+      "gpt-5.4-control": "pass"
+    },
+    "offer_side_and_bid_invariance": {
+      "sonnet-5-with-skill": "pass",
+      "sonnet-5-control": "pass",
+      "gpt-5.4-with-skill": "start-leg public path passes; quote-derived end-leg path selects bid",
+      "gpt-5.4-control": "pass"
+    },
+    "generated_boundary_validator_sweep": {
+      "sonnet-5-with-skill": "pass: zero findings",
+      "sonnet-5-control": "fail: ClosedState.activityDate missing",
+      "gpt-5.4-with-skill": "fail: Trade product, tradeLot, counterparty, and tradeDate absent; ClosedState passes",
+      "gpt-5.4-control": "fail: populated product and counterparties fail their own validators; ClosedState passes"
+    }
+  },
+  "skill_revision_after_run": {
+    "pre_run_snapshot_sha256": "b9bbb6fa0eaa74deac2276dc7d677fb3df08f557dccbf140e30291886be12470",
+    "post_run_snapshot_sha256": "e63c6ff5911b682577ff5c06f1623fb1cb8d600b4a48f8c15de3002c60347747",
+    "change": "Made source and API lookup batched and package-safe; imposed a compiler-driven helper-call ceiling; distinguished complete boundaries from labelled partial fixtures and prohibited hollow child shells; added a mechanical populated-child validator walk, fail-loud dependency-injection guidance, dated windowed-policy state, monetary minor-unit assertions, and transaction-remedy scope guidance.",
+    "credit": "not credited to any recorded treatment arm"
+  },
+  "harness_limitations": [
+    "One GPT treatment Gradle --info output listed sibling workspace path names through a long-lived shared daemon; sandbox logs show no sibling file access and the design predated that output.",
+    "Future arms must use a per-arm GRADLE_USER_HOME and --no-daemon or stop daemons between arms.",
+    "Cross-vendor token and cost values are not comparable; comparisons are made only within model/vendor pairs."
+  ],
+  "runs": [
+    {
+      "arm": "sonnet-5-with-skill",
+      "vendor": "claude",
+      "model": "claude-sonnet-5",
+      "claude_code_version": "2.1.227",
+      "skill": true,
+      "authentication": "local Claude Max subscription; API credential/provider overrides removed; trace apiKeySource=none",
+      "deliverable_git_commit": "725bfc03fc2f20a1fe5c35e648c904b7ca3ba3c3",
+      "production_tree_sha256": "a7da7f483f3b07692845cbeac0a1ce189cdc29f1f92bcfa90346e9489bc51635",
+      "authored_tests": {"passed": 21, "total": 21},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "99/100",
+        "generated_boundary": "pass: complete validator sweep has zero findings",
+        "fresh_clone_offline_build": "pass"
+      },
+      "metrics": {
+        "sessions": 1,
+        "effort": "high",
+        "turns": 191,
+        "tool_calls": 190,
+        "bash_calls": 120,
+        "first_production_write_call_index": 84,
+        "first_production_write_wall_seconds": 847,
+        "wall_seconds": 1850,
+        "api_duration_seconds": 1817,
+        "output_tokens": 164522,
+        "reported_subscription_accounting_usd": 15.86
+      }
+    },
+    {
+      "arm": "sonnet-5-control",
+      "vendor": "claude",
+      "model": "claude-sonnet-5",
+      "claude_code_version": "2.1.227",
+      "skill": false,
+      "authentication": "local Claude Max subscription; API credential/provider overrides removed; trace apiKeySource=none",
+      "deliverable_git_commit": "9091f4279cf1c5cff6f096b51c016398e0f88f4b",
+      "production_tree_sha256": "ea242a148db15bc5ee7279ccc8c72e556767d44cca7bfadfadca9a4438716820",
+      "authored_tests": {"passed": 20, "total": 20},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "94/100",
+        "generated_boundary": "fail: terminated ClosedState omits required activityDate",
+        "fresh_clone_offline_build": "pass"
+      },
+      "metrics": {
+        "sessions": 1,
+        "effort": "high",
+        "turns": 182,
+        "tool_calls": 181,
+        "bash_calls": 98,
+        "first_production_write_call_index": 81,
+        "first_production_write_wall_seconds": 692,
+        "wall_seconds": 1427,
+        "api_duration_seconds": 1394,
+        "output_tokens": 128273,
+        "reported_subscription_accounting_usd": 10.17
+      }
+    },
+    {
+      "arm": "gpt-5.4-with-skill",
+      "vendor": "codex",
+      "model": "gpt-5.4",
+      "codex_cli_version": "0.147.0",
+      "skill": true,
+      "authentication": "local ChatGPT subscription; API credential/provider overrides removed",
+      "deliverable_git_commit": "2509fbf47b0c74f26aa95fcf98d146f3e1e03703",
+      "production_tree_sha256": "0c0e1e3f966d6345fa92f067e7bb9363b9bff6150faab79eb3c0851184cc9913",
+      "authored_tests": {"passed": 6, "total": 6},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "87/100",
+        "generated_boundary": "partial: ClosedState passes but Trade identity shell fails four cardinality checks",
+        "skipped_date_fail_window": "fail",
+        "fresh_clone_offline_build": "pass"
+      },
+      "metrics": {
+        "top_level_turns": 1,
+        "reasoning_effort": "high",
+        "completed_items": 63,
+        "commands": 35,
+        "file_change_events": 4,
+        "first_production_write_completed_item": 38,
+        "wall_seconds": 633,
+        "input_tokens": 1291735,
+        "cached_input_tokens": 1192704,
+        "output_tokens": 32495,
+        "reasoning_output_tokens": 16282
+      }
+    },
+    {
+      "arm": "gpt-5.4-control",
+      "vendor": "codex",
+      "model": "gpt-5.4",
+      "codex_cli_version": "0.147.0",
+      "skill": false,
+      "authentication": "local ChatGPT subscription; API credential/provider overrides removed",
+      "deliverable_git_commit": "359331721eaf981e5c40a0ac22a2e25be95aaadc",
+      "production_tree_sha256": "f47091d07ca404db869ac349e31e75bf0cfe738ea6b4d83d32b4338dc8024e44",
+      "authored_tests": {"passed": 14, "total": 14},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "93/100",
+        "generated_boundary": "partial: root Trade passes but empty populated children fail their own validators",
+        "fresh_clone_offline_build": "pass"
+      },
+      "metrics": {
+        "top_level_turns": 1,
+        "reasoning_effort": "high",
+        "completed_items": 92,
+        "commands": 47,
+        "file_change_events": 8,
+        "first_production_write_completed_item": 48,
+        "wall_seconds": 665,
+        "input_tokens": 2237467,
+        "cached_input_tokens": 2128640,
+        "output_tokens": 33503,
+        "reasoning_output_tokens": 14056
+      }
+    }
+  ]
+}

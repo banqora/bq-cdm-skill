@@ -1,3 +1,6 @@
 .gradle/
 .tmp/
+.claude/
+.codex/
 build/
+lib/

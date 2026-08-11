@@ -62,6 +62,10 @@ decimal residual. Test an exact cap multiple, an under-cap input, a rounding tie
 candidates, and a deliberately inconsistent derived price; assert both per-piece bounds and exact
 aggregate reconciliation without passing through binary floating point.
 
+For every emitted monetary amount, assert currency, sign/direction, and the currency's supported
+minor-unit scale after the one final rounding step. Apply this to netted results as well as accruals;
+an integral example does not prove that a fractional-cent close-out is rounded correctly.
+
 ## Use positive and negative controls
 
 A load-bearing check should be observed failing for the defect it guards. Temporarily break the
@@ -139,10 +143,14 @@ arithmetic, selection, or mechanical builder conversion that a typed focused tes
 
 Smoke-test injected functions or validator factories with a known positive and a deliberately
 invalid object before trusting their output; silent null injection can otherwise make an empty rule
-set look successful. Validate populated child generated objects separately because parent
-structural validators and parent metadata data rules do not recurse into child conditions. Include
-one child-choice negative when the boundary contains a generated choice. Run validation of inputs
-and selected conventions before zero, empty, replay, or no-op fast paths.
+set look successful. Never suppress a thrown validator failure or a failed result by matching null
+injection text: wire the dependency when the rule is in scope, or state the narrower validation
+claim. For a complete generated boundary, validate populated child objects separately because
+parent structural validators and parent metadata data rules do not recurse into child conditions.
+For a labelled partial fixture, validate complete nodes the function relies on without claiming
+whole-root validity. Include one child-choice negative when the boundary contains a generated
+choice. Run validation of inputs and selected conventions before zero, empty, replay, or no-op fast
+paths.
 
 When the task names a public function, method, command, or wire signature, compile and invoke that
 exact entry point in a focused test. A renamed class containing a more idiomatic helper is not a
@@ -151,6 +159,11 @@ substitute for the caller-visible contract; keep an alias only in addition to th
 Lifecycle tests should include a sequence, not only isolated events. Assert before/after
 identity, economic delta, lineage, keys/references, validation, and classification after each
 step.
+
+Represent a date-scoped policy window with recorded boundary dates in application state. Test every
+processed date through an open and closed window, a call that spans more than one date, and normal
+processing after closure. A transient per-call flag cannot prove which skipped dates were governed
+by the policy or reconstruct the window after it ends.
 
 ## Separate offline and live checks
 

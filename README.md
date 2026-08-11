@@ -427,6 +427,59 @@ deep-links manufactured income and corporate-action cash movements without teach
 reversal algorithm. This is the skill's intended value: faster access to version-correct model
 semantics and verification traps that ordinary plausible Java does not reveal.
 
+An eleventh [intraday-repo benchmark](evals/benchmarks/intraday-repo-interest/) tested exact elapsed
+time across midnight and time zones, zero and reversed durations, day-count bases, and 24-hour
+continuity. It left the Java API, CDM `Money` boundary, validation depth, arithmetic form, and
+rounding policy open.
+
+| Intraday arm | Agent-authored tests | Fixed probes | Fable review | Wall time |
+|---|---:|---:|---:|---:|
+| Sonnet 5 + `cdm-dev` | 15/15 | 5/6 | 96/100 | 13m 00s |
+| Sonnet 5 control | 14/14 | 4/6 | 93/100 | 11m 00s |
+| GPT-5.4 + `cdm-dev` | 8/8 | 4/6 | 91/100 | 8m 16s |
+| GPT-5.4 control | 11/11 | 6/6 | 96/100 | 6m 22s |
+
+Every arm got the elapsed-time economics right. The skill improved Sonnet's generated validation
+by three points, but its root validator still missed a populated `UnitType` choice. GPT control's
+exact-rational arithmetic and application checks beat treatment by five points. The result is mixed:
+the skill helps when generated-model validation is the weak link, but it cannot replace ordinary
+numeric and boundary judgment. The post-run revision made populated-child validation, validation
+before zero-result shortcuts, and dependency-injection smoke checks explicit.
+
+A twelfth [repo-fail and mini-close-out benchmark](evals/benchmarks/repo-fail-mini-closeout/)
+tested selected-trade netting, same-counterparty scope isolation, negative-rate fail periods, and
+offer-side replacement valuation. The contract deliberately left the CDM graph, application state,
+validation traversal, and day-by-day fail-window representation for each agent to discover.
+
+| Repo-fail arm | Agent-authored tests | Public probes | Fable review | Agent work | Wall time |
+|---|---:|---:|---:|---:|---:|
+| Sonnet 5 + `cdm-dev` | 21/21 | pass | **99/100** | 191 turns, 190 tool calls | 30m 50s |
+| Sonnet 5 control | 20/20 | pass | **94/100** | 182 turns, 181 tool calls | 23m 47s |
+| GPT-5.4 + `cdm-dev` | 6/6 | pass | **87/100** | 63 completed items, 35 commands | 10m 33s |
+| GPT-5.4 control | 14/14 | pass | **93/100** | 92 completed items, 47 commands | 11m 05s |
+
+This is a clear Sonnet correctness win, not merely more tests. Treatment was the only arm whose
+complete terminated `TradeState`, every populated child, and emitted CDM `Money` all passed the
+generated CDM 7.0.0 validator sweep. Control omitted required `ClosedState.activityDate`; its
+root-only validation never inspected the object it changed. The skill cost 30% more wall time, and
+Sonnet ignored its own bounded-query instruction, so some—not all—of that cost bought the better
+graph.
+
+GPT-5.4 treatment shows the limit. It used 42% fewer input tokens and 12 fewer commands than control,
+but modeled the fail window as a current-call boolean. Skipping a failed day and landing on a
+resolution day retroactively accrued the skipped day at the negative contractual rate, rewarding
+the failing seller. Its CDM boundary was also an invalid identity shell. The skill improved
+efficiency but not implementation quality for that model.
+
+The durable [independent review](evals/benchmarks/repo-fail-mini-closeout/REVIEW.md) therefore led
+to generic, executable improvements rather than repo-example prose: simple Java names resolve to
+exact generated packages; source declarations batch in one command; five helper batches force a
+boundary re-check; complete boundaries must validate every populated child and may not use hollow
+shells; date-scoped policy must remain reconstructible from recorded dates; and every emitted net
+amount must prove currency scale and direction. This is the reason to use `cdm-dev`: it can turn
+plausible Java into version-correct CDM and expose model-specific defects a normal suite misses—but
+the benchmark record also makes clear when that benefit does not materialise.
+
 ## Install
 
 The distributable skill is the `skills/cdm-dev/` directory; everything outside it is
@@ -449,13 +502,13 @@ generated-Java `-sources.jar`; the binary already embeds the Rune source:
 
 ```bash
 skills/cdm-dev/scripts/cdm-source --jar path/to/cdm-java.jar version
-skills/cdm-dev/scripts/cdm-source --jar path/to/cdm-java.jar type cdm.event.common.TradeState
+skills/cdm-dev/scripts/cdm-source --jar path/to/cdm-java.jar type TradeState ClosedState
 skills/cdm-dev/scripts/cdm-source --jar path/to/cdm-java.jar list 'event.*func'
 ```
 
-The `type` command prints the complete declaration together with inherited base declarations,
-conditions, and sibling subtypes, avoiding repeated line-window searches and first-name matches.
-Use `search` for a batched regex across otherwise unrelated declarations.
+The `type` command accepts a bounded batch and prints each complete declaration with inherited base
+declarations, conditions, and sibling subtypes, avoiding repeated line-window searches and broad
+matches against FpML ingestion types. Use `search` for otherwise unrelated declarations.
 
 `CDM_JAVA_JAR` can supply the path instead. Without either, the helper searches common
 Gradle/Maven distribution and dependency-copy layouts under the active project. It refuses
@@ -465,10 +518,11 @@ For exact generated Java getters and builders, inspect several types in one pass
 
 ```bash
 skills/cdm-dev/scripts/cdm-java-api --jar path/to/cdm-java.jar \
-  cdm.event.common.TradeState cdm.event.common.Trade
+  TradeState Trade InterestRatePayout
 ```
 
-The API helper automatically includes each requested type's generated nested builder. If a
+For an unambiguous simple name, the helper prints the exact generated Java package; ambiguity lists
+candidates instead of inviting a guessed import. It also includes each type's generated builder. If a
 `com.rosetta.model.lib.*` support type is needed, add the project's already-resolved
 `rune-runtime` JAR with `--classpath`; the helper never guesses or downloads a version.
 
@@ -518,7 +572,7 @@ evals/run-local --vendor all --quality-only --case price-quantity-model-api
 The local runner deliberately ignores API-key environment variables. Live model evals do not run
 in GitHub Actions and require no repository secrets. See [Local skill evaluations](evals/README.md)
 for authentication, focused commands, fixture caching, result review, and baseline promotion.
-The ten code-writing use cases are also preserved as leakage-aware
+The twelve code-writing use cases are also preserved as leakage-aware
 [implementation forward benchmarks](evals/benchmarks/README.md), with fixed tasks, hidden rubrics,
 observed skill/control baselines, a shared CDM 7.0.0 seed, and `evals/check-benchmarks` validation.
 

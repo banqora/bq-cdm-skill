@@ -4,10 +4,12 @@ set -euo pipefail
 usage() {
   cat >&2 <<'USAGE'
 Usage:
-  cdm-java-api [--jar <cdm-java.jar>] [--classpath <path>] <fully.qualified.Type>...
+  cdm-java-api [--jar <cdm-java.jar>] [--classpath <path>] <Type|fully.qualified.Type>...
 
 Print the public generated Java API for each requested type. When the selected cdm-java JAR
 contains a matching nested <Type>$<Type>Builder class, print that builder in the same javap pass.
+An unqualified simple name is resolved from the selected JAR when it has exactly one match; the
+resolved fully qualified Java name is printed before the API. Ambiguous names fail with candidates.
 
 The cdm-java JAR is selected by the adjacent cdm-source helper. Repeat --classpath to add
 project-resolved runtime dependencies, or set CDM_JAVA_CLASSPATH. The helper never downloads or
@@ -74,7 +76,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ ${#requested_types[@]} -gt 0 ]] || {
-  echo "cdm-java-api: provide at least one fully qualified Java type" >&2
+  echo "cdm-java-api: provide at least one Java type" >&2
   usage
   exit 1
 }
@@ -94,6 +96,7 @@ else
 fi
 jar_entries="$(zipinfo -1 "$jar")"
 targets=()
+resolution_notes=()
 
 add_target() {
   local candidate="$1"
@@ -105,15 +108,40 @@ add_target() {
 }
 
 for requested_type in "${requested_types[@]}"; do
-  if [[ ! "$requested_type" =~ ^[A-Za-z_$][A-Za-z0-9_$]*(\.[A-Za-z_$][A-Za-z0-9_$]*)+$ ]]; then
-    echo "cdm-java-api: invalid fully qualified Java type: $requested_type" >&2
+  if [[ ! "$requested_type" =~ ^[A-Za-z_$][A-Za-z0-9_$]*(\.[A-Za-z_$][A-Za-z0-9_$]*)*$ ]]; then
+    echo "cdm-java-api: invalid Java type: $requested_type" >&2
     exit 1
   fi
-  add_target "$requested_type"
 
-  if [[ "$requested_type" != *'$'* ]]; then
-    simple_name="${requested_type##*.}"
-    builder_type="${requested_type}\$${simple_name}Builder"
+  resolved_type="$requested_type"
+  if [[ "$requested_type" != *.* ]]; then
+    simple_matches=()
+    while IFS= read -r entry; do
+      case "$entry" in
+        */"$requested_type".class)
+          match="${entry%.class}"
+          simple_matches+=("${match//\//.}")
+          ;;
+      esac
+    done <<<"$jar_entries"
+    if [[ ${#simple_matches[@]} -eq 0 ]]; then
+      echo "cdm-java-api: Java type not found in selected JAR: $requested_type" >&2
+      exit 1
+    fi
+    if [[ ${#simple_matches[@]} -gt 1 ]]; then
+      echo "cdm-java-api: Java type name is ambiguous; use a fully qualified name:" >&2
+      printf '  %s\n' "${simple_matches[@]}" | sort >&2
+      exit 1
+    fi
+    resolved_type="${simple_matches[0]}"
+    resolution_notes+=("# requested=$requested_type resolved=$resolved_type")
+  fi
+
+  add_target "$resolved_type"
+
+  if [[ "$resolved_type" != *'$'* ]]; then
+    simple_name="${resolved_type##*.}"
+    builder_type="${resolved_type}\$${simple_name}Builder"
     builder_entry="${builder_type//.//}.class"
     if rg -Fx -- "$builder_entry" <<<"$jar_entries" >/dev/null; then
       add_target "$builder_type"
@@ -136,4 +164,7 @@ if ! api="$(javap -public -classpath "$classpath" "${targets[@]}" 2>&1)"; then
   exit 1
 fi
 
+if [[ ${#resolution_notes[@]} -gt 0 ]]; then
+  printf '%s\n' "${resolution_notes[@]}"
+fi
 printf '%s\n' "$api"

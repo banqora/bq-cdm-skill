@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "repo-fail-mini-closeout",
+  "total_score": 100,
+  "required_entry_points": [
+    "ProcessFail"
+  ],
+  "fatal_failures": [
+    "production or authored tests do not compile and run from a clean offline copy",
+    "the caller-visible ProcessFail operation is absent",
+    "the implementation uses no genuine generated CDM 7.0.0 object at its input or output boundary",
+    "the end-leg example emits two gross cash payments or pays the EUR 300,000 in the wrong direction",
+    "mini close-out terminates or economically changes another portfolio trade",
+    "a start-leg failing seller earns contractual negative-rate interest during the fail window"
+  ],
+  "criteria": [
+    {
+      "id": "single-net-closeout-payment",
+      "visibility": "public",
+      "weight": 20,
+      "description": "Net the two selected-trade obligations into one correctly directed close-out payment.",
+      "checks": [
+        "EUR 10,500,000 collateral value less EUR 10,200,000 repurchase price produces exactly one EUR 300,000 payment from buyer to seller.",
+        "The result contains no compensating pair of gross flows and does not rely on summing two outputs downstream.",
+        "The selected trade is terminated at the effective close-out date and repeated result inspection preserves currency and direction."
+      ]
+    },
+    {
+      "id": "failed-trade-scope-isolation",
+      "visibility": "public",
+      "weight": 22,
+      "description": "Apply a mini close-out only to the identified failed repo.",
+      "checks": [
+        "In a three-repo same-counterparty portfolio, exactly the requested trade changes lifecycle and application state.",
+        "The other two CDM TradeState values, economics and histories remain equal to their inputs and are not rebuilt with incidental differences.",
+        "The input portfolio and caller-owned collections are not mutated or retained through mutable aliases.",
+        "Missing and duplicate trade IDs fail before any partial portfolio update."
+      ]
+    },
+    {
+      "id": "negative-rate-fail-economics",
+      "visibility": "public",
+      "weight": 22,
+      "description": "Prevent a failing party from earning negative-rate interest without erasing contractual economics outside the fail.",
+      "checks": [
+        "A start-leg failing seller on EUR 10,000,000 at -0.50% ACT/360 has exactly zero seller-perspective payable accrual for every failed day.",
+        "No abs, sign inversion or global non-negative-rate rejection turns the contractual negative rate into a charge during normal running.",
+        "After resolution, the next normal day produces EUR 138.89 from buyer to seller and does not retroactively accrue or floor the wrong dates.",
+        "The state transition makes the fail window and resumption observable and repeatable rather than depending on the current clock."
+      ]
+    },
+    {
+      "id": "offer-side-valuation",
+      "visibility": "public",
+      "weight": 18,
+      "description": "Use the terminating buyer's replacement offer rather than mid-market valuation.",
+      "checks": [
+        "For 100,000 securities and EUR 90/110, replacement value is EUR 11,000,000 and seller pays buyer EUR 1,000,000 net.",
+        "For the same-mid EUR 98/102 quote, the payment is EUR 200,000; the two outputs are observably different.",
+        "Bid and offer are validated as coherent exact decimals and no default-to-mid path survives."
+      ]
+    },
+    {
+      "id": "cdm-lifecycle-boundary",
+      "visibility": "hidden",
+      "weight": 12,
+      "description": "Represent lifecycle and cash facts coherently without pretending CDM owns fail policy.",
+      "checks": [
+        "The portfolio boundary contains genuine CDM TradeState objects and the mini-close-out result records a version-correct terminated ClosedState or comparably defensible generated lifecycle object.",
+        "Any emitted CDM Money or transfer has coherent currency, amount, payer/receiver direction and its own plus populated-child generated conditions executed where applicable.",
+        "Fail identity, dates, selected valuation side, accrual bucket and scope policy remain explicit application facts rather than invented generated fields.",
+        "DESIGN.md accurately separates generated model semantics from the supplied mini-close-out convention."
+      ]
+    },
+    {
+      "id": "validation-and-engineering",
+      "visibility": "hidden",
+      "weight": 6,
+      "description": "Deliver deterministic exact code with focused defenses against plausible failures.",
+      "checks": [
+        "Inputs and actions validate before zero/no-payment shortcuts; currencies, dates, quotes, basis, identities and closed-state preconditions fail visibly.",
+        "The monetary path uses BigDecimal without double/float and rounds once at the supported currency scale.",
+        "Required tests plus close negative controls pass from a clean offline copy without current-clock, default-zone or mutable-static state."
+      ]
+    }
+  ]
+}

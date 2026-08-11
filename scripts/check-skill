@@ -136,13 +136,23 @@ if not re.fullmatch(r"[^.!?]+[.!?]", default_prompt):
 readme = repo_root / "README.md"
 link_re = re.compile(r"\]\(([^)#]+\.md)(?:#[^)]*)?\)")
 missing = []
-for markdown in [*skill_dir.rglob("*.md"), readme]:
+for markdown in skill_dir.rglob("*.md"):
     for link in link_re.findall(markdown.read_text()):
         if "://" in link:
             continue
         target = (markdown.parent / link).resolve()
         if not target.is_file():
             missing.append(f"{markdown.relative_to(repo_root)} -> {link}")
+for link in link_re.findall(readme.read_text()):
+    if "://" in link:
+        continue
+    target = (readme.parent / link).resolve()
+    try:
+        target.relative_to(skill_dir)
+    except ValueError:
+        continue
+    if not target.is_file():
+        missing.append(f"{readme.relative_to(repo_root)} -> {link}")
 if missing:
     raise SystemExit("check-skill: missing Markdown references:\n  " + "\n  ".join(missing))
 

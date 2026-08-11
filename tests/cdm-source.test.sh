@@ -59,6 +59,16 @@ expect_ok "type hands off to a combined API query and populated compile" \
   --stdout '^# next=make at most one combined cdm-java-api query, then compile a populated slice$' -- \
   "$cdm_source" --jar "$fixture_jar" type cdm.event.common.ContingentTransfer
 
+batch_types() {
+  local output
+  output="$("$cdm_source" --jar "$fixture_jar" type \
+    cdm.event.common.TradeState cdm.event.common.ContingentTransfer)" || return
+  rg '^# requested=cdm\.event\.common\.TradeState$' <<<"$output" >/dev/null || return
+  printf '%s\n' "$output"
+}
+expect_ok "type accepts a bounded batch without a broad source search" \
+  --stdout '^# requested=cdm\.event\.common\.ContingentTransfer$' -- batch_types
+
 expect_fail "type rejects an unknown declaration clearly" \
   --stderr 'type not found: cdm\.event\.common\.Absent' -- \
   "$cdm_source" --jar "$fixture_jar" type cdm.event.common.Absent

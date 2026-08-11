@@ -17,6 +17,7 @@ these cases require an agent to write and test Java code.
 - [BDT tranche-to-CDM expander (open discovery)](bdt-tranche-expander-discovery/)
 - [Manufactured-payment engine with reversal support](manufactured-payment-reversal/)
 - [Intraday repo interest calculator](intraday-repo-interest/)
+- [Repo fail and mini close-out engine](repo-fail-mini-closeout/)
 
 ## Contents
 
@@ -43,8 +44,10 @@ these cases require an agent to write and test Java code.
 8. Repeat the authored tests from a clean clone or copy that excludes ignored temp/cache files, so
    a warmed workspace cannot hide missing dependencies. Only then add evaluator-owned tests derived
    from `rubric.json`; never leave hidden tests where a later arm can discover them.
-9. Record exact CLI/model versions, auth mode, wall time, exposed turn/item counts, tool calls,
-   authored-test results, hidden-check outcomes, and any harness limitations.
+9. Give every arm a private build cache (for Gradle, a unique `GRADLE_USER_HOME`) and use
+   `--no-daemon` or stop daemons between arms. An OS sandbox does not isolate a shared build daemon.
+10. Record exact CLI/model versions, auth mode, wall time, exposed turn/item counts, tool calls,
+    authored-test results, hidden-check outcomes, and any harness limitations.
 
 The historical baseline is evidence from one run, not a threshold to optimise blindly. Promote a
 new baseline only after reviewing raw code and test output and noting which skill revision was under
