@@ -70,6 +70,10 @@ expect_fail "a missing Rune runtime type gets an actionable classpath hint" \
   --stderr 'add the project.s resolved rune-runtime JAR with --classpath' -- \
   "$cdm_api" --jar "$fixture_jar" com.rosetta.model.lib.records.Date
 
+expect_fail "a missing runtime forbids global-cache scavenging" \
+  --stderr 'do not search global caches or guess a runtime version' -- \
+  "$cdm_api" --jar "$fixture_jar" com.rosetta.model.lib.records.Date
+
 expect_fail "at least one fully qualified type is required" \
   --stderr 'provide at least one fully qualified Java type' -- \
   "$cdm_api" --jar "$fixture_jar"

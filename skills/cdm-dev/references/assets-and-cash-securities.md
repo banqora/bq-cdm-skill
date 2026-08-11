@@ -3,6 +3,16 @@
 Load this reference for cash, bonds and other securities, loans, listed derivatives, money-market
 instruments, direct asset trades, bond forwards, and early digital-asset exploration.
 
+## Contents
+
+- [Re-query the active release](#re-query-the-active-release)
+- [Keep the taxonomies separate](#keep-the-taxonomies-separate)
+- [Choose the product boundary](#choose-the-product-boundary)
+- [Keep asset and settlement tokenisation separate](#keep-asset-and-settlement-tokenisation-separate)
+- [Application boundary](#application-boundary)
+- [Non-vacuous tests](#non-vacuous-tests)
+- [Official context and freshness](#official-context-and-freshness)
+
 ## Re-query the active release
 
 Research baseline: these anchors were checked against FINOS CDM 7.0.0 on 2026-08-07. Re-run
@@ -11,8 +21,7 @@ group proposal onto a different release.
 
 ```bash
 CDM_SOURCE=/path/to/cdm-dev/scripts/cdm-source
-"$CDM_SOURCE" --jar path/to/cdm-java.jar search '^enum AssetClassEnum|^choice (Asset|Instrument|Product)'
-"$CDM_SOURCE" --jar path/to/cdm-java.jar search '^type (Security|TransferableProduct|AssetIdentifier)\b'
+"$CDM_SOURCE" --jar path/to/cdm-java.jar search '^choice (Asset|Instrument|Product)|^type (Security|TransferableProduct|EconomicTerms|PayerReceiver|AssetIdentifier)\b|^enum AssetClassEnum'
 "$CDM_SOURCE" --jar path/to/cdm-java.jar search '^func Qualify_AssetClass_|^func Qualify_.*Debt'
 ```
 
@@ -32,10 +41,30 @@ the actual trade.
 - `DigitalAsset` is an `Asset` alternative, not a derivative asset-class qualifier and not the
   digital representation of another asset. Tokenized-securities proposals must not be mistaken
   for production model behavior.
-- A cash security is normally an `Asset -> Instrument -> Security` inside a
-  `TransferableProduct`, with economic terms. Direct or forward settlement adds payout and
-  settlement structures. A bond forward may qualify under an interest-rate debt-forward
-  predicate; that does not make the bond itself an interest-rate payout.
+
+## Choose the product boundary
+
+Start with the official [FINOS product-model distinction](https://cdm.finos.org/docs/product-model/#transferableproduct),
+then confirm it in the active Rune source. `Security` minimally identifies and classifies an asset;
+`TransferableProduct` associates that asset with `EconomicTerms` for future transfers.
+
+| Caller-visible need | Narrow boundary |
+|---|---|
+| Identity or security-master reference only | `Asset -> Instrument -> Security` |
+| A transferable asset plus supplied, representable future-transfer economics | `TransferableProduct` containing that asset and `EconomicTerms` |
+| An executed purchase, sale, or settlement | Add the applicable trade, payout, price/quantity, and settlement structures |
+
+Do not reject `TransferableProduct` merely because a payout uses `CounterpartyRoleEnum`:
+`productPartyRole` and `PayerReceiver` are abstract role indirection, not concrete trade parties.
+The role election still needs a model-mandated meaning, source fact, or documented application
+assumption. Likewise, do not force sparse source data into a payout by inventing schedule,
+convention, seniority, principal, or party facts; keep unsupported facts in an explicit application
+envelope and state the limitation.
+
+For this boundary decision, use the combined declaration query above and at most one combined Java
+API query when the project runtime classpath is already resolved, then compile the first real
+builder path. Let compiler errors name any remaining support type; do not survey neighboring Bond,
+FpML-ingestion, quantity, rate, enum, validator, or runtime classes before that slice exists.
 
 ## Keep asset and settlement tokenisation separate
 

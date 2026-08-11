@@ -20,7 +20,27 @@ work = Path(sys.argv[1])
 def write_rosetta(jar):
     jar.writestr(
         "cdm/rosetta/event-common-type.rosetta",
-        "namespace cdm.event.common\n\ntype TradeState:\n  trade Trade (1..1)\n",
+        """namespace cdm.event.common
+
+type TradeState:
+  trade Trade (1..1)
+
+type AssetFlowBase:
+  quantity number (1..1)
+  condition PositiveQuantity:
+    quantity > 0
+
+type TransferBase extends AssetFlowBase:
+  payer string (1..1)
+
+type ScheduledTransfer extends TransferBase:
+  schedule string (1..1)
+
+type ContingentTransfer extends TransferBase:
+  event string (1..1)
+  condition EventExists:
+    event exists
+""",
     )
     jar.writestr(
         "cdm/rosetta/event-qualification-func.rosetta",

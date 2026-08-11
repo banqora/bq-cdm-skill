@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "bdt-tranche-expander-discovery",
+  "total_score": 100,
+  "required_entry_points": [
+    "ExpandIssuance"
+  ],
+  "fatal_failures": [
+    "production or authored tests do not compile and run from a clean offline copy",
+    "no callable ExpandIssuance entry point is delivered",
+    "the implementation emits no genuine generated CDM 7.0.0 object at its output boundary",
+    "a tranche override mutates or leaks into a programme default or sibling output",
+    "a valid tap creates two output instruments with the same ISIN",
+    "a conflicting tap is silently accepted or handled with last-writer-wins",
+    "generated CDM source is edited or unrelated model fields are used to disguise missing issuance semantics"
+  ],
+  "criteria": [
+    {
+      "id": "inheritance-and-isolation",
+      "visibility": "public",
+      "weight": 14,
+      "description": "Resolve programme defaults independently for every tranche.",
+      "checks": [
+        "The required three-row case produces GBP, EUR, GBP (or equivalent chosen currencies) in input order.",
+        "Issuer, governing-law, and currency overrides are resolved per row and do not leak to siblings.",
+        "Inputs and earlier outputs remain unchanged after later rows are processed."
+      ]
+    },
+    {
+      "id": "aggregate-completeness",
+      "visibility": "public",
+      "weight": 10,
+      "description": "Use the programme total as a fail-closed completeness check.",
+      "checks": [
+        "The declared total is compared exactly with the sum of every input row, including tap rows.",
+        "A missing row or mismatched total yields an explicit failure and no misleading partial result.",
+        "The implementation does not invent FX conversion for the source-message checksum."
+      ]
+    },
+    {
+      "id": "tap-identity-and-provenance",
+      "visibility": "public",
+      "weight": 18,
+      "description": "Consolidate a genuine fungible reopening without losing identity or provenance.",
+      "checks": [
+        "A matching later row with the same ISIN produces one output identity and an exact summed issue size.",
+        "The result retains the original issue date and the later tap date or equivalent issuance provenance.",
+        "First-occurrence ordering is deterministic and a non-later duplicate is not silently merged."
+      ]
+    },
+    {
+      "id": "fungibility-guard",
+      "visibility": "public",
+      "weight": 14,
+      "description": "Reject a duplicate ISIN when resolved fungibility terms conflict.",
+      "checks": [
+        "A coupon conflict fails loudly rather than creating a duplicate or overwriting the original.",
+        "Maturity, currency, issuer, and governing-law conflicts are also considered after inheritance is resolved.",
+        "Decimal coupon comparison is numeric rather than accidentally scale-sensitive."
+      ]
+    },
+    {
+      "id": "cdm-model-judgment",
+      "visibility": "hidden",
+      "weight": 25,
+      "description": "Choose and explain a faithful CDM 7.0.0 representation rather than following a prescribed topology.",
+      "checks": [
+        "Outputs contain genuine generated CDM objects with a correctly typed ISIN security identity and issuer/LEI relationship where supported by the chosen topology.",
+        "The design distinguishes security-master identity from contractual/product economics and chooses Security, TransferableProduct/EconomicTerms, or an explicit application envelope for coherent reasons.",
+        "Coupon, maturity, currency, size, issue dates, governing law, and tap provenance each have an exact model path or are explicitly identified as application-owned/unrepresentable; no unrelated CDM field is repurposed.",
+        "The implementation uses version-correct generated builders, references, choices, and cardinalities and does not claim whole-object validity without evidence."
+      ]
+    },
+    {
+      "id": "validation-boundary",
+      "visibility": "hidden",
+      "weight": 9,
+      "description": "Expose predictable failures for malformed source data.",
+      "checks": [
+        "Null structures, missing required terms, malformed ISIN/LEI values, non-positive sizes, invalid dates, and invalid rates are rejected or reported coherently.",
+        "Failures identify their reason and do not coexist with apparently successful partial instruments.",
+        "Validation policy is documented as application mapping policy versus generated CDM validation."
+      ]
+    },
+    {
+      "id": "engineering-and-tests",
+      "visibility": "hidden",
+      "weight": 10,
+      "description": "Deliver a reproducible, exact, mutation-safe implementation and meaningful tests.",
+      "checks": [
+        "All four requested scenarios are asserted against caller-visible outputs, including the plausible wrong result.",
+        "BigDecimal is used without binary floating point for business values, result collections are stable, and mutable input collections cannot alias delivered results.",
+        "A clean offline Java 21/Gradle 8.10 build passes without ignored temp/cache dependencies, and DESIGN.md accurately describes the delivered code."
+      ]
+    }
+  ]
+}

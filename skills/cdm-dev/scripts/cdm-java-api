@@ -129,6 +129,7 @@ if ! api="$(javap -public -classpath "$classpath" "${targets[@]}" 2>&1)"; then
   if rg -q 'class not found: com\.rosetta\.model\.lib\.' <<<"$api"; then
     echo "cdm-java-api: com.rosetta.model.lib runtime support types are not in cdm-java;" >&2
     echo "cdm-java-api: add the project's resolved rune-runtime JAR with --classpath" >&2
+    echo "cdm-java-api: do not search global caches or guess a runtime version; compile the project slice if its resolved classpath is not ready" >&2
   else
     echo "cdm-java-api: add missing project-resolved dependencies with --classpath; do not guess versions" >&2
   fi

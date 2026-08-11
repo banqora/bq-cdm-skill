@@ -13,7 +13,9 @@ these cases require an agent to write and test Java code.
 - [Evergreen repo lifecycle engine](evergreen-repo-lifecycle/)
 - [Securities-lending month-end billing](securities-lending-month-end-billing/)
 - [UTI report-sequence validator](uti-report-sequence-validator/)
-- [BDT-style tranche-to-CDM expander](bdt-tranche-expander/)
+- [BDT-style tranche-to-CDM expander (prescribed contract)](bdt-tranche-expander/)
+- [BDT tranche-to-CDM expander (open discovery)](bdt-tranche-expander-discovery/)
+- [Manufactured-payment engine with reversal support](manufactured-payment-reversal/)
 
 ## Contents
 
@@ -23,6 +25,7 @@ these cases require an agent to write and test Java code.
 - `<benchmark>/rubric.json`: fixed public and hidden evaluator criteria.
 - `<benchmark>/evaluator/`: evaluator-owned tests copied in only after an arm is sealed, when saved.
 - `<benchmark>/baseline.json`: observed model/skill runs, effort, reviews, and any labelled post-revision regression.
+- `<benchmark>/REVIEW.md`: a durable comparative review when modelling judgment cannot be reduced to one shared test API.
 
 ## Isolation protocol
 

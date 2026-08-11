@@ -1,6 +1,6 @@
 ---
 name: cdm-dev
-description: Develop, debug, test, upgrade, and review FINOS Common Domain Model (CDM) software, Rune source/DSL, generated distributions, and Rune runtimes. Use for CDM onboarding or generated-API upgrades; Java, Python, TypeScript, JSON Schema, or Excel integration; FpML/data mapping, typed objects, dropped fields, serialization, and JSON dialects; lifecycle events, validation, qualification, and functions; derivatives, securities financing, collateral, DRR/regulatory reporting, or legal-agreement representation; and separating CDM semantics from application policy or ISDA/ISLA/ICMA guidance. Exclude unrelated meanings of "CDM" or "Rune", generic build debugging, CLI lookups, and legal advice.
+description: Develop, debug, test, upgrade, and review FINOS Common Domain Model (CDM) software, Rune source/DSL, generated distributions, and Rune runtimes. Use for CDM onboarding or generated-API upgrades; Java, Python, TypeScript, JSON Schema, or Excel integration; FpML/data mapping, typed objects, dropped fields, serialization, and JSON dialects; lifecycle events, validation, qualification, and functions; derivatives, securities financing, collateral or manufactured payments, DRR/regulatory reporting, or legal-agreement representation; and separating CDM semantics from application policy or ISDA/ISLA/ICMA guidance. Exclude unrelated meanings of "CDM" or "Rune", generic build debugging, CLI lookups, and legal advice.
 ---
 
 # Develop with CDM
@@ -33,18 +33,16 @@ If CDM is not installed, its distribution is unclear, or a language must be sele
 2. Trace the value end to end with `rg`: external input, normalization or mapping, generated
    builder, typed CDM object, serialization, validation/functions, and downstream storage or
    API behavior. Name any project-specific stages instead of treating them as CDM.
-3. Query version-matched `.rosetta` source with `scripts/cdm-source` resolved from this `SKILL.md`;
-   point it at the binary `cdm-java` JAR, which embeds Rune source, not the generated-Java
-   `-sources.jar`. Batch questions and open owning declarations. For Java getter and builder
-   signatures, batch types through `scripts/cdm-java-api`; add the project's resolved `rune-runtime`
-   JAR only for support types. Inspection JARs must not replace working dependencies or enter durable
-   builds through ignored temp/cache paths. Use [Rosetta and generated code](references/rosetta.md)
-   only for remaining ambiguity; an exact path is confirmation, not cause to survey neighboring types.
+3. Query version-matched `.rosetta` source from the binary `cdm-java` JAR with `scripts/cdm-source type`;
+   it includes inherited conditions and sibling choices. Put all owning types in one `scripts/cdm-java-api`
+   call; use `--help` instead of reading either helper. Never scan `/`, home, or global caches. Keep
+   inspection JARs out of builds; use [Rosetta](references/rosetta.md) only for remaining ambiguity.
 4. Build or compile the smallest typed vertical slice early: exercise at least one production
    getter or builder and the first real branch. Compiling empty directories, records, or signatures
    alone is not evidence. Let errors identify API details that still need inspection.
 5. Add the smallest test that proves meaningful content, the changed economic leaf, and a close
-   negative case. When fault detection is uncertain, make one reversible mutation and prove it fails.
+   negative. For each emitted CDM type, run its structural validator and applicable inherited data rules;
+   never infer requiredness from Java annotations. Use one reversible mutation only when needed.
 6. Change the narrowest owning layer. Keep source-system conversions in the application,
    model semantics in generated CDM code, and explicit business guards labelled as application
    policy.
@@ -52,15 +50,15 @@ If CDM is not installed, its distribution is unclear, or a language must be sele
    Inspect data-driven inputs and snapshot diffs; do not invent a universal build command.
 
 Bound the evidence pass before coding: list the input path and choices, units or direction, output
-contract, and owner. Stop when each claim has one version-matched source and the smallest compile or
-test confirms it. Escalate from typed construction to a rule/function probe or full runtime only when
-the requested behavior depends on it; never make a partial fixture fully qualify as ceremony.
+contract, and owner. After one type/declaration query and one combined API query, edit and compile;
+do not inspect validators, functions, or runtime internals first unless the contract executes them.
+Let the first real compile name any remaining symbol. Never fully qualify a partial fixture as ceremony.
 
 For a typed application-owned calculation or supplied state machine, use one combined
 declaration/builder query, one real vertical slice, then its test. A product, lifecycle, or reporting
 label alone does not require its domain, workflow, or DRR guide when the supplied contract owns the
-policy and does not execute or emit those artefacts. Inspect only members the function reads or
-rebuilds. For a single-leaf rebuild, assert untouched neighbors or rewind the leaf and compare the
+policy and does not execute or emit those artefacts. Inspect only members the function reads or rebuilds;
+for a single-leaf rebuild, assert untouched neighbors or rewind the leaf and compare the
 whole object. Use [Day-to-day workflows](references/workflows.md) only for broader routes.
 
 ## Load only what the task needs
@@ -70,9 +68,9 @@ whole object. Use [Day-to-day workflows](references/workflows.md) only for broad
   [equities](references/equities.md), [foreign exchange](references/foreign-exchange.md), and
   [commodities](references/commodities.md).
 - [Securities financing](references/securities-financing.md): repo, buy/sell-back, securities
-  lending, collateral, qualification, and lifecycle traps.
-- [Transferable assets and cash securities](references/assets-and-cash-securities.md): cash,
-  bonds, loans, listed derivatives, money-market instruments, and digital-asset boundaries.
+  lending, collateral, manufactured income, corporate-action cash flows, and lifecycle traps.
+- [Choose the transferable-asset boundary](references/assets-and-cash-securities.md#choose-the-product-boundary):
+  cash, bonds, loans, listed derivatives, money-market instruments, and digital-asset boundaries.
 - [Legal agreements and contracts](references/legal-contracts.md): use when representing, mapping,
   or resolving agreements and elections—not merely when resolved legal values feed a calculation.
 - [Digital regulatory reporting](references/regulatory-reporting.md): DRR acquisition and
@@ -97,6 +95,8 @@ whole object. Use [Day-to-day workflows](references/workflows.md) only for broad
 - A valid document can still be economically wrong. Assert units, conventions, qualification,
   the exact economic leaf, and named caller-visible contracts. Copy mutable collections in every public
   constructor or record; test direct construction by mutating the caller's list and returned view.
+- Trace every populated CDM leaf to source data, a model-mandated value, or a documented assumption.
+  Test standardized identifiers against a published valid vector, not only self-generated fixtures.
 - A JSON tree can contain a field that the selected mapper silently drops. Inspect the typed
   object and canonical reserialization before trusting validation or function output.
 - Choices and containment can have multiple economic routes. Enumerate applicable root paths and

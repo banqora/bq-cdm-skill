@@ -8,6 +8,7 @@ Usage:
   cdm-source [--jar <cdm-java.jar>] jar
   cdm-source [--jar <cdm-java.jar>] list [regex]
   cdm-source [--jar <cdm-java.jar>] search <regex>
+  cdm-source [--jar <cdm-java.jar>] type <fully.qualified.Type|Type>
   cdm-source [--jar <cdm-java.jar>] show <cdm/rosetta/file.rosetta>
 
 The JAR is selected in this order:
@@ -35,7 +36,7 @@ if [[ -z "$command" || "$command" == "-h" || "$command" == "--help" || "$command
   exit 0
 fi
 
-for required_tool in zipinfo unzip rg; do
+for required_tool in python3 zipinfo unzip rg; do
   command -v "$required_tool" >/dev/null || {
     echo "cdm-source: required command is not installed: $required_tool" >&2
     exit 1
@@ -211,6 +212,156 @@ case "$command" in
       cd "$source_dir"
       rg -n -C 3 --glob '*.rosetta' -- "$pattern" cdm/rosetta
     )
+    ;;
+
+  type)
+    [[ $# -eq 2 ]] || {
+      usage
+      exit 1
+    }
+    requested_type="$2"
+    if [[ ! "$requested_type" =~ ^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$ ]]; then
+      echo "cdm-source: invalid type name: $requested_type" >&2
+      exit 1
+    fi
+    source_dir="$(mktemp -d "${TMPDIR:-/tmp}/cdm-source.XXXXXX")"
+    cleanup() {
+      [[ -n "${source_dir:-}" && -d "$source_dir" ]] && rm -rf -- "$source_dir"
+    }
+    trap cleanup EXIT
+    unzip -q "$jar" 'cdm/rosetta/*.rosetta' -d "$source_dir"
+    python3 - "$source_dir" "$requested_type" <<'PY'
+from __future__ import annotations
+
+import re
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass(frozen=True)
+class Declaration:
+    namespace: str
+    name: str
+    base: str | None
+    path: Path
+    line: int
+    block: tuple[str, ...]
+
+
+root = Path(sys.argv[1])
+requested = sys.argv[2]
+files = sorted((root / "cdm" / "rosetta").glob("*.rosetta"))
+declaration_re = re.compile(
+    r"^type\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s+extends\s+([A-Za-z_][A-Za-z0-9_]*))?\s*:"
+)
+top_level_re = re.compile(r"^(?:type|enum|choice|func|qualification|report|rule)\s+")
+declarations: list[Declaration] = []
+
+for path in files:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    namespace = ""
+    for line in lines:
+        match = re.match(r"^namespace\s+([A-Za-z_][A-Za-z0-9_.]*)\b", line)
+        if match:
+            namespace = match.group(1)
+            break
+    for index, line in enumerate(lines):
+        match = declaration_re.match(line)
+        if not match:
+            continue
+        end = index + 1
+        while end < len(lines) and not top_level_re.match(lines[end]):
+            end += 1
+        while end > index + 1 and not lines[end - 1].strip():
+            end -= 1
+        declarations.append(
+            Declaration(
+                namespace,
+                match.group(1),
+                match.group(2),
+                path,
+                index + 1,
+                tuple(lines[index:end]),
+            )
+        )
+
+
+def qualified(declaration: Declaration) -> str:
+    return f"{declaration.namespace}.{declaration.name}" if declaration.namespace else declaration.name
+
+
+if "." in requested:
+    requested_namespace, requested_name = requested.rsplit(".", 1)
+    matches = [
+        declaration
+        for declaration in declarations
+        if declaration.name == requested_name and declaration.namespace == requested_namespace
+    ]
+else:
+    requested_name = requested
+    matches = [declaration for declaration in declarations if declaration.name == requested_name]
+
+if not matches:
+    raise SystemExit(f"cdm-source: type not found: {requested}")
+if len(matches) > 1:
+    options = "\n  ".join(sorted(qualified(declaration) for declaration in matches))
+    raise SystemExit(
+        f"cdm-source: type name is ambiguous; use a fully qualified name:\n  {options}"
+    )
+
+target = matches[0]
+
+
+def resolve_base(declaration: Declaration) -> Declaration | None:
+    if declaration.base is None:
+        return None
+    same_namespace = [
+        candidate
+        for candidate in declarations
+        if candidate.name == declaration.base and candidate.namespace == declaration.namespace
+    ]
+    if len(same_namespace) == 1:
+        return same_namespace[0]
+    global_matches = [candidate for candidate in declarations if candidate.name == declaration.base]
+    return global_matches[0] if len(global_matches) == 1 else None
+
+
+def print_declaration(label: str, declaration: Declaration) -> None:
+    relative = declaration.path.relative_to(root)
+    print(f"## {label}: {qualified(declaration)}")
+    print(f"# source={relative}:{declaration.line}")
+    print("\n".join(declaration.block))
+
+
+print(f"# requested={requested}")
+print_declaration("declaration", target)
+seen = {qualified(target)}
+base = resolve_base(target)
+direct_base = base
+while base is not None and qualified(base) not in seen:
+    seen.add(qualified(base))
+    print()
+    print_declaration("inherited", base)
+    base = resolve_base(base)
+
+if direct_base is not None:
+    siblings = sorted(
+        (
+            candidate
+            for candidate in declarations
+            if candidate.base == direct_base.name and candidate.namespace == target.namespace
+        ),
+        key=lambda candidate: candidate.name,
+    )
+    if siblings:
+        print()
+        print(f"## sibling types extending {qualified(direct_base)}")
+        for sibling in siblings:
+            relative = sibling.path.relative_to(root)
+            print(f"{qualified(sibling)}  # {relative}:{sibling.line}")
+            print(sibling.block[0])
+PY
     ;;
 
   show)

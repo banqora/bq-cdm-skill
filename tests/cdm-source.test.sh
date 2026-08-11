@@ -35,6 +35,22 @@ expect_ok "search locates a declaration with context" \
   --stdout 'type TradeState:' -- \
   "$cdm_source" --jar "$fixture_jar" search '^type TradeState:'
 
+expect_ok "type prints the complete requested declaration and its condition" \
+  --stdout 'condition EventExists:' -- \
+  "$cdm_source" --jar "$fixture_jar" type cdm.event.common.ContingentTransfer
+
+expect_ok "type follows the inheritance chain" \
+  --stdout '## inherited: cdm\.event\.common\.AssetFlowBase' -- \
+  "$cdm_source" --jar "$fixture_jar" type cdm.event.common.ContingentTransfer
+
+expect_ok "type lists sibling alternatives instead of encouraging a first-name match" \
+  --stdout 'type ScheduledTransfer extends TransferBase:' -- \
+  "$cdm_source" --jar "$fixture_jar" type cdm.event.common.ContingentTransfer
+
+expect_fail "type rejects an unknown declaration clearly" \
+  --stderr 'type not found: cdm\.event\.common\.Absent' -- \
+  "$cdm_source" --jar "$fixture_jar" type cdm.event.common.Absent
+
 expect_ok "show dumps a named Rosetta source" \
   --stdout 'namespace cdm\.event\.common' -- \
   "$cdm_source" --jar "$fixture_jar" show cdm/rosetta/event-common-type.rosetta

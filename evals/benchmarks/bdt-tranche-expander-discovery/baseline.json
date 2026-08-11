@@ -1,0 +1,193 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "bdt-tranche-expander-discovery",
+  "recorded_at": "2026-08-11",
+  "fixture_version": "7.0.0",
+  "task_sha256": "4d55cdf872e1d1c39efadec4a72162bbbafb846772990fb87750131452bd05f3",
+  "rubric_sha256": "5a3aa2671fe2b668a656872ff37fdb25b1186dfcfca83a0869c7a9144e2fddba",
+  "adaptive_probe_sha256": "b66c31c9e75c24510600a38320744dbdc4cc452b4b3202d79b9f64b81376b7ff",
+  "review_sha256": "39336eaeb613dfebf043b27007630897b27df30bc939fd5f7f83d30cbbde630e",
+  "skill_snapshot_sha256": "40f550d89d95621b6ad8cf6d51af2b661ca5edf3e4d1377f25cf84b0fafe6abd",
+  "skill_snapshot_hash_method": "SHA-256 of sorted relative-path sha256sum lines for every file under skills/cdm-dev",
+  "production_tree_hash_method": "SHA-256 of each sorted src/main relative path, a NUL separator, and that file's SHA-256 digest",
+  "raw_run_root": "/private/tmp/bdt-discovery.7mD0r4",
+  "note": "This is the open-design successor to the saturated bdt-tranche-expander contract. Four counted arms ran sequentially in isolated single sessions with the same task and CDM 7.0.0 seed. Claude Code 2.1.227 used claude-sonnet-5 and local Claude Max authentication; Codex CLI 0.147.0 used gpt-5.4 and local ChatGPT authentication. All ran at high effort with API credential/provider overrides removed. Controls could not read cdm-dev, the repository, historical benchmarks, global skills, or sibling workspaces. Every authored suite passed from a clean offline copy before adaptive tests were introduced. Claude Fable 5 then independently inspected code and traces, reran the suites, and reviewed generated CDM validation. It scored Sonnet treatment/control 92/84 and GPT-5.4 treatment/control 89/70. All four missed the frozen non-later-tap guard. GPT control additionally rejected a genuine valid LEI, populated unsupported seniority/principal facts, and duplicated the CDM dependency. GPT treatment used a richer version-correct TransferableProduct boundary and passed six targeted generated data rules. The skill therefore delivered a modest Sonnet quality gain at a large time cost and a material GPT-5.4 correctness/modelling gain at a smaller time cost.",
+  "independent_review": {
+    "reviewer": "Claude Fable 5",
+    "claude_code_version": "2.1.227",
+    "model": "claude-fable-5",
+    "effort": "high",
+    "authentication": "local Claude Max subscription; API credential overrides removed; trace apiKeySource=none",
+    "sessions": 1,
+    "turns": 69,
+    "wall_seconds": 891,
+    "scores": {
+      "sonnet-5-with-skill": 92,
+      "gpt-5.4-with-skill": 89,
+      "sonnet-5-control": 84,
+      "gpt-5.4-control": 70
+    },
+    "fatal_caps": "none",
+    "verification": "all authored suites pass from clean offline copies; representative emitted CDM graphs pass recursive cardinality, type-format, and data-rule review, with one dependency-injection-only predicate inspected directly",
+    "limitations": [
+      "GPT JSONL does not contain event timestamps; its wall time is measured from trace-file birth to final modification and rounded to the nearest second.",
+      "The same-day duplicate probe was executed directly against all four arms by the benchmark owner; Fable independently executed it against both treatment arms and inspected the equivalent control code paths.",
+      "No arm claimed or was credited with product qualification."
+    ]
+  },
+  "adaptive_probes": {
+    "non_later_duplicate": {
+      "expected": "same-day duplicate is rejected with no instruments",
+      "sonnet-5-with-skill": "fail: silently merged",
+      "sonnet-5-control": "fail: silently merged",
+      "gpt-5.4-with-skill": "fail: silently merged",
+      "gpt-5.4-control": "fail: silently merged"
+    },
+    "published_valid_lei": {
+      "target": "gpt-5.4-control",
+      "vector": "5493001KJTIIGC8Y1R12",
+      "result": "fail: valid LEI rejected by IBAN-style rearrangement"
+    },
+    "generated_cdm_rules": {
+      "target": "gpt-5.4-with-skill",
+      "result": "6/6 pass",
+      "credit": "post-seal evaluator evidence, not an authored test"
+    }
+  },
+  "skill_revision_after_run": {
+    "pre_run_snapshot_sha256": "40f550d89d95621b6ad8cf6d51af2b661ca5edf3e4d1377f25cf84b0fafe6abd",
+    "post_run_snapshot_sha256": "10d134dd546c8045798061f1d377b4ffdd985f1d8994c8ae1406813b7eab1159",
+    "change": "Deep-linked a concise Security/TransferableProduct boundary and abstract-role guide; made the evidence budget operational; prohibited runtime scavenging from root, home, or global caches in both instructions and cdm-java-api diagnostics; required independent provenance for populated leaves and identifier vectors.",
+    "credit": "not credited to any recorded treatment arm"
+  },
+  "runs": [
+    {
+      "arm": "sonnet-5-with-skill",
+      "vendor": "claude",
+      "model": "claude-sonnet-5",
+      "claude_code_version": "2.1.227",
+      "skill": true,
+      "authentication": "local Claude Max subscription; API credential overrides removed; trace apiKeySource=none",
+      "deliverable_git_commit": "d36d771aadaa6b211309d8b5f91be9370e0dfc08",
+      "production_tree_sha256": "ea7460464f1f22eeace05d6ad6f3f896efb924f2d044bf9b97842432a2604372",
+      "authored_tests": {
+        "passed": 26,
+        "total": 26
+      },
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "92/100",
+        "non_later_duplicate_probe": "fail",
+        "fresh_clone_offline_build": "pass",
+        "cdm_representation": "Asset -> Instrument -> Security plus explicit application envelope"
+      },
+      "metrics": {
+        "sessions": 1,
+        "effort": "high",
+        "turns": 77,
+        "tool_calls": 76,
+        "shell_calls": 59,
+        "tool_calls_before_first_production_write": 45,
+        "wall_seconds": 1088,
+        "api_duration_seconds": 952
+      }
+    },
+    {
+      "arm": "sonnet-5-control",
+      "vendor": "claude",
+      "model": "claude-sonnet-5",
+      "claude_code_version": "2.1.227",
+      "skill": false,
+      "authentication": "local Claude Max subscription; API credential overrides removed; trace apiKeySource=none",
+      "deliverable_git_commit": "ca03d96184b6e18629aeaf23f3b3fd77262897ae",
+      "production_tree_sha256": "1ec73ef59a61f731cadea3db47aab724cf0deb973aa3fff53f6044f819ad0048",
+      "authored_tests": {
+        "passed": 9,
+        "total": 9
+      },
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "84/100",
+        "non_later_duplicate_probe": "fail",
+        "fresh_clone_offline_build": "pass",
+        "cdm_representation": "Security plus explicit application envelope"
+      },
+      "metrics": {
+        "sessions": 1,
+        "effort": "high",
+        "turns": 67,
+        "tool_calls": 66,
+        "shell_calls": 34,
+        "tool_calls_before_first_production_write": 40,
+        "wall_seconds": 635,
+        "api_duration_seconds": 628
+      }
+    },
+    {
+      "arm": "gpt-5.4-with-skill",
+      "vendor": "codex",
+      "model": "gpt-5.4",
+      "codex_cli_version": "0.147.0",
+      "skill": true,
+      "authentication": "local ChatGPT subscription; API credential overrides removed",
+      "deliverable_git_commit": "80aab666a9a7fc0ff1e9dfbe2d7e2004913ee041",
+      "production_tree_sha256": "4cd8c0d221a7e9dd4e92a0f273e70cb1ff91280a511ae735d98a635cc09775bc",
+      "authored_tests": {
+        "passed": 6,
+        "total": 6
+      },
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "89/100",
+        "non_later_duplicate_probe": "fail",
+        "generated_data_rule_probe": "6/6 pass after sealing",
+        "fresh_clone_offline_build": "pass",
+        "cdm_representation": "TransferableProduct with Asset -> Instrument -> Security, EconomicTerms, and InterestRatePayout"
+      },
+      "metrics": {
+        "top_level_turns": 1,
+        "reasoning_effort": "high",
+        "completed_items": 75,
+        "commands": 50,
+        "file_changes": 4,
+        "commands_before_first_production_write": 36,
+        "wall_seconds": 572
+      }
+    },
+    {
+      "arm": "gpt-5.4-control",
+      "vendor": "codex",
+      "model": "gpt-5.4",
+      "codex_cli_version": "0.147.0",
+      "skill": false,
+      "authentication": "local ChatGPT subscription; API credential overrides removed",
+      "deliverable_git_commit": "9f63db90e242c565f3e3628dffa762e5569c1c73",
+      "production_tree_sha256": "063bccef550a337d9e5e0a994e04a37e7e09e78d37f22ae5151a42d05890513e",
+      "authored_tests": {
+        "passed": 5,
+        "total": 5
+      },
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "70/100",
+        "non_later_duplicate_probe": "fail",
+        "published_valid_lei_probe": "fail",
+        "fresh_clone_offline_build": "pass with warm offline Maven cache; duplicate local and Maven CDM declarations remain",
+        "cdm_representation": "Instrument -> Security plus application envelope; unsupported seniority and principal facts populated"
+      },
+      "metrics": {
+        "top_level_turns": 1,
+        "reasoning_effort": "high",
+        "completed_items": 74,
+        "commands": 49,
+        "file_changes": 2,
+        "commands_before_first_production_write": 46,
+        "wall_seconds": 448
+      }
+    }
+  ]
+}

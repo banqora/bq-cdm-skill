@@ -1,0 +1,200 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "manufactured-payment-reversal",
+  "recorded_at": "2026-08-11",
+  "fixture_version": "7.0.0",
+  "task_sha256": "20ba980d2a2f64879ddc0ba92cd57fbcd5e4ac008b144c233f8b7c6ad62cae41",
+  "rubric_sha256": "ce096acf4efc4013fef65596b09d4b3780acd6d376fc9d0a074abb1af75c7be2",
+  "adaptive_probe_sha256": "a8ffed8209a973982ad064257b3e1e04c20cb40701923cfc10dba0d6ff7e1e0b",
+  "review_sha256": "cc21c32947c4cd56b5b34459d4b4818d71b7921f01a09e248e18aee20908d893",
+  "skill_snapshot_sha256": "10d134dd546c8045798061f1d377b4ffdd985f1d8994c8ae1406813b7eab1159",
+  "skill_snapshot_hash_method": "SHA-256 of sorted relative-path sha256sum lines for every file under skills/cdm-dev",
+  "production_tree_hash_method": "SHA-256 of each sorted src/main relative path, a NUL separator, and that file's SHA-256 digest",
+  "raw_run_root": "/private/tmp/manufactured-payment-counted.FDZ5Bo",
+  "note": "Four counted, isolated, sequential single-session arms used Claude Code 2.1.227 with claude-sonnet-5 or Codex CLI 0.147.0 invoked with gpt-5.4, all at high effort and with local Claude Max or ChatGPT subscription authentication. API credential and provider overrides were removed. Every arm received the same checksummed task and pinned CDM 7.0.0 artifacts; controls could not read cdm-dev, the repository, historical benchmarks, global skills, or sibling workspaces. Every authored suite and fresh-clone offline build passed before adaptive evaluator tests were introduced. The tests were adapted mechanically to each open public API only after all candidate processes exited and their deliverables were committed. Claude Fable 5 independently reviewed the frozen rubric, implementation sources, tests, design notes, traces, and probe outcomes. It scored Sonnet treatment/control 98/89 and GPT-5.4 treatment/control 91/92. The skill gave Sonnet a material model-correctness gain while also reducing calls and wall time. GPT treatment used far fewer commands and had stronger replay identity, but selected the wrong generated transfer branch and omitted inherited Cash/unit and party-identifier invariants; GPT control built the strongest validated CDM object but silently accepted a conflicting replay payload. The type-centric source helper, emitted-object validation gate, and corporate-action cash-movement guide added after the run are not credited to treatment.",
+  "independent_review": {
+    "reviewer": "Claude Fable 5",
+    "model": "claude-fable-5",
+    "claude_code_version": "2.1.227",
+    "effort": "high",
+    "authentication": "local Claude Max subscription; API credential overrides removed; trace apiKeySource=none",
+    "sessions": 1,
+    "turns": 55,
+    "wall_seconds": 537,
+    "scores": {
+      "sonnet-5-with-skill": 98,
+      "sonnet-5-control": 89,
+      "gpt-5.4-with-skill": 91,
+      "gpt-5.4-control": 92
+    },
+    "fatal_caps": "none",
+    "findings": [
+      "Sonnet treatment alone combines content-scoped replay with a coherent corporate-action ContingentTransfer, Cash asset, currency quantity unit, settlement date, and identified payer/receiver parties.",
+      "Sonnet control emits the affected Instrument for a cash payment, omits settlementDate, violates the inherited quantity-unit rule, and incorrectly infers Rune requiredness from generated Java annotations.",
+      "GPT-5.4 treatment has the cleanest immutable caller-owned state and rejects conflicting replay payloads, but ScheduledTransfer.DividendReturn is the wrong branch, its Cash quantity has no unit, and its parties have no required identifiers.",
+      "GPT-5.4 control executes the strongest generated validator set, but an existing correction ID short-circuits before payload comparison and silently suppresses changed economics as a replay.",
+      "All four preserve the record-date entitlement, signed direction, and later correction chain; authored tests alone did not expose the model and identity differences."
+    ],
+    "leakage_verdict": "clean on trace-verifiable dimensions",
+    "limitations": [
+      "Codex JSONL does not echo the selected model identifier; gpt-5.4 comes from the recorded invocation.",
+      "GPT wall time is measured from trace-file birth to final modification because Codex events do not carry timestamps.",
+      "Subscription mode, removed credential overrides, and sandbox policy are harness-level facts corroborated by local auth checks and invocation records rather than repeated in every event."
+    ]
+  },
+  "adaptive_probes": {
+    "correction_chain": {
+      "expected": "a second distinct correction from 0.45 to 0.47 emits positive EUR 1,700 from borrower to lender",
+      "sonnet-5-with-skill": "pass",
+      "sonnet-5-control": "pass",
+      "gpt-5.4-with-skill": "pass",
+      "gpt-5.4-control": "pass"
+    },
+    "conflicting_replay_identity": {
+      "expected": "reuse of one correction ID with different economics rejects rather than replaying",
+      "sonnet-5-with-skill": "pass",
+      "sonnet-5-control": "pass",
+      "gpt-5.4-with-skill": "pass",
+      "gpt-5.4-control": "fail: silently classified as replay"
+    },
+    "cdm_cash_movement": {
+      "expected": "corporate-action ContingentTransfer with Cash asset, currency unit, settlement date, and actual party identifiers",
+      "sonnet-5-with-skill": "pass",
+      "sonnet-5-control": "fail: Instrument asset and missing settlement date",
+      "gpt-5.4-with-skill": "fail: ScheduledTransfer.DividendReturn, missing quantity unit, and missing party identifiers",
+      "gpt-5.4-control": "pass"
+    }
+  },
+  "skill_revision_after_run": {
+    "pre_run_snapshot_sha256": "10d134dd546c8045798061f1d377b4ffdd985f1d8994c8ae1406813b7eab1159",
+    "post_run_snapshot_sha256": "c6657932c7a15362d628847d290af60c22e5d469bc88982d95b4851f23f10be9",
+    "change": "Added a type-centric cdm-source mode that emits a complete declaration, inherited conditions, and sibling subtypes; required structural plus applicable inherited data-rule validation for newly emitted CDM types; and documented the version-matched manufactured-income/corporate-action cash-movement boundary and DividendReturn near miss.",
+    "credit": "not credited to any recorded treatment arm"
+  },
+  "discarded_diagnostic": {
+    "raw_root": "/private/tmp/manufactured-payment-benchmark.LV89X0",
+    "reason": "A preliminary environment check was excluded before any production write because its prompt claimed Gradle was on PATH when it was not; the counted harness then supplied the same Java 21 and Gradle 8.10 tools to every arm."
+  },
+  "runs": [
+    {
+      "arm": "sonnet-5-with-skill",
+      "vendor": "claude",
+      "model": "claude-sonnet-5",
+      "claude_code_version": "2.1.227",
+      "skill": true,
+      "authentication": "local Claude Max subscription; API credential overrides removed; trace apiKeySource=none",
+      "deliverable_git_commit": "030c9dd9556a1274655b70a080aef70a627acc8a",
+      "production_tree_sha256": "0baf387fc6da8cd30bf33ce8c18aa66b53d7e02c3bc100276bc94b84e68ccc6c",
+      "authored_tests": {"passed": 19, "total": 19},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "98/100",
+        "evaluator_probes": "3/3 pass",
+        "correction_chain": "pass",
+        "conflicting_replay_identity": "pass",
+        "cdm_cash_movement": "pass",
+        "fresh_clone_offline_build": "pass"
+      },
+      "metrics": {
+        "sessions": 1,
+        "effort": "high",
+        "turns": 76,
+        "tool_calls": 75,
+        "tool_calls_before_first_production_write": 43,
+        "wall_seconds": 758,
+        "api_duration_seconds": 745
+      }
+    },
+    {
+      "arm": "sonnet-5-control",
+      "vendor": "claude",
+      "model": "claude-sonnet-5",
+      "claude_code_version": "2.1.227",
+      "skill": false,
+      "authentication": "local Claude Max subscription; API credential overrides removed; trace apiKeySource=none",
+      "deliverable_git_commit": "a37ba3f1e7bc3a0575eff2462425e91ebf84f90e",
+      "production_tree_sha256": "57b3fbf73f12e59e379b2d0f86469fd44aff01f5ea560db8a97cfbb1f0876088",
+      "authored_tests": {"passed": 18, "total": 18},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "89/100",
+        "evaluator_probes": "2/3 pass",
+        "correction_chain": "pass",
+        "conflicting_replay_identity": "pass",
+        "cdm_cash_movement": "fail: security asset and missing settlement date",
+        "fresh_clone_offline_build": "pass"
+      },
+      "metrics": {
+        "sessions": 1,
+        "effort": "high",
+        "turns": 99,
+        "tool_calls": 98,
+        "tool_calls_before_first_production_write": 54,
+        "wall_seconds": 825,
+        "api_duration_seconds": 811
+      }
+    },
+    {
+      "arm": "gpt-5.4-with-skill",
+      "vendor": "codex",
+      "model": "gpt-5.4",
+      "codex_cli_version": "0.147.0",
+      "skill": true,
+      "authentication": "local ChatGPT subscription; API credential overrides removed",
+      "deliverable_git_commit": "e8b061a503a18da5b00af5df48e03d3c845777cf",
+      "production_tree_sha256": "f0ce5db559326811761f7ff2ab44c9ac5564f01db27034869c032908b83997a6",
+      "authored_tests": {"passed": 7, "total": 7},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "91/100",
+        "evaluator_probes": "2/4 pass",
+        "correction_chain": "pass",
+        "conflicting_replay_identity": "pass",
+        "cdm_cash_movement": "fail: wrong transfer subtype, missing quantity unit, and missing party identifiers",
+        "fresh_clone_offline_build": "pass"
+      },
+      "metrics": {
+        "top_level_turns": 1,
+        "reasoning_effort": "high",
+        "completed_items": 66,
+        "commands": 39,
+        "file_changes": 5,
+        "commands_before_first_production_write": 33,
+        "wall_seconds": 575
+      }
+    },
+    {
+      "arm": "gpt-5.4-control",
+      "vendor": "codex",
+      "model": "gpt-5.4",
+      "codex_cli_version": "0.147.0",
+      "skill": false,
+      "authentication": "local ChatGPT subscription; API credential overrides removed",
+      "deliverable_git_commit": "47efe8f165e93223c0ebaa9d927623e935b5be80",
+      "production_tree_sha256": "6ca1dc13eb14e15c09b25604cd8df7062448829ce6f28b2985b309214acf7684",
+      "authored_tests": {"passed": 9, "total": 9},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "92/100",
+        "evaluator_probes": "2/3 pass",
+        "correction_chain": "pass",
+        "conflicting_replay_identity": "fail: conflicting economics silently classified as replay",
+        "cdm_cash_movement": "pass",
+        "fresh_clone_offline_build": "pass"
+      },
+      "metrics": {
+        "top_level_turns": 1,
+        "reasoning_effort": "high",
+        "completed_items": 97,
+        "commands": 69,
+        "file_changes": 3,
+        "commands_before_first_production_write": 66,
+        "wall_seconds": 559
+      }
+    }
+  ]
+}

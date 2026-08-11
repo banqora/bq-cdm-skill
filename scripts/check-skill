@@ -288,6 +288,7 @@ source_count="$(rg '^cdm/rosetta/.*\.rosetta$' <<<"$jar_entries" | wc -l | tr -d
 }
 
 "$source_helper" --jar "$jar" search '^type TradeState:' >/dev/null
+"$source_helper" --jar "$jar" type TradeState | rg '^type TradeState:' >/dev/null
 "$source_helper" --jar "$jar" search 'func Qualify_' >/dev/null
 if rg -Fx 'cdm/event/common/TradeState.class' <<<"$jar_entries" >/dev/null; then
   "$api_helper" --jar "$jar" cdm.event.common.TradeState | rg 'getTrade\(' >/dev/null

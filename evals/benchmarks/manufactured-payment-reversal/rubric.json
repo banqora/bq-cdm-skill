@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "manufactured-payment-reversal",
+  "total_score": 100,
+  "required_entry_points": [
+    "ProcessCorporateAction",
+    "ProcessReversal"
+  ],
+  "fatal_failures": [
+    "production or authored tests do not compile and run from a clean offline copy",
+    "either caller-visible ProcessCorporateAction or ProcessReversal operation is absent",
+    "the implementation emits no genuine generated CDM 7.0.0 object at its input or output boundary",
+    "a correction is recomputed from the current position rather than the original record-date entitlement",
+    "replaying the same correction emits a second economic transfer",
+    "a negative lender-perspective adjustment is clamped, loses its sign, or is emitted in the wrong payer/receiver direction",
+    "generated CDM source is edited or unrelated model fields are repurposed as an idempotency ledger"
+  ],
+  "criteria": [
+    {
+      "id": "baseline-entitlement",
+      "visibility": "public",
+      "weight": 14,
+      "description": "Calculate the ordinary manufactured dividend from the record-date loan position.",
+      "checks": [
+        "100,000 * EUR 0.50 * 0.85 produces exactly EUR 42,500.",
+        "The initial transfer flows from the borrower to the lender and the lender-perspective signed amount is positive.",
+        "Rates, quantities, and monetary amounts remain in BigDecimal arithmetic without a double or float round-trip."
+      ]
+    },
+    {
+      "id": "record-date-snapshot",
+      "visibility": "public",
+      "weight": 19,
+      "description": "Anchor entitlement to the historical position at record date.",
+      "checks": [
+        "A later return of 60,000 shares does not change the 100,000-share correction basis.",
+        "The original processed entitlement records or durably references the actual quantity used rather than consulting a live balance during reversal.",
+        "A missing or ambiguous record-date position fails visibly instead of substituting the current position."
+      ]
+    },
+    {
+      "id": "net-correction",
+      "visibility": "public",
+      "weight": 17,
+      "description": "Emit the difference between processed and corrected entitlement rather than cancel-and-rebook legs.",
+      "checks": [
+        "Correcting EUR 0.50 to EUR 0.45 produces one exact EUR 4,250 economic adjustment, not a EUR 42,500 reversal plus EUR 38,250 rebooking.",
+        "A zero-difference correction emits no transfer while still having coherent processing semantics.",
+        "A later distinct correction is measured from the latest processed entitlement, preserving an auditable correction chain."
+      ]
+    },
+    {
+      "id": "exactly-once-ledger",
+      "visibility": "public",
+      "weight": 17,
+      "description": "Make replay identity and processing state explicit and durable.",
+      "checks": [
+        "Replaying the same correction identity produces no transfer and returns an explicit duplicate/no-op outcome.",
+        "The initial event is also replay-safe and correction identity is scoped to an unambiguous original event.",
+        "Correctness does not depend on a static mutable map, object identity, current time, or an in-process side effect hidden from the public state/repository boundary."
+      ]
+    },
+    {
+      "id": "signed-directional-flow",
+      "visibility": "public",
+      "weight": 14,
+      "description": "Preserve both the signed economic result and valid directional transfer representation.",
+      "checks": [
+        "The rate reduction is negative from the lender's perspective and names lender as payer and borrower as receiver.",
+        "Any CDM AssetFlowBase quantity remains non-negative with direction carried by payer/receiver; the signed application amount remains available separately.",
+        "An upward correction reverses both sign and direction without absolute-value or zero-floor defects."
+      ]
+    },
+    {
+      "id": "cdm-model-boundary",
+      "visibility": "hidden",
+      "weight": 11,
+      "description": "Use version-correct CDM facts and transfers without attributing application policy to generated code.",
+      "checks": [
+        "The implementation identifies a coherent CDM 7.0.0 security-lending, dividend-term, corporate-action, position, or transfer boundary and uses real generated getters/builders.",
+        "Cash transfer asset, currency unit, settlement date, corporate-action classification, positive transfer quantity, and actual payer/receiver references are coherent where represented.",
+        "DESIGN.md accurately distinguishes CDM product/event semantics from application-owned event IDs, position history, snapshots, correction linkage, and idempotency persistence."
+      ]
+    },
+    {
+      "id": "validation-and-engineering",
+      "visibility": "hidden",
+      "weight": 8,
+      "description": "Fail closed at malformed boundaries and deliver stable reproducible results.",
+      "checks": [
+        "Unknown originals, mismatched security/currency/record date, duplicate or blank identifiers, malformed ratios/rates/quantities, and inconsistent histories are rejected coherently.",
+        "Inputs, processing state, event collections, and returned collections cannot be mutated through aliases; prior results remain stable after later calls.",
+        "The four requested scenarios and close plausible-wrong controls pass from a clean offline Java 21/Gradle 8.10 copy, and documentation names the validation actually run."
+      ]
+    }
+  ]
+}

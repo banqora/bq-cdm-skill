@@ -1,12 +1,14 @@
 # Securities financing
 
 Load this reference for repurchase agreements, buy/sell-backs, securities lending, collateral,
-returns, billing, repricing, substitution, pair-off, shaping, partial delivery, and repo rolls.
+returns, manufactured income, billing, repricing, substitution, pair-off, shaping, partial delivery,
+and repo rolls.
 
 ## Contents
 
 - [Re-query the active release](#re-query-the-active-release)
 - [Construct and qualify deliberately](#construct-and-qualify-deliberately)
+- [Represent corporate-action cash movements](#represent-corporate-action-cash-movements)
 - [Separate trade shaping from settlement shaping](#separate-trade-shaping-from-settlement-shaping)
 - [Lifecycle and application boundary](#lifecycle-and-application-boundary)
 - [Non-vacuous tests](#non-vacuous-tests)
@@ -21,6 +23,7 @@ dependency; this area has evolved materially between releases.
 ```bash
 CDM_SOURCE=/path/to/cdm-dev/scripts/cdm-source
 "$CDM_SOURCE" --jar path/to/cdm-java.jar search '^type (AssetPayout|Collateral|CollateralPosition|CollateralPortfolio)\b'
+"$CDM_SOURCE" --jar path/to/cdm-java.jar search '^type (CorporateAction|ContingentTransfer|TransferBase|DividendPayoutRatio)\b'
 "$CDM_SOURCE" --jar path/to/cdm-java.jar search '^func Qualify_(RepurchaseAgreement|BuySellBack|SecurityLending)'
 "$CDM_SOURCE" --jar path/to/cdm-java.jar search '^func (Create_Return|Create_SecurityLendingInvoice|Qualify_(Reprice|Adjustment|Substitution|Renegotiation|PairOff|PartialDelivery))'
 ```
@@ -46,6 +49,31 @@ repo and securities-lending function examples; directory presence is not a scena
   conversion blindly to both fields.
 - Qualifiers are not guaranteed to be mutually exclusive. Evaluate the complete result set and
   assert both required and forbidden labels; do not route on the first result.
+
+## Represent corporate-action cash movements
+
+Keep product terms, observed events, transfer representation, and processing policy distinct:
+
+- `AssetPayout.dividendTerms.manufacturedIncomeRequirement` carries a
+  `DividendPayoutRatio`; in the 7.0.0 baseline its `totalRatio` is a resolved product fact, not an
+  event identity or replay marker.
+- `CorporateAction` can carry `recordDate`, `payDate`, `underlier`, and `dividendObservation`.
+  Confirm the selected observation's type, value, unit, and date rather than treating any price as a
+  cash dividend.
+- A cash movement caused by that event fits `ContingentTransfer` with `transferType =
+  CorporateAction` and `corporateActionTransferType = CashDividend`. Use a `Cash` asset, currency-unit
+  quantity, settlement date, and actual payer/receiver references whose parties carry identifiers;
+  do not put the affected security
+  in the transfer's asset merely because it identifies the entitlement.
+- In the 7.0.0 baseline, `ScheduledTransferEnum.DividendReturn` describes a synthetic dividend on an
+  equity derivative; its plausible name does not make it the corporate-action cash-movement branch.
+- `TransferBase` quantities are non-negative and direction belongs in `payerReceiver`. Preserve a
+  separately signed application amount when callers need a directional economic result.
+- Run the emitted type's structural validator plus applicable inherited `AssetFlowBase` conditions;
+  generated Java annotations alone do not prove Rune cardinality or conditional validity.
+- The application owns feed event IDs, correction lineage, position history, record-date snapshots,
+  and an atomic durable replay ledger. Do not hide those facts in generated CDM fields or transient
+  process memory.
 
 ## Separate trade shaping from settlement shaping
 
@@ -105,6 +133,12 @@ See [Testing CDM code](testing.md) for the generic test protocol.
 - [FINOS securities-lending documentation](https://cdm.finos.org/docs/securities-lending/) and
   [FINOS repo representation](https://cdm.finos.org/docs/repurchase-agreement-representation/)
   are useful implementation guides; record their displayed version and confirm paths in source.
+- [HMRC CFM74430](https://www.gov.uk/hmrc-internal-manuals/corporate-finance-manual/cfm74430)
+  gives dated tax context for manufactured payments; treat supplied implementation rules as the
+  contract rather than inferring legal conclusions from the manual.
+- The ECB SCoRE Corporate Actions standards distinguish
+  [negative cash flows (Standard 5)](https://www.ecb.europa.eu/paym/groups/pdf/dimcg/ecb.dimcg210127_item3.3.en.pdf)
+  from [corporate-action reversals (Standard 13)](https://www.ecb.europa.eu/paym/groups/shared/docs/04f2d-ami-seco-2023-06-16-item-4.1b-score-standards-faq.pdf).
 - [ISLA's CDM hub](https://www.islagroup.org/common-domain-model/) provides dated
   securities-lending coverage and adoption material.
 - [ICMA's CDM for repo and bonds hub](https://www.icmagroup.org/market-practice-and-regulatory-policy/repo-and-collateral-markets/fintech/common-domain-model-cdm/)

@@ -343,6 +343,90 @@ the table and is not credited to treatment. The broader result is deliberately n
 when a task already pins the complete CDM boundary and acceptance rules, `cdm-dev` may add little;
 its value has to come from avoiding model-semantic mistakes, not from ritual source inspection.
 
+A ninth [open-discovery rerun](evals/benchmarks/bdt-tranche-expander-discovery/) removed that
+prescribed topology. It gave agents essentially the BDT programme/tranche use case, four business
+examples, the pinned CDM 7.0.0 artefacts, and a request to choose and justify their own Java and CDM
+boundary. The task did not select `Security`, `TransferableProduct`, a sidecar, builders, validation
+classes, or identifier algorithms. A frozen rubric then scored the modelling choices as well as the
+visible examples.
+
+| Discovery arm | Agent-authored tests | Same-day tap probe | Fable review | Agent work | Wall time |
+|---|---:|---:|---:|---:|---:|
+| Sonnet 5 + `cdm-dev` | 26/26 | fail | 92/100 | 77 turns, 76 tool calls | 18m 08s |
+| Sonnet 5 control | 9/9 | fail | 84/100 | 67 turns, 66 tool calls | 10m 35s |
+| GPT-5.4 + `cdm-dev` | 6/6 | fail | 89/100 | 75 completed items, 50 commands | 9m 32s |
+| GPT-5.4 control | 5/5 | fail | 70/100 | 74 completed items, 49 commands | 7m 28s |
+
+This rerun exposes the skill's intended value. The
+[FINOS product model](https://cdm.finos.org/docs/product-model/) distinguishes a minimally
+identifying asset from a `TransferableProduct` carrying economic terms when the instrument
+generates future transfers. GPT-5.4 treatment found that boundary and placed the supplied coupon,
+maturity, issue date, currency, and size into a generated `Asset -> Instrument -> Security` plus
+`EconomicTerms` and `InterestRatePayout`; generated rule probes passed. Its governing-law and
+issuance-provenance facts stayed application-owned. The control instead invented `SENIOR` and
+`BULLET` facts, implemented the LEI checksum incorrectly, and then generated a test fixture with
+the same wrong algorithm. Treatment was nineteen review points better with essentially the same
+command count, although 28% slower by wall time.
+
+Sonnet already found a defensible conservative `Security` plus application-envelope design without
+the skill. Treatment improved its typed graph, failures, tests, and design evidence by eight review
+points, but was 71% slower. Its source/API pass was the clearest remaining efficiency problem:
+correctness improved, but too much of the extra time was evidence gathering before the first
+vertical slice.
+
+All four arms missed one genuine business guard: they treated a same-day duplicate as a tap solely
+because it appeared later in the message. That rule remains in the benchmark evaluator rather than
+being taught as a BDT-specific recipe. The durable
+[independent review](evals/benchmarks/bdt-tranche-expander-discovery/) instead identifies
+generic improvements: test identifier code against an independently sourced valid vector, trace
+every populated CDM leaf to source or a documented assumption, explain abstract product-role
+elections, name the exact validation tier, and make the evidence-pass budget operational. This is
+positive evidence for using `cdm-dev` when the hard part is discovering a faithful CDM boundary; it
+is not evidence that every CDM-labelled coding task benefits from the extra navigation cost. The
+boundary/role route, independent-vector guard, bounded source/API pass, and no-cache-scavenging
+diagnostic were added after the run and are not credited in the table.
+
+A tenth [open-design benchmark](evals/benchmarks/manufactured-payment-reversal/) implemented a
+securities-lending manufactured-payment engine with issuer correction/reversal support. The task
+supplied the record-date entitlement formula, signed flow and exactly-once behavior, but left the
+Java state API, CDM boundary, transfer subtype, builders, inherited conditions, validation tier, and
+persistence seam to each agent. This reflects the ordinary manufactured-payment context described
+by [HMRC CFM74430](https://www.gov.uk/hmrc-internal-manuals/corporate-finance-manual/cfm74430).
+The ECB SCoRE material treats negative cash flows as Standard 5 and corporate-action reversals as
+Standard 13; those sources motivate the cases, while the benchmark's supplied rules remain the
+implementation contract.
+
+| Manufactured-payment arm | Agent-authored tests | Evaluator probes | Fable review | Agent work | Wall time |
+|---|---:|---:|---:|---:|---:|
+| Sonnet 5 + `cdm-dev` | 19/19 | 3/3 | 98/100 | 76 turns, 75 tool calls | 12m 38s |
+| Sonnet 5 control | 18/18 | 2/3 | 89/100 | 99 turns, 98 tool calls | 13m 45s |
+| GPT-5.4 + `cdm-dev` | 7/7 | 2/4 | 91/100 | 66 completed items, 39 commands | 9m 35s |
+| GPT-5.4 control | 9/9 | 2/3 | 92/100 | 97 completed items, 69 commands | 9m 19s |
+
+All four authored suites passed, as did every visible arithmetic, record-date, correction-chain,
+replay, and signed-direction example. The adaptive checks still separated them. Sonnet treatment
+emitted the coherent CDM 7.0.0 shape: corporate-action `ContingentTransfer`, `Cash` asset,
+currency-unit positive quantity, settlement date, and identified payer/receiver parties. Control
+instead emitted the affected security, omitted the settlement date, and inferred requiredness from
+generated Java annotations. The skill gained nine review points and was 8% faster, so this is a
+clear correctness-and-efficiency win rather than simply extra deliberation.
+
+GPT-5.4 was a useful counterexample. Treatment used half as many pre-edit commands and correctly
+rejected a reused correction ID carrying different economics, which control silently treated as an
+idempotent replay. But the pre-run skill lacked a corporate-action movement route, and treatment
+stopped at the plausible-sounding `ScheduledTransfer.DividendReturn`; it also omitted the Cash
+quantity unit and party identifiers. Control explored generated rules more deeply and scored one
+point higher. Skill-guided navigation reduced work but did not yet guarantee the right model choice.
+
+The [independent review](evals/benchmarks/manufactured-payment-reversal/) therefore led to
+three generic post-run changes, none credited in the table. `cdm-source type` now returns a full
+declaration, inherited conditions, and sibling subtypes in one bounded query; the main workflow now
+requires structural and applicable inherited data-rule checks for newly emitted CDM types and
+forbids treating Java annotations as Rune cardinality; and the securities-financing guide now
+deep-links manufactured income and corporate-action cash movements without teaching the benchmark's
+reversal algorithm. This is the skill's intended value: faster access to version-correct model
+semantics and verification traps that ordinary plausible Java does not reveal.
+
 ## Install
 
 The distributable skill is the `skills/cdm-dev/` directory; everything outside it is
@@ -365,9 +449,13 @@ generated-Java `-sources.jar`; the binary already embeds the Rune source:
 
 ```bash
 skills/cdm-dev/scripts/cdm-source --jar path/to/cdm-java.jar version
-skills/cdm-dev/scripts/cdm-source --jar path/to/cdm-java.jar search '^type TradeState:'
+skills/cdm-dev/scripts/cdm-source --jar path/to/cdm-java.jar type cdm.event.common.TradeState
 skills/cdm-dev/scripts/cdm-source --jar path/to/cdm-java.jar list 'event.*func'
 ```
+
+The `type` command prints the complete declaration together with inherited base declarations,
+conditions, and sibling subtypes, avoiding repeated line-window searches and first-name matches.
+Use `search` for a batched regex across otherwise unrelated declarations.
 
 `CDM_JAVA_JAR` can supply the path instead. Without either, the helper searches common
 Gradle/Maven distribution and dependency-copy layouts under the active project. It refuses
@@ -430,7 +518,7 @@ evals/run-local --vendor all --quality-only --case price-quantity-model-api
 The local runner deliberately ignores API-key environment variables. Live model evals do not run
 in GitHub Actions and require no repository secrets. See [Local skill evaluations](evals/README.md)
 for authentication, focused commands, fixture caching, result review, and baseline promotion.
-The eight code-writing use cases are also preserved as leakage-aware
+The ten code-writing use cases are also preserved as leakage-aware
 [implementation forward benchmarks](evals/benchmarks/README.md), with fixed tasks, hidden rubrics,
 observed skill/control baselines, a shared CDM 7.0.0 seed, and `evals/check-benchmarks` validation.
 

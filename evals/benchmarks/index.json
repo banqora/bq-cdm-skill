@@ -87,6 +87,26 @@
       "task": "benchmarks/bdt-tranche-expander/TASK.md",
       "rubric": "benchmarks/bdt-tranche-expander/rubric.json",
       "baseline": "benchmarks/bdt-tranche-expander/baseline.json"
+    },
+    {
+      "id": "bdt-tranche-expander-discovery",
+      "title": "BDT tranche-to-CDM discovery expander",
+      "kind": "implementation-forward-test",
+      "artifact_version": "7.0.0",
+      "language": "java",
+      "task": "benchmarks/bdt-tranche-expander-discovery/TASK.md",
+      "rubric": "benchmarks/bdt-tranche-expander-discovery/rubric.json",
+      "baseline": "benchmarks/bdt-tranche-expander-discovery/baseline.json"
+    },
+    {
+      "id": "manufactured-payment-reversal",
+      "title": "Manufactured-payment engine with reversal support",
+      "kind": "implementation-forward-test",
+      "artifact_version": "7.0.0",
+      "language": "java",
+      "task": "benchmarks/manufactured-payment-reversal/TASK.md",
+      "rubric": "benchmarks/manufactured-payment-reversal/rubric.json",
+      "baseline": "benchmarks/manufactured-payment-reversal/baseline.json"
     }
   ]
 }
