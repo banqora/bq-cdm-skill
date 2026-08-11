@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "securities-loan-event-qualifier",
+  "total_score": 100,
+  "required_entry_points": [
+    "QualifyEvent"
+  ],
+  "fatal_failures": [
+    "production or authored tests do not compile and run from a clean offline copy",
+    "the caller-visible QualifyEvent operation or one of the six required result values is absent",
+    "the qualifier does not use genuine generated CDM 7.0.0 TradeState and PrimitiveInstruction values at its boundary",
+    "event names, eventQualifier text, intent, or another label is used to select a positive qualification",
+    "a zero quantity without Terminated closed state qualifies as FullReturn",
+    "a zeroing quantity change combined with an extraneous terms change qualifies as FullReturn",
+    "one fixture can satisfy more than one positive qualification predicate without detection",
+    "generated CDM source is edited or generated fields are repurposed to carry application classification state"
+  ],
+  "criteria": [
+    {
+      "id": "quantity-deduction-and-conjunction",
+      "visibility": "public",
+      "weight": 18,
+      "description": "Distinguish increase, partial return, and full return from primitive and before/after quantity and state facts.",
+      "checks": [
+        "100,000 to 60,000 with the admitted quantity primitive returns PartialReturn and a clean quantity increase returns Increase.",
+        "100,000 to zero returns FullReturn only when the after state is Terminated.",
+        "A positive remainder cannot match FullReturn and a zero remainder cannot match PartialReturn.",
+        "Unchanged, negative, missing, or ambiguous quantities fail visibly or return Unqualified rather than being forced into a direction."
+      ]
+    },
+    {
+      "id": "only-exists-primitive-semantics",
+      "visibility": "public",
+      "weight": 18,
+      "description": "Require the admitted primitive set rather than testing only for the presence of one component.",
+      "checks": [
+        "A zeroing quantity change plus termsChange does not qualify as FullReturn even when zero and Terminated conditions hold.",
+        "Extraneous components are detected across one multi-populated PrimitiveInstruction and across several list entries.",
+        "Primitive order does not change the result and duplicate or empty primitive input is handled deterministically.",
+        "The documented admitted set for every positive qualification agrees with executable predicate behavior."
+      ]
+    },
+    {
+      "id": "intent-as-guard-only",
+      "visibility": "public",
+      "weight": 10,
+      "description": "Use event intent only to prevent a false automatic qualification.",
+      "checks": [
+        "The otherwise-valid full return with Novation intent returns Unqualified.",
+        "A matching intent cannot make unchanged or incompatible primitive/state facts qualify.",
+        "Intent is supplied through the application carrier as EventIntentEnum and is not invented on PrimitiveInstruction."
+      ]
+    },
+    {
+      "id": "rerate-and-substitution",
+      "visibility": "public",
+      "weight": 20,
+      "description": "Recognise fee re-rating and collateral substitution while proving their non-changing dimensions.",
+      "checks": [
+        "A supported loan fee/rate change with quantity and collateral unchanged returns ReRate.",
+        "An unrelated terms amendment, a simultaneous quantity change, or a simultaneous collateral change does not return ReRate.",
+        "Returning security A and delivering distinct security B with quantity and fee unchanged returns Substitution.",
+        "One movement, two same-direction movements, the same collateral identity on both sides, or a simultaneous quantity/fee change does not return Substitution."
+      ]
+    },
+    {
+      "id": "uniqueness-and-unqualified",
+      "visibility": "hidden",
+      "weight": 16,
+      "description": "Make the six outcomes mutually exclusive and expose overlap instead of hiding it behind predicate order.",
+      "checks": [
+        "Every required positive and close-negative fixture is evaluated against all candidate predicates and has a match count of exactly one or zero.",
+        "Zero matches map to Unqualified; multiple matches fail rather than selecting the first enum branch.",
+        "Boundary quantities, compound primitives, incompatible intent, and negative-space substitution fixtures preserve exclusivity.",
+        "Changing predicate declaration or enum order cannot change a fixture's semantic result."
+      ]
+    },
+    {
+      "id": "cdm-boundary-and-validation",
+      "visibility": "hidden",
+      "weight": 12,
+      "description": "Use an honest, version-correct CDM event boundary and validate the tier actually claimed.",
+      "checks": [
+        "QualificationInput immutably carries generated TradeState before/after values, generated PrimitiveInstruction values, and optional EventIntentEnum.",
+        "The implementation reads real CDM quantity, closed-state, fee/rate, collateral, and transfer facts for the classifications it supports rather than parallel labels.",
+        "Complete generated roots pass root and populated-child validation; deliberately partial fixtures are labelled and do not claim whole-root validity.",
+        "A meaningful invalid populated child or primitive fails the claimed validation tier, while application preconditions remain distinct."
+      ]
+    },
+    {
+      "id": "engineering-and-reproducibility",
+      "visibility": "hidden",
+      "weight": 6,
+      "description": "Deliver immutable, deterministic, proportionately inspected Java code and focused tests.",
+      "checks": [
+        "Mutating a caller list after input construction or attempting mutation through an exposed view cannot change qualification.",
+        "The implementation does not depend on current time, default time zone, mutable static state, object identity, or list iteration order.",
+        "Authored tests cover every required case and plausible wrong branch and pass from a clean offline Java 21/Gradle 8.10 copy.",
+        "DESIGN.md records the active CDM paths, ownership, primitive sets, and actual validation without claiming labels were deduced."
+      ]
+    }
+  ]
+}

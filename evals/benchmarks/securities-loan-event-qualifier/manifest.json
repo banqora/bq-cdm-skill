@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "securities-loan-event-qualifier",
+  "status": "sealed-unrun",
+  "sealed_at": "2026-08-11",
+  "model_facing_file": "TASK.md",
+  "fixture": {
+    "id": "java-21-cdm-7.0.0",
+    "artifact_version": "7.0.0",
+    "java_version": 21,
+    "gradle_version": "8.10",
+    "binary_sha256": "904b6d328584751c3e576994b16c3a2f3e85a7a6cf431134ae5df4275e538342",
+    "sources_sha256": "18525245186d4888a88726e62b011938300f61077260235b332ef6c47bec93dc"
+  },
+  "sealed_files": {
+    "task": {
+      "path": "TASK.md",
+      "sha256": "c50875ba2f3d53a66310cdce531dedd8e0211ce9b9008d8997ebe1a0f34f2172"
+    },
+    "rubric": {
+      "path": "rubric.json",
+      "sha256": "8896b27c30d344ad85a24f640b7144e15b95b36965b16a41dbdc18b523d32c08"
+    },
+    "probes": {
+      "path": "evaluator/PROBES.md",
+      "sha256": "22633b1fbb984009daf769d691e5f4a53318b0407f40758d5edd2840a2bc6fbe"
+    }
+  },
+  "registration": "deferred until a genuine skill/control baseline is recorded"
+}
