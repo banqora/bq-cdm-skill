@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "candidate_id": "settlement-status-reconciliation",
+  "total_score": 100,
+  "required_entry_points": [
+    "ReconcileSettlementStatus"
+  ],
+  "fatal_failures": [
+    "production or authored tests do not compile and run from a clean offline copy",
+    "the caller-visible ReconcileSettlementStatus operation is absent",
+    "the implementation uses no genuine generated CDM 7.0.0 TradeState at its boundary",
+    "an update changes a non-target book entry or mutates a prior snapshot",
+    "identical replay emits a second audit entry or conflicting event-id reuse is accepted",
+    "operational SETTLED or FAILED status silently terminates or changes the economics of the CDM trade"
+  ],
+  "criteria": [
+    {
+      "id": "transition-contract",
+      "visibility": "public",
+      "weight": 24,
+      "description": "Implement the supplied operational state machine and preconditions exactly.",
+      "checks": [
+        "Every allowed transition succeeds and every unlisted transition rejects before any result escapes.",
+        "SETTLED is terminal, FAILED can be repaired to MATCHED, and FAILED requires a non-blank reason.",
+        "Effective timestamps come from the update and back-dated updates reject deterministically."
+      ]
+    },
+    {
+      "id": "replay-semantics",
+      "visibility": "public",
+      "weight": 20,
+      "description": "Make replay idempotent by both event identity and content.",
+      "checks": [
+        "Replaying an accepted event with identical content returns the prior semantic result without a second audit line.",
+        "Reusing its event identifier with different target, time, status, or reason rejects visibly.",
+        "Replay behavior survives a new engine instance because it is represented in returned state rather than mutable process globals."
+      ]
+    },
+    {
+      "id": "scope-and-value-semantics",
+      "visibility": "public",
+      "weight": 22,
+      "description": "Change only the selected entry while preserving old snapshots as values.",
+      "checks": [
+        "One target in a reordered three-entry same-counterparty book produces exactly one changed entry and one audit line.",
+        "Unknown and duplicated trade identifiers fail before constructing a partially revised book.",
+        "Mutating caller-owned construction lists or an exposed result collection cannot alter old or new snapshots.",
+        "Unchanged CDM values, application histories, and bystander entries remain equal to their inputs."
+      ]
+    },
+    {
+      "id": "honest-cdm-boundary",
+      "visibility": "hidden",
+      "weight": 18,
+      "description": "Use a defensible generated boundary without assigning application settlement policy to CDM.",
+      "checks": [
+        "Every entry carries a genuine CDM 7.0.0 TradeState with stable documented identity resolution.",
+        "Operational status, failure reason, replay ledger, and audit line remain explicit application facts.",
+        "SETTLED and FAILED preserve the input CDM trade lifecycle and economics rather than constructing a ClosedState as operational shorthand.",
+        "DESIGN.md states whether each fixture is a complete root or deliberately partial and names only validation actually executed."
+      ]
+    },
+    {
+      "id": "validation-negative-controls",
+      "visibility": "hidden",
+      "weight": 10,
+      "description": "Prove the declared boundary and failure paths rather than relying on validation theatre.",
+      "checks": [
+        "Any claimed complete CDM root has applicable root and populated-child conditions executed through working runtime wiring.",
+        "A deliberately invalid populated generated child fails specifically; a labelled partial fixture is not misreported as wholly valid.",
+        "Application validation still runs for missing identities, reasons, histories, timestamps, and unsupported enum/null inputs."
+      ]
+    },
+    {
+      "id": "engineering-and-efficiency",
+      "visibility": "hidden",
+      "weight": 6,
+      "description": "Deliver deterministic, compact code with proportionate dependency inspection.",
+      "checks": [
+        "Clean offline tests pass without current-clock, default-zone, mutable-static, or hash-only replay behavior.",
+        "The implementation uses bounded source/API queries and does not bulk-extract the generated source JAR into the project.",
+        "Public value types expose immutable collections and unambiguous equality/content semantics."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,563 @@
+#!/usr/bin/env python3
+"""Validate the CDM implementation-pattern catalogue and its evaluation contract."""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import hashlib
+import json
+import re
+import sys
+from pathlib import Path
+from typing import Any
+from urllib.parse import urlparse
+
+
+REQUIRED_LABELS = [
+    "Use when",
+    "Avoid when",
+    "Authority",
+    "Pattern",
+    "Proof",
+    "Wrong turns",
+    "Upgrade tripwire",
+]
+PROTOCOL_HEADINGS = [
+    "Evidence classes",
+    "Seal the evaluation before any run",
+    "Run a leakage-safe A/B comparison",
+    "Include near-miss and non-application cases",
+    "Record enough to reproduce a run",
+    "Judge correctness before efficiency",
+    "Promotion gate",
+    "Keep credentials off GitHub",
+]
+RESULT_KEYS = {
+    "schema_version",
+    "candidate_id",
+    "pair_id",
+    "recorded_at",
+    "arm",
+    "evidence_class",
+    "task_sha256",
+    "rubric_sha256",
+    "probes_sha256",
+    "catalogue_sha256",
+    "skill_sha256",
+    "source",
+    "environment",
+    "result_commit",
+    "correctness",
+    "efficiency",
+    "contamination_audit",
+}
+SENSITIVE_KEY = re.compile(r"(?:api[_-]?key|access[_-]?token|auth[_-]?token|secret|password)", re.I)
+
+
+def parse_args() -> argparse.Namespace:
+    repo_root = Path(__file__).resolve().parent.parent
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--catalogue",
+        type=Path,
+        default=repo_root / "skills/cdm-dev/references/implementation-patterns.md",
+        help="pattern catalogue to validate",
+    )
+    parser.add_argument(
+        "--patterns-dir",
+        type=Path,
+        default=repo_root / "evals/patterns",
+        help="pattern evaluation directory to validate",
+    )
+    return parser.parse_args()
+
+
+def report(errors: list[str], pattern_count: int, candidate_count: int) -> int:
+    if errors:
+        for error in errors:
+            print(f"check-patterns: {error}", file=sys.stderr)
+        print(f"check-patterns: {len(errors)} error(s)", file=sys.stderr)
+        return 1
+    print(f"{pattern_count} patterns and {candidate_count} forward candidate(s) passed")
+    return 0
+
+
+def load_json(path: Path, errors: list[str]) -> Any:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        errors.append(f"missing file: {path}")
+    except json.JSONDecodeError as exc:
+        errors.append(f"invalid JSON in {path}: {exc}")
+    return None
+
+
+def sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for block in iter(lambda: source.read(65536), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def require_keys(value: object, keys: set[str], label: str, errors: list[str]) -> bool:
+    if not isinstance(value, dict):
+        errors.append(f"{label} must be an object")
+        return False
+    missing = sorted(keys - set(value))
+    if missing:
+        errors.append(f"{label} is missing keys: {', '.join(missing)}")
+        return False
+    return True
+
+
+def resolve_file(base: Path, relative: object, label: str, errors: list[str]) -> Path | None:
+    if not isinstance(relative, str) or not relative:
+        errors.append(f"{label} must be a non-empty relative path")
+        return None
+    path = (base / relative).resolve()
+    try:
+        path.relative_to(base.resolve())
+    except ValueError:
+        errors.append(f"{label} escapes the patterns directory: {relative}")
+        return None
+    if not path.is_file():
+        errors.append(f"{label} does not exist: {relative}")
+        return None
+    return path
+
+
+def markdown_words(value: str) -> list[str]:
+    value = re.sub(r"\[[^]]+\]\([^)]+\)", " link ", value)
+    value = re.sub(r"[`*_#>-]", " ", value)
+    return re.findall(r"[A-Za-z0-9][A-Za-z0-9'/-]*", value)
+
+
+def parse_fields(body: str, pattern_id: str, errors: list[str]) -> dict[str, str]:
+    labels = list(re.finditer(r"(?m)^\*\*([^*\n]+):\*\*\s*(.*)$", body))
+    known = [match for match in labels if match.group(1) in REQUIRED_LABELS]
+    seen = [match.group(1) for match in known]
+    for required in REQUIRED_LABELS:
+        count = seen.count(required)
+        if count != 1:
+            errors.append(f"{pattern_id} must contain {required!r} exactly once (found {count})")
+    if seen != REQUIRED_LABELS:
+        errors.append(f"{pattern_id} labels must appear in the required order")
+
+    fields: dict[str, str] = {}
+    for index, match in enumerate(known):
+        end = known[index + 1].start() if index + 1 < len(known) else len(body)
+        value = (match.group(2) + "\n" + body[match.end() : end]).strip()
+        if not value:
+            errors.append(f"{pattern_id} {match.group(1)!r} must not be empty")
+        fields[match.group(1)] = value
+    return fields
+
+
+def approved_url(url: str, prefixes: list[str]) -> bool:
+    parsed = urlparse(url)
+    return parsed.scheme == "https" and any(url.startswith(prefix) for prefix in prefixes)
+
+
+def validate_catalogue(
+    path: Path,
+    contract: dict[str, Any],
+    errors: list[str],
+) -> int:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        errors.append(f"missing catalogue: {path}")
+        return 0
+
+    malformed = [
+        line
+        for line in text.splitlines()
+        if line.startswith("## PAT-") and not re.fullmatch(r"## PAT-\d{3}: \S.*", line)
+    ]
+    for line in malformed:
+        errors.append(f"malformed pattern heading: {line}")
+
+    headings = list(re.finditer(r"(?m)^## (PAT-(\d{3})): (\S.*)$", text))
+    minimum = contract.get("minimum_patterns")
+    if not isinstance(minimum, int) or minimum < 1:
+        errors.append("catalogue_contract.minimum_patterns must be a positive integer")
+        minimum = 1
+    if len(headings) < minimum:
+        errors.append(f"catalogue has {len(headings)} patterns, expected at least {minimum}")
+
+    ids = [match.group(1) for match in headings]
+    expected = [f"PAT-{number:03d}" for number in range(1, len(ids) + 1)]
+    if ids != expected:
+        errors.append(f"pattern ids must be unique and contiguous from PAT-001 (found {', '.join(ids)})")
+    titles = [match.group(3).strip().casefold() for match in headings]
+    if len(set(titles)) != len(titles):
+        errors.append("pattern titles must be unique")
+
+    prefixes = contract.get("approved_authority_prefixes")
+    if not isinstance(prefixes, list) or not prefixes or not all(
+        isinstance(prefix, str) and prefix.startswith("https://") for prefix in prefixes
+    ):
+        errors.append("catalogue_contract.approved_authority_prefixes must be HTTPS prefixes")
+        prefixes = []
+
+    expected_labels = contract.get("required_labels")
+    if expected_labels != REQUIRED_LABELS:
+        errors.append("catalogue_contract.required_labels differs from the fixed card contract")
+
+    minimum_words = {
+        "Use when": 4,
+        "Avoid when": 4,
+        "Authority": 3,
+        "Pattern": 10,
+        "Proof": 6,
+        "Wrong turns": 10,
+        "Upgrade tripwire": 7,
+    }
+    for index, heading in enumerate(headings):
+        pattern_id = heading.group(1)
+        end = headings[index + 1].start() if index + 1 < len(headings) else len(text)
+        body = text[heading.end() : end]
+        fields = parse_fields(body, pattern_id, errors)
+        for label, minimum_count in minimum_words.items():
+            value = fields.get(label, "")
+            if len(markdown_words(value)) < minimum_count:
+                errors.append(f"{pattern_id} {label!r} is too short to be actionable")
+
+        authority = fields.get("Authority", "")
+        links = re.findall(r"\[[^]]+\]\((https?://[^)]+)\)", authority)
+        if not links:
+            errors.append(f"{pattern_id} Authority must cite at least one HTTPS source")
+        for link in links:
+            if not approved_url(link, prefixes):
+                errors.append(f"{pattern_id} Authority uses an unapproved source URL: {link}")
+
+        proof = fields.get("Proof", "")
+        if not re.search(r"\b(?:assert|test|probe|compile|validate|validation|round-trip|execute)\w*\b", proof, re.I):
+            errors.append(f"{pattern_id} Proof must name executable evidence")
+
+        wrong_turns = fields.get("Wrong turns", "")
+        bullets = re.findall(r"(?m)^\s*[-*]\s+\S", wrong_turns)
+        if len(bullets) < 2:
+            errors.append(f"{pattern_id} Wrong turns must contain at least two Markdown bullets")
+
+        tripwire = fields.get("Upgrade tripwire", "")
+        if not re.search(r"\b(?:version|release|artifact|artefact|runtime|schema|generator)\b", tripwire, re.I):
+            errors.append(f"{pattern_id} Upgrade tripwire must identify a versioned change")
+        if not re.search(r"\b(?:re-?run|re-?check|re-?query|re-?verify|verify|inspect|compare)\w*\b", tripwire, re.I):
+            errors.append(f"{pattern_id} Upgrade tripwire must require a verification action")
+
+        if fields.get("Use when", "").casefold() == fields.get("Avoid when", "").casefold():
+            errors.append(f"{pattern_id} Use when and Avoid when must distinguish application from near-miss")
+
+    return len(headings)
+
+
+def validate_rubric(path: Path, candidate_id: str, task: str, errors: list[str]) -> None:
+    rubric = load_json(path, errors)
+    required = {
+        "schema_version",
+        "candidate_id",
+        "total_score",
+        "required_entry_points",
+        "fatal_failures",
+        "criteria",
+    }
+    if not require_keys(rubric, required, f"rubric {candidate_id}", errors):
+        return
+    if rubric["schema_version"] != 1 or rubric["candidate_id"] != candidate_id:
+        errors.append(f"rubric {candidate_id} has an invalid schema or candidate id")
+    if rubric["total_score"] != 100:
+        errors.append(f"rubric {candidate_id} total_score must be 100")
+    entry_points = rubric["required_entry_points"]
+    if not isinstance(entry_points, list) or not entry_points:
+        errors.append(f"rubric {candidate_id} must name required entry points")
+    elif not all(isinstance(item, str) and item in task for item in entry_points):
+        errors.append(f"task {candidate_id} does not name every required entry point")
+    fatal = rubric["fatal_failures"]
+    if not isinstance(fatal, list) or not fatal or not all(isinstance(item, str) and item for item in fatal):
+        errors.append(f"rubric {candidate_id} fatal_failures must be non-empty strings")
+    criteria = rubric["criteria"]
+    if not isinstance(criteria, list) or not criteria:
+        errors.append(f"rubric {candidate_id} criteria must be a non-empty list")
+        return
+    total = 0
+    visibilities: set[str] = set()
+    ids: set[str] = set()
+    for index, criterion in enumerate(criteria):
+        label = f"rubric {candidate_id} criterion {index}"
+        if not require_keys(criterion, {"id", "visibility", "weight", "description", "checks"}, label, errors):
+            continue
+        criterion_id = criterion["id"]
+        if not isinstance(criterion_id, str) or not re.fullmatch(r"[a-z0-9-]+", criterion_id):
+            errors.append(f"{label} has an invalid id")
+        elif criterion_id in ids:
+            errors.append(f"rubric {candidate_id} repeats criterion id {criterion_id}")
+        ids.add(criterion_id)
+        visibility = criterion["visibility"]
+        if visibility not in {"public", "hidden"}:
+            errors.append(f"{label} visibility must be public or hidden")
+        else:
+            visibilities.add(visibility)
+        weight = criterion["weight"]
+        if not isinstance(weight, int) or weight <= 0:
+            errors.append(f"{label} weight must be a positive integer")
+        else:
+            total += weight
+        if not isinstance(criterion["description"], str) or not criterion["description"]:
+            errors.append(f"{label} description must be non-empty")
+        checks = criterion["checks"]
+        if not isinstance(checks, list) or not checks or not all(isinstance(item, str) and item for item in checks):
+            errors.append(f"{label} checks must be non-empty strings")
+    if total != 100:
+        errors.append(f"rubric {candidate_id} criterion weights total {total}, expected 100")
+    if visibilities != {"public", "hidden"}:
+        errors.append(f"rubric {candidate_id} must contain public and hidden criteria")
+
+
+def reject_sensitive_keys(value: object, label: str, errors: list[str]) -> None:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if SENSITIVE_KEY.search(str(key)):
+                errors.append(f"{label} contains forbidden credential-like key {key!r}")
+            reject_sensitive_keys(child, label, errors)
+    elif isinstance(value, list):
+        for child in value:
+            reject_sensitive_keys(child, label, errors)
+
+
+def validate_result(
+    path: Path,
+    candidates: dict[str, dict[str, Any]],
+    errors: list[str],
+) -> tuple[str, str, str, str] | None:
+    result = load_json(path, errors)
+    label = f"result {path.name}"
+    if not require_keys(result, RESULT_KEYS, label, errors):
+        return None
+    reject_sensitive_keys(result, label, errors)
+    if result["schema_version"] != 1:
+        errors.append(f"{label} must use schema_version 1")
+    candidate_id = result["candidate_id"]
+    if candidate_id not in candidates:
+        errors.append(f"{label} names unknown candidate {candidate_id!r}")
+        return None
+    candidate = candidates[candidate_id]
+    for field in ("task_sha256", "rubric_sha256", "probes_sha256"):
+        if result[field] != candidate[field]:
+            errors.append(f"{label} {field} differs from the sealed candidate")
+    try:
+        dt.date.fromisoformat(result["recorded_at"])
+    except (TypeError, ValueError):
+        errors.append(f"{label} recorded_at must be an ISO date")
+    if result["arm"] not in {"skill", "control"}:
+        errors.append(f"{label} arm must be skill or control")
+    if result["evidence_class"] not in {"fresh-forward", "regression"}:
+        errors.append(f"{label} evidence_class must be fresh-forward or regression")
+    for digest in ("catalogue_sha256", "skill_sha256"):
+        if not isinstance(result[digest], str) or not re.fullmatch(r"[0-9a-f]{64}", result[digest]):
+            errors.append(f"{label} {digest} must be a lowercase SHA-256 digest")
+    if not isinstance(result["result_commit"], str) or not re.fullmatch(
+        r"[0-9a-f]{40}|[0-9a-f]{64}", result["result_commit"]
+    ):
+        errors.append(f"{label} result_commit must be a lowercase Git digest")
+    source = result["source"]
+    if require_keys(source, {"cdm_version", "binary_sha256", "sources_sha256"}, f"{label} source", errors):
+        if source["cdm_version"] != candidate["cdm_version"]:
+            errors.append(f"{label} CDM version differs from the candidate")
+        for field in ("binary_sha256", "sources_sha256"):
+            if not isinstance(source[field], str) or not re.fullmatch(r"[0-9a-f]{64}", source[field]):
+                errors.append(f"{label} source {field} must be a lowercase SHA-256 digest")
+    environment = result["environment"]
+    environment_keys = {"vendor", "model", "cli_version", "java_version", "gradle_version", "auth_mode"}
+    if require_keys(environment, environment_keys, f"{label} environment", errors):
+        if environment["auth_mode"] != "local-subscription":
+            errors.append(f"{label} must record local-subscription auth")
+        for field in environment_keys - {"auth_mode"}:
+            if not isinstance(environment[field], str) or not environment[field]:
+                errors.append(f"{label} environment {field} must be non-empty")
+    correctness = result["correctness"]
+    if require_keys(correctness, {"fatal_pass", "score", "total", "human_reviewed"}, f"{label} correctness", errors):
+        if not isinstance(correctness["fatal_pass"], bool) or not isinstance(correctness["human_reviewed"], bool):
+            errors.append(f"{label} correctness booleans are invalid")
+        if correctness["total"] != 100 or not isinstance(correctness["score"], int) or not 0 <= correctness["score"] <= 100:
+            errors.append(f"{label} correctness score must be an integer from 0 to 100")
+    efficiency = result["efficiency"]
+    efficiency_keys = {"wall_seconds", "turns", "tool_calls", "source_queries", "jar_extractions"}
+    if require_keys(efficiency, efficiency_keys, f"{label} efficiency", errors):
+        if not all(isinstance(efficiency[field], int) and efficiency[field] >= 0 for field in efficiency_keys):
+            errors.append(f"{label} efficiency values must be non-negative integers")
+    audit = result["contamination_audit"]
+    if not require_keys(audit, {"rubric_hidden", "sibling_access_blocked", "workspace_clean"}, f"{label} contamination_audit", errors):
+        pass
+    elif not all(audit[field] is True for field in ("rubric_hidden", "sibling_access_blocked", "workspace_clean")):
+        errors.append(f"{label} contamination audit must pass before evidence is saved")
+    pair_id = result["pair_id"]
+    if not isinstance(pair_id, str) or not pair_id:
+        errors.append(f"{label} pair_id must be non-empty")
+        return None
+    vendor = environment.get("vendor", "") if isinstance(environment, dict) else ""
+    model = environment.get("model", "") if isinstance(environment, dict) else ""
+    return candidate_id, pair_id, vendor, model
+
+
+def validate_protocol(path: Path, errors: list[str]) -> None:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        errors.append(f"missing protocol: {path}")
+        return
+    headings = re.findall(r"(?m)^## (.+)$", text)
+    for heading in PROTOCOL_HEADINGS:
+        if headings.count(heading) != 1:
+            errors.append(f"protocol must contain exactly one '## {heading}' heading")
+    required_phrases = [
+        "regression evidence",
+        "fresh evidence",
+        "near-miss",
+        "correctness",
+        "local subscription",
+        "API-key",
+        "GitHub",
+        "source JAR",
+        "exact model",
+        "catalogue SHA-256",
+    ]
+    normalized = re.sub(r"\s+", " ", text.casefold())
+    for phrase in required_phrases:
+        if phrase.casefold() not in normalized:
+            errors.append(f"protocol must state the {phrase!r} rule")
+
+
+def validate_candidate(
+    base: Path,
+    value: object,
+    errors: list[str],
+) -> tuple[str, dict[str, Any]] | None:
+    required = {
+        "id",
+        "title",
+        "kind",
+        "status",
+        "evidence_class",
+        "cdm_version",
+        "java_version",
+        "task",
+        "rubric",
+        "probes",
+        "task_sha256",
+        "rubric_sha256",
+        "probes_sha256",
+    }
+    if not require_keys(value, required, "forward candidate", errors):
+        return None
+    candidate_id = value["id"]
+    if not isinstance(candidate_id, str) or not re.fullmatch(r"[a-z0-9-]+", candidate_id):
+        errors.append("forward candidate has an invalid id")
+        return None
+    if value["kind"] != "implementation-forward-test":
+        errors.append(f"candidate {candidate_id} has unsupported kind")
+    if value["status"] not in {"unrun", "reviewed", "promoted"}:
+        errors.append(f"candidate {candidate_id} has unsupported status")
+    if value["evidence_class"] != "fresh-forward-candidate":
+        errors.append(f"candidate {candidate_id} must be labelled fresh-forward-candidate before its first run")
+    if value["cdm_version"] != "7.0.0" or value["java_version"] != 21:
+        errors.append(f"candidate {candidate_id} must pin CDM 7.0.0 and Java 21")
+
+    paths: dict[str, Path] = {}
+    for field in ("task", "rubric", "probes"):
+        path = resolve_file(base, value[field], f"candidate {candidate_id} {field}", errors)
+        if path is not None:
+            paths[field] = path
+            expected_digest = value[f"{field}_sha256"]
+            if not isinstance(expected_digest, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_digest):
+                errors.append(f"candidate {candidate_id} {field}_sha256 must be a lowercase SHA-256 digest")
+            elif sha256(path) != expected_digest:
+                errors.append(f"candidate {candidate_id} {field} differs from its sealed SHA-256")
+    task = ""
+    if "task" in paths:
+        task = paths["task"].read_text(encoding="utf-8")
+        if len(markdown_words(task)) < 120:
+            errors.append(f"candidate {candidate_id} task is too short")
+        for pin in ("Java 21", "CDM 7.0.0"):
+            if pin not in task:
+                errors.append(f"candidate {candidate_id} task must pin {pin}")
+        for leak in ("rubric", "hidden test", "implementation-patterns", "PAT-00", "control arm", "treatment arm"):
+            if leak.casefold() in task.casefold():
+                errors.append(f"candidate {candidate_id} task leaks evaluator context: {leak}")
+    if "rubric" in paths:
+        validate_rubric(paths["rubric"], candidate_id, task, errors)
+    if "probes" in paths:
+        probes = paths["probes"].read_text(encoding="utf-8")
+        if len(markdown_words(probes)) < 80 or "evaluator-owned" not in probes.casefold():
+            errors.append(f"candidate {candidate_id} probes must preserve a substantive evaluator-owned contract")
+    return candidate_id, value
+
+
+def main() -> int:
+    args = parse_args()
+    errors: list[str] = []
+    patterns_dir = args.patterns_dir.resolve()
+    manifest = load_json(patterns_dir / "manifest.json", errors)
+    required = {"schema_version", "catalogue_contract", "protocol", "forward_tests", "results_dir"}
+    if not require_keys(manifest, required, "pattern manifest", errors):
+        return report(errors, 0, 0)
+    if manifest["schema_version"] != 1:
+        errors.append("pattern manifest must use schema_version 1")
+
+    contract = manifest["catalogue_contract"]
+    if not isinstance(contract, dict):
+        errors.append("catalogue_contract must be an object")
+        contract = {}
+    pattern_count = validate_catalogue(args.catalogue.resolve(), contract, errors)
+
+    protocol = resolve_file(patterns_dir, manifest["protocol"], "protocol", errors)
+    if protocol is not None:
+        validate_protocol(protocol, errors)
+
+    forward_tests = manifest["forward_tests"]
+    candidates: dict[str, dict[str, Any]] = {}
+    if not isinstance(forward_tests, list) or not forward_tests:
+        errors.append("pattern manifest must contain at least one forward candidate")
+    else:
+        for value in forward_tests:
+            validated = validate_candidate(patterns_dir, value, errors)
+            if validated is None:
+                continue
+            candidate_id, candidate = validated
+            if candidate_id in candidates:
+                errors.append(f"pattern manifest repeats candidate id {candidate_id}")
+            candidates[candidate_id] = candidate
+
+    results_dir_value = manifest["results_dir"]
+    if not isinstance(results_dir_value, str) or not results_dir_value:
+        errors.append("results_dir must be a non-empty relative path")
+    else:
+        results_dir = (patterns_dir / results_dir_value).resolve()
+        try:
+            results_dir.relative_to(patterns_dir)
+        except ValueError:
+            errors.append("results_dir escapes the patterns directory")
+        else:
+            groups: dict[tuple[str, str, str, str], list[str]] = {}
+            if results_dir.is_dir():
+                for result_path in sorted(results_dir.glob("*.json")):
+                    group = validate_result(result_path, candidates, errors)
+                    if group is None:
+                        continue
+                    groups.setdefault(group, []).append(
+                        json.loads(result_path.read_text(encoding="utf-8"))["arm"]
+                    )
+                for group, arms in groups.items():
+                    if sorted(arms) != ["control", "skill"]:
+                        errors.append(
+                            f"saved A/B pair {group[1]!r} for {group[0]} / {group[2]} {group[3]} "
+                            "must contain exactly one skill and one control arm"
+                        )
+
+    return report(errors, pattern_count, len(candidates))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

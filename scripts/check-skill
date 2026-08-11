@@ -43,7 +43,10 @@ case "$mode" in
     ;;
 esac
 
-for portable_script in "$skill_root/scripts/cdm-source" "$skill_root/scripts/cdm-java-api"; do
+for portable_script in \
+  "$skill_root/scripts/cdm-source" \
+  "$skill_root/scripts/cdm-java-api" \
+  "$skill_root/scripts/cdm-inspect"; do
   if [[ ! -f "$portable_script" || ! -x "$portable_script" ]]; then
     echo "check-skill: ${portable_script#"$repo_root/"} is missing or not executable" >&2
     exit 1
@@ -165,6 +168,7 @@ required_reference_names = {
     "dialects.md",
     "equities.md",
     "foreign-exchange.md",
+    "implementation-patterns.md",
     "industry-bodies.md",
     "interest-rates.md",
     "legal-contracts.md",
@@ -249,9 +253,10 @@ for reference in references:
 
 source_helper = skill_dir / "scripts" / "cdm-source"
 api_helper = skill_dir / "scripts" / "cdm-java-api"
+inspect_helper = skill_dir / "scripts" / "cdm-inspect"
 checker = repo_root / "scripts" / "check-skill"
 link_checker = repo_root / "scripts" / "check-links"
-for script in (source_helper, api_helper, checker, link_checker):
+for script in (source_helper, api_helper, inspect_helper, checker, link_checker):
     if not script.is_file() or not os.access(script, os.X_OK):
         raise SystemExit(f"check-skill: {script.relative_to(repo_root)} is missing or not executable")
 try:
@@ -259,7 +264,7 @@ try:
 except SyntaxError as error:
     raise SystemExit(f"check-skill: scripts/check-links has invalid Python: {error}")
 
-portable_resources = [skill, ui_metadata, readme, source_helper, api_helper, link_checker,
+portable_resources = [skill, ui_metadata, readme, source_helper, api_helper, inspect_helper, link_checker,
                       *sorted(references)]
 resource_text = "\n".join(path.read_text() for path in portable_resources)
 forbidden = {
@@ -288,6 +293,7 @@ fi
 
 source_helper="$skill_root/scripts/cdm-source"
 api_helper="$skill_root/scripts/cdm-java-api"
+inspect_helper="$skill_root/scripts/cdm-inspect"
 jar="$("$source_helper" --jar "$jar_path" jar)"
 jar_entries="$(zipinfo -1 "$jar")"
 source_count="$(rg '^cdm/rosetta/.*\.rosetta$' <<<"$jar_entries" | wc -l | tr -d ' ')"
@@ -302,6 +308,7 @@ source_count="$(rg '^cdm/rosetta/.*\.rosetta$' <<<"$jar_entries" | wc -l | tr -d
 "$source_helper" --jar "$jar" search 'func Qualify_' >/dev/null
 if rg -Fx 'cdm/event/common/TradeState.class' <<<"$jar_entries" >/dev/null; then
   "$api_helper" --jar "$jar" cdm.event.common.TradeState | rg 'getTrade\(' >/dev/null
+  "$inspect_helper" --jar "$jar" cdm.event.common.TradeState | rg '^## Generated Java API$' >/dev/null
 fi
 
 # The conformance reference depends on this corpus being discoverable; its

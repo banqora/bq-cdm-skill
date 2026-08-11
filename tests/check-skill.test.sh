@@ -25,6 +25,12 @@ expect_fail "static gate requires the generated Java API helper" \
   --stderr "scripts/cdm-java-api is missing or not executable" -- \
   "$copy/scripts/check-skill" --static
 
+copy="$(fresh_copy missing-inspect-helper)"
+rm -- "$copy/skills/cdm-dev/scripts/cdm-inspect"
+expect_fail "static gate requires the bounded inspection helper" \
+  --stderr "scripts/cdm-inspect is missing or not executable" -- \
+  "$copy/scripts/check-skill" --static
+
 copy="$(fresh_copy missing-ui-metadata)"
 rm -- "$copy/skills/cdm-dev/agents/openai.yaml"
 expect_fail "static gate requires agents/openai.yaml" \

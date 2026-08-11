@@ -20,6 +20,13 @@ financing, transferable assets and cash securities, Digital Regulatory Reporting
 agreements. Each guide records its research baseline, points back to version-matched Rune source,
 and separates CDM or DRR behavior from application policy and legal interpretation.
 
+Recurring engineering hazards are distilled into a small
+[implementation-pattern catalogue](skills/cdm-dev/references/implementation-patterns.md). It is
+not a library of benchmark formulas: each card says when to use or avoid it, which authority owns
+the decision, the implementation shape, the proof required, common wrong turns, and what must be
+rechecked on an upgrade. Agents load only the matching card, then confirm it against the active
+CDM release and the consuming application's contract.
+
 ## Why use this skill?
 
 A capable general agent can eventually reconstruct CDM behavior from raw distributions. This
@@ -497,8 +504,22 @@ GitHub tree URL of `skills/cdm-dev` — discover the skill directly.
 
 ## Inspect the active CDM model and Java API
 
-The source helper reads `.rosetta` files directly from the binary `cdm-java` JAR. Do not pass the
-generated-Java `-sources.jar`; the binary already embeds the Rune source:
+For a normal Java task, inspect the complete bounded slice in one command:
+
+```bash
+skills/cdm-dev/scripts/cdm-inspect --jar path/to/cdm-java.jar \
+  TradeState TransferState Money
+```
+
+`cdm-inspect` reports the exact CDM version, owning Rune type/choice/enum declarations, inheritance,
+conditioned children, generated Java getters/builders, and relevant metadata and validator class
+names. It accepts at most eight declarations and refuses output above 1,200 lines rather than
+silently truncating it. The helper reads the embedded Rune files in one in-memory batch; it does not
+unpack the JAR onto disk, download dependencies, or scan global caches.
+
+Use the lower-level source helper for a source-only question. Its `type` path reads `.rosetta`
+files directly from the binary `cdm-java` JAR. Do not pass the generated-Java `-sources.jar`; the
+binary already embeds the Rune source:
 
 ```bash
 skills/cdm-dev/scripts/cdm-source --jar path/to/cdm-java.jar version
@@ -506,9 +527,10 @@ skills/cdm-dev/scripts/cdm-source --jar path/to/cdm-java.jar type TradeState Clo
 skills/cdm-dev/scripts/cdm-source --jar path/to/cdm-java.jar list 'event.*func'
 ```
 
-The `type` command accepts a bounded batch and prints each complete declaration with inherited base
-declarations, conditions, and sibling subtypes, avoiding repeated line-window searches and broad
-matches against FpML ingestion types. Use `search` for otherwise unrelated declarations.
+The `type` command accepts a bounded batch of types, choices, and enums and reads the archive once.
+It prints each complete declaration with inherited base declarations, conditions, alternatives,
+and sibling subtypes, avoiding repeated line-window searches and broad FpML ingestion matches. Use
+`search` only for otherwise unrelated declarations.
 
 `CDM_JAVA_JAR` can supply the path instead. Without either, the helper searches common
 Gradle/Maven distribution and dependency-copy layouts under the active project. It refuses
@@ -532,6 +554,7 @@ Run the structural gate:
 
 ```bash
 scripts/check-skill --static
+evals/check-patterns
 ```
 
 Run the live contract against any contemporary `cdm-java` dependency:
@@ -540,8 +563,9 @@ Run the live contract against any contemporary `cdm-java` dependency:
 scripts/check-skill --jar path/to/cdm-java.jar
 ```
 
-The static gate checks frontmatter, reference reachability, portability, script syntax, and
-the size of the always-loaded skill. The live gate also proves the source helper can read a
+The static gates check frontmatter, reference reachability, portability, script syntax, the size of
+the always-loaded skill, implementation-card structure and provenance, and sealed forward-test
+hashes. They do not claim model lift. The live skill gate also proves the source helper can read a
 substantial Rosetta corpus and locate declarations the workflow relies on.
 
 Run the script test suite (hermetic; builds its own fixture JARs):
@@ -576,7 +600,7 @@ The twelve code-writing use cases are also preserved as leakage-aware
 [implementation forward benchmarks](evals/benchmarks/README.md), with fixed tasks, hidden rubrics,
 observed skill/control baselines, a shared CDM 7.0.0 seed, and `evals/check-benchmarks` validation.
 
-Requirements: Bash, Python 3, `rg`, `zipinfo`, and `unzip`; a JDK for generated Java API checks;
+Requirements: Bash, Python 3.10+, `rg`, `zipinfo`, and `unzip`; a JDK for generated Java API checks;
 network access for the live link and release checks; local Claude Code and Codex CLIs for live
 model evals.
 
@@ -595,11 +619,12 @@ early warning before the next release enters the matrix.
 skills/cdm-dev/          the distributable skill — everything an install ships
   SKILL.md               lean workflow and reference router
   references/            onboarding, product-family, legal, DRR, industry, Rune, workflow, and test guidance
+  scripts/cdm-inspect    inspect a bounded Rune/Java/validator slice in one command
   scripts/cdm-source     query source embedded in an active cdm-java dependency
   scripts/cdm-java-api   batch generated Java getters and builders with javap
 scripts/check-skill      static and live drift gates (repository tooling)
 scripts/check-links      verify external documentation links and redirects
 tests/                   hermetic per-tool suites (driver: tests/run; shared lib.sh, fixtures.sh)
-evals/                   local runners, implementation benchmarks, graders, and baselines
+evals/                   local runners, pattern/implementation benchmarks, graders, and baselines
 .github/                 hermetic lint/tests, CDM release matrix, links, and upstream canary
 ```

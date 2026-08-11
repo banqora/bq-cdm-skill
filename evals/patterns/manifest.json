@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "catalogue_contract": {
+    "minimum_patterns": 5,
+    "required_labels": [
+      "Use when",
+      "Avoid when",
+      "Authority",
+      "Pattern",
+      "Proof",
+      "Wrong turns",
+      "Upgrade tripwire"
+    ],
+    "approved_authority_prefixes": [
+      "https://cdm.finos.org/",
+      "https://rune.finos.org/",
+      "https://github.com/finos/",
+      "https://rosetta-technology.io/",
+      "https://drr.docs.rosetta-technology.io/",
+      "https://www.isda.org/",
+      "https://www.islagroup.org/",
+      "https://www.icmagroup.org/",
+      "https://www.ecb.europa.eu/",
+      "https://www.gov.uk/",
+      "https://www.cftc.gov/",
+      "https://www.esma.europa.eu/",
+      "https://www.leiroc.org/",
+      "https://docs.oracle.com/"
+    ]
+  },
+  "protocol": "PROTOCOL.md",
+  "results_dir": "results",
+  "forward_tests": [
+    {
+      "id": "settlement-status-reconciliation",
+      "title": "Settlement-status reconciliation",
+      "kind": "implementation-forward-test",
+      "status": "unrun",
+      "evidence_class": "fresh-forward-candidate",
+      "cdm_version": "7.0.0",
+      "java_version": 21,
+      "task": "forward/settlement-status-reconciliation/TASK.md",
+      "rubric": "forward/settlement-status-reconciliation/rubric.json",
+      "probes": "forward/settlement-status-reconciliation/evaluator/PROBES.md",
+      "task_sha256": "0337d23e727002ccab896b4c9965257e32433e654055d594981a9c4574f71aa8",
+      "rubric_sha256": "3509f661494b07bca3aa54374c5547b2d09d1fd5f2cdb7b53227190f573a3570",
+      "probes_sha256": "80b6bc1d8e97710781743d5d31ccc63e9b30da62f54f877d9091116ca7e6c382"
+    }
+  ]
+}

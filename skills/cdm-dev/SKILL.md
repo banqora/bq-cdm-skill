@@ -37,11 +37,11 @@ If CDM is not installed, its distribution is unclear, or a language must be sele
 2. Trace the value end to end with `rg`: external input, normalization or mapping, generated
    builder, typed CDM object, serialization, validation/functions, and downstream storage or
    API behavior. Name any project-specific stages instead of treating them as CDM.
-3. Batch version-matched owning declarations through `scripts/cdm-source type`, including inherited
-   conditions and sibling choices. Put their simple or qualified Java names in one
-   `scripts/cdm-java-api` call; it resolves one exact package or fails with candidates. Use `--help`
-   instead of reading helpers. Never scan `/`, home, or global caches. Keep inspection JARs out of
-   builds; use [Rosetta](references/rosetta.md) only for remaining ambiguity.
+3. Run one bounded set of owning types/choices through `scripts/cdm-inspect`; it returns their
+   version-matched declarations, inheritance and conditioned children, exact Java APIs, and relevant
+   validator/meta classes, or fails on ambiguity. Use `cdm-source` or `cdm-java-api` only for a
+   remaining question. Use `--help`; never scan `/`, home, or global caches. Keep inspection JARs
+   out of builds; use [Rosetta](references/rosetta.md) only for remaining ambiguity.
 4. Build or compile the smallest typed vertical slice early: exercise at least one production
    getter or builder and the first real branch. Compiling empty directories, records, or signatures
    alone is not evidence. Let errors identify API details that still need inspection.
@@ -80,8 +80,8 @@ neighbors or rewind and compare the whole object. Use [Day-to-day workflows](ref
   compatibility, translate/enrich/transform/project, policy seams, regimes, evidence, and tests.
 - [Rosetta and generated code](references/rosetta.md): model declarations, generated APIs,
   metadata annotations, validators, functions, and qualifiers.
-- [Day-to-day workflows](references/workflows.md): locating the owning layer and making
-  ordinary mapping, document, lifecycle, validation, or upgrade changes.
+- [Implementation patterns](references/implementation-patterns.md): load one card for boundary,
+  validation, identity/scope, temporal/replay, or money risk; use [day-to-day workflows](references/workflows.md) only when broader navigation is needed.
 - [JSON dialects](references/dialects.md): legacy/Rune detection, dropped fields, references,
   pruning, round trips, and migration.
 - [Testing CDM code](references/testing.md): use for fixture, mapping, runtime, round-trip, build,
@@ -89,7 +89,7 @@ neighbors or rewind and compare the whole object. Use [Day-to-day workflows](ref
 - [ISDA corpus conformance](references/conformance.md): discovering shipped scenarios and
   comparing application execution with reference outputs.
 - [Getting started with CDM](references/onboarding.md): distributions, language options,
-  acquisition, capability gaps, version selection, and installation smoke tests.
+  acquisition, version selection, and installation smoke tests.
 - [Industry-body guidance](references/industry-bodies.md): dated ISDA, ISLA, ICMA, and FpML
   market-practice sources, with freshness, access, and licensing boundaries.
 

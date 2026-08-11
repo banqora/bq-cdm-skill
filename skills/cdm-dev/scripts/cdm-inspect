@@ -1,0 +1,279 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat >&2 <<'USAGE'
+Usage:
+  cdm-inspect [--jar <cdm-java.jar>] [--classpath <path>] <RuneDeclaration>...
+
+Inspect a bounded CDM vertical slice in one command. For each requested Rune type, choice, or
+enum, print its exact embedded declaration, inheritance and conditioned children; the exact
+generated Java public API (including a matching builder); and the generated metadata and validator
+class names relevant to that slice.
+
+The command accepts at most 8 declarations and emits at most 1200 lines. It fails rather than
+truncating an exact declaration. The adjacent cdm-source helper selects the JAR; repeat
+--classpath for project-resolved runtime dependencies. Nothing is downloaded or persistently
+extracted, and ambiguous simple names must be fully qualified.
+USAGE
+}
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source_helper="$script_dir/cdm-source"
+api_helper="$script_dir/cdm-java-api"
+jar_override=""
+classpath_entries=()
+requested_declarations=()
+max_declarations=8
+max_output_lines=1200
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --jar)
+      [[ $# -ge 2 ]] || {
+        echo "cdm-inspect: --jar needs a path" >&2
+        exit 1
+      }
+      jar_override="$2"
+      shift 2
+      ;;
+    --classpath)
+      [[ $# -ge 2 && -n "$2" ]] || {
+        echo "cdm-inspect: --classpath needs a non-empty path" >&2
+        exit 1
+      }
+      classpath_entries+=("$2")
+      shift 2
+      ;;
+    -h | --help | help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      requested_declarations+=("$@")
+      break
+      ;;
+    -*)
+      echo "cdm-inspect: unknown option '$1'" >&2
+      usage
+      exit 1
+      ;;
+    *)
+      requested_declarations+=("$1")
+      shift
+      ;;
+  esac
+done
+
+[[ ${#requested_declarations[@]} -gt 0 ]] || {
+  echo "cdm-inspect: provide at least one Rune declaration" >&2
+  usage
+  exit 1
+}
+if [[ ${#requested_declarations[@]} -gt $max_declarations ]]; then
+  echo "cdm-inspect: at most $max_declarations declarations are allowed per bounded inspection" >&2
+  echo "cdm-inspect: split the request into a smaller vertical slice" >&2
+  exit 1
+fi
+
+if [[ -n "$jar_override" ]]; then
+  jar="$($source_helper --jar "$jar_override" jar)"
+else
+  jar="$($source_helper jar)"
+fi
+
+# cdm-source resolves the complete batch before printing and reads the embedded Rune files once.
+source_output="$($source_helper --jar "$jar" type "${requested_declarations[@]}")"
+artifact_version="$(sed -n 's/^# artifact-version=//p' <<<"$source_output")"
+if [[ -z "$artifact_version" || "$artifact_version" == *$'\n'* ]]; then
+  echo "cdm-inspect: internal error reading the selected CDM artifact version" >&2
+  exit 1
+fi
+resolved_lines="$(
+  awk '/^## declaration: / { print $3 }' <<<"$source_output"
+)"
+resolved_types=()
+while IFS= read -r resolved_type; do
+  [[ -n "$resolved_type" ]] && resolved_types+=("$resolved_type")
+done <<<"$resolved_lines"
+
+if [[ ${#resolved_types[@]} -ne ${#requested_declarations[@]} ]]; then
+  echo "cdm-inspect: internal error resolving Rune declarations to generated Java types" >&2
+  exit 1
+fi
+
+api_args=(--jar "$jar")
+for classpath_entry in "${classpath_entries[@]:-}"; do
+  [[ -n "$classpath_entry" ]] && api_args+=(--classpath "$classpath_entry")
+done
+api_output="$($api_helper "${api_args[@]}" "${resolved_types[@]}")"
+
+inspection_dir="$(mktemp -d "${TMPDIR:-/tmp}/cdm-inspect.XXXXXX")"
+cleanup() {
+  [[ -n "${inspection_dir:-}" && -d "$inspection_dir" ]] && rm -rf -- "$inspection_dir"
+}
+trap cleanup EXIT
+source_report="$inspection_dir/source.txt"
+printf '%s\n' "$source_output" >"$source_report"
+
+support_output="$(
+  python3 - "$jar" "$source_report" <<'PY'
+from __future__ import annotations
+
+import re
+import struct
+import sys
+import zipfile
+from collections import defaultdict
+from pathlib import Path
+
+
+jar_path = sys.argv[1]
+source_path = Path(sys.argv[2])
+lines = source_path.read_text(encoding="utf-8").splitlines()
+support_types: dict[str, None] = {}
+
+for line in lines:
+    owner_match = re.match(r"^## (?:declaration|inherited): ([A-Za-z0-9_.]+)$", line)
+    if owner_match:
+        support_types[owner_match.group(1)] = None
+
+    child_match = re.match(
+        r"^[A-Za-z0-9_.]+\.[a-z][A-Za-z0-9_]* -> ([A-Za-z0-9_.]+)$", line
+    )
+    if child_match:
+        support_types[child_match.group(1)] = None
+
+    summary_match = re.match(
+        r"^\s+([A-Za-z0-9_.]+) conditions: ([A-Za-z0-9_, ]+)(?:\s+#.*)?$", line
+    )
+    if summary_match:
+        owner = summary_match.group(1)
+        support_types[owner] = None
+
+def class_name(entry: str) -> str:
+    return entry.removesuffix(".class").replace("/", ".")
+
+
+def class_utf8_constants(data: bytes) -> list[str]:
+    if data[:4] != b"\xca\xfe\xba\xbe":
+        raise ValueError("invalid JVM class magic")
+    constant_count = struct.unpack_from(">H", data, 8)[0]
+    offset = 10
+    constants: list[str] = []
+    fixed_sizes = {
+        3: 4,  # Integer
+        4: 4,  # Float
+        7: 2,  # Class
+        8: 2,  # String
+        9: 4,  # Fieldref
+        10: 4,  # Methodref
+        11: 4,  # InterfaceMethodref
+        12: 4,  # NameAndType
+        15: 3,  # MethodHandle
+        16: 2,  # MethodType
+        17: 4,  # Dynamic
+        18: 4,  # InvokeDynamic
+        19: 2,  # Module
+        20: 2,  # Package
+    }
+    index = 1
+    while index < constant_count:
+        tag = data[offset]
+        offset += 1
+        if tag == 1:  # Utf8
+            length = struct.unpack_from(">H", data, offset)[0]
+            offset += 2
+            constants.append(data[offset : offset + length].decode("utf-8", "replace"))
+            offset += length
+        elif tag in (5, 6):  # Long and Double occupy two constant-pool slots.
+            offset += 8
+            index += 1
+        elif tag in fixed_sizes:
+            offset += fixed_sizes[tag]
+        else:
+            raise ValueError(f"unsupported JVM constant-pool tag {tag}")
+        index += 1
+    return constants
+
+
+# Generator-assigned names for anonymous conditions (for example OneOf0) cannot be reconstructed
+# reliably from Rune text or filename prefixes. Each generated Meta class records the exact direct
+# and inherited data-rule classes it registers. Read those constant-pool references and retain only
+# class entries that actually exist in the selected JAR.
+data_rules_by_owner: dict[str, list[str]] = defaultdict(list)
+rule_reference_re = re.compile(
+    r"(?:^|[\[;(])L?"
+    r"((?:[A-Za-z_][A-Za-z0-9_$]*/)+validation/datarule/"
+    r"[A-Za-z_][A-Za-z0-9_$]*)"
+    r"(?:;|$)"
+)
+with zipfile.ZipFile(jar_path) as archive:
+    entries = set(archive.namelist())
+    for fq_type in support_types:
+        package, simple_name = fq_type.rsplit(".", 1)
+        package_path = package.replace(".", "/")
+        meta_entry = f"{package_path}/meta/{simple_name}Meta.class"
+        if meta_entry not in entries:
+            continue
+        try:
+            constants = class_utf8_constants(archive.read(meta_entry))
+        except (IndexError, struct.error, ValueError) as error:
+            raise SystemExit(f"cdm-inspect: cannot inspect {meta_entry}: {error}") from error
+        rule_references = {
+            match.group(1)
+            for constant in constants
+            for match in rule_reference_re.finditer(constant)
+            if "$" not in match.group(1)
+        }
+        rules = {
+            f"{reference}.class"
+            for reference in rule_references
+            if f"{reference}.class" in entries
+        }
+        data_rules_by_owner[fq_type].extend(sorted(rules))
+
+
+print("## Generated validation and metadata classes")
+for fq_type in support_types:
+    package, simple_name = fq_type.rsplit(".", 1)
+    package_path = package.replace(".", "/")
+    candidates = [
+        ("metadata", f"{package_path}/meta/{simple_name}Meta.class"),
+        ("structural_validator", f"{package_path}/validation/{simple_name}Validator.class"),
+        (
+            "type_format_validator",
+            f"{package_path}/validation/{simple_name}TypeFormatValidator.class",
+        ),
+        (
+            "only_exists_validator",
+            f"{package_path}/validation/exists/{simple_name}OnlyExistsValidator.class",
+        ),
+    ]
+    candidates.extend(("data_rule", entry) for entry in data_rules_by_owner[fq_type])
+
+    present = [(label, entry) for label, entry in candidates if entry in entries]
+    print(f"### {fq_type}")
+    if not present:
+        print("support=none")
+        continue
+    for label, entry in present:
+        print(f"{label}={class_name(entry)}")
+PY
+)"
+
+result="$(
+  printf '# cdm-inspect version=%s jar=%s\n' "$artifact_version" "$jar"
+  printf '## Rune declarations\n%s\n' "$source_output"
+  printf '\n## Generated Java API\n%s\n' "$api_output"
+  printf '\n%s\n' "$support_output"
+)"
+line_count="$(awk 'END { print NR }' <<<"$result")"
+if [[ "$line_count" -gt "$max_output_lines" ]]; then
+  echo "cdm-inspect: exact inspection would emit $line_count lines (limit $max_output_lines)" >&2
+  echo "cdm-inspect: request a smaller vertical slice; output was not truncated" >&2
+  exit 1
+fi
+
+printf '%s\n' "$result"

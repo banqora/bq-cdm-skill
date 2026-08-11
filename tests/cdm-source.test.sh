@@ -15,6 +15,32 @@ source "$script_dir/fixtures.sh"
 setup_work
 build_fixture_jars
 
+python3 - "$fixture_jar" <<'PY'
+import sys
+import zipfile
+
+with zipfile.ZipFile(sys.argv[1], "a") as jar:
+    jar.writestr(
+        "cdm/rosetta/event-choice-enum-fixture.rosetta",
+        """namespace cdm.event.common
+
+type CashTransfer:
+  amount number (1..1)
+
+type SecurityTransfer:
+  identifier string (1..1)
+
+choice Transfer:
+  CashTransfer
+  SecurityTransfer
+
+enum TransferStatusEnum:
+  Pending
+  Settled
+""",
+    )
+PY
+
 expect_ok "version reports the release parsed from the JAR filename" \
   --stdout '^version=9\.9\.9$' -- \
   "$cdm_source" --jar "$fixture_jar" version
@@ -56,7 +82,7 @@ expect_ok "type warns that parent validation does not recurse into child conditi
   "$cdm_source" --jar "$fixture_jar" type cdm.event.common.ContingentTransfer
 
 expect_ok "type hands off to a combined API query and populated compile" \
-  --stdout '^# next=make at most one combined cdm-java-api query, then compile a populated slice$' -- \
+  --stdout '^# next=use one cdm-inspect batch, then compile a populated slice$' -- \
   "$cdm_source" --jar "$fixture_jar" type cdm.event.common.ContingentTransfer
 
 batch_types() {
@@ -69,8 +95,31 @@ batch_types() {
 expect_ok "type accepts a bounded batch without a broad source search" \
   --stdout '^# requested=cdm\.event\.common\.ContingentTransfer$' -- batch_types
 
+choice_and_enum_batch() {
+  local output
+  output="$("$cdm_source" --jar "$fixture_jar" type Transfer TransferStatusEnum)" || return
+  rg '^# resolved=cdm\.event\.common\.Transfer kind=choice$' <<<"$output" >/dev/null || return
+  rg '^cdm\.event\.common\.CashTransfer  #' <<<"$output" >/dev/null || return
+  printf '%s\n' "$output"
+}
+expect_ok "one batch resolves Rune choices and enums as well as types" \
+  --stdout '^# resolved=cdm\.event\.common\.TransferStatusEnum kind=enum$' -- \
+  choice_and_enum_batch
+
+fake_bin="$work/fake-bin"
+mkdir -p "$fake_bin"
+printf '%s\n' '#!/usr/bin/env bash' 'exit 97' >"$fake_bin/unzip"
+chmod +x "$fake_bin/unzip"
+batch_without_extraction() {
+  PATH="$fake_bin:$PATH" \
+    "$cdm_source" --jar "$fixture_jar" type TradeState Transfer TransferStatusEnum
+}
+expect_ok "a multi-declaration type batch performs no filesystem extraction" \
+  --stdout '^# resolved=cdm\.event\.common\.TransferStatusEnum kind=enum$' -- \
+  batch_without_extraction
+
 expect_fail "type rejects an unknown declaration clearly" \
-  --stderr 'type not found: cdm\.event\.common\.Absent' -- \
+  --stderr 'declaration not found: cdm\.event\.common\.Absent' -- \
   "$cdm_source" --jar "$fixture_jar" type cdm.event.common.Absent
 
 expect_ok "show dumps a named Rosetta source" \

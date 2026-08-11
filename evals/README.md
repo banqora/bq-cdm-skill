@@ -11,6 +11,7 @@ only deterministic tests; this repository does not store model API keys or subsc
 - [Run the complete suite](#run-the-complete-suite)
 - [Run one evaluation layer](#run-one-evaluation-layer)
 - [Run implementation forward benchmarks](#run-implementation-forward-benchmarks)
+- [Validate implementation patterns](#validate-implementation-patterns)
 - [Interpret and promote results](#interpret-and-promote-results)
 - [Why live evals stay local](#why-live-evals-stay-local)
 
@@ -120,12 +121,13 @@ for human review.
 
 ## Run implementation forward benchmarks
 
-Ten implementation cases—the tokenisation classifier, locate matcher, repo settlement shaper,
+Twelve implementation cases—the tokenisation classifier, locate matcher, repo settlement shaper,
 CSA margin calculator, evergreen repo lifecycle engine, securities-lending month-end billing,
-UTI report-sequence validator, two tranche-expander contracts, and manufactured-payment reversal—
+UTI report-sequence validator, two tranche-expander contracts, manufactured-payment reversal,
+intraday repo interest, and repo fail/mini close-out—
 are preserved under
 [`evals/benchmarks`](benchmarks/README.md). Each package contains a model-facing `TASK.md`, a fixed
-public/hidden rubric, and its observed baseline. All ten use the shared minimal Java 21/CDM 7.0.0
+public/hidden rubric, and its observed baseline. All twelve use the shared minimal Java 21/CDM 7.0.0
 Gradle seed and the same checksummed binary/source fixtures as the quality suite.
 
 Validate the saved benchmark contract without calling a model:
@@ -139,6 +141,19 @@ agent writes an entire temporary project and implementations expose different ap
 types. Follow the isolation protocol in the benchmark README: copy only the seed and selected task
 into each fresh arm, keep the rubric and historical results outside the model workspace, expose the
 skill only to the treatment arm, and add evaluator-owned tests only after every agent has exited.
+
+## Validate implementation patterns
+
+The reusable pattern cards and their leakage-safe promotion contract are checked with:
+
+```bash
+evals/check-patterns
+```
+
+This deterministic check proves card structure, reviewed authority-link shape, mutation sensitivity,
+and sealed task/rubric/probe hashes. It does not prove model lift. Follow
+[`patterns/PROTOCOL.md`](patterns/PROTOCOL.md) for fresh skill/control runs, near-miss cases,
+correctness-first scoring, and the evidence required before promoting a card.
 
 ## Interpret and promote results
 

@@ -8,7 +8,7 @@ Usage:
   cdm-source [--jar <cdm-java.jar>] jar
   cdm-source [--jar <cdm-java.jar>] list [regex]
   cdm-source [--jar <cdm-java.jar>] search <regex>
-  cdm-source [--jar <cdm-java.jar>] type <fully.qualified.Type|Type>...
+  cdm-source [--jar <cdm-java.jar>] type <fully.qualified.Declaration|Declaration>...
   cdm-source [--jar <cdm-java.jar>] show <cdm/rosetta/file.rosetta>
 
 The JAR is selected in this order:
@@ -219,116 +219,121 @@ case "$command" in
       usage
       exit 1
     }
-    if [[ $# -gt 2 ]]; then
-      first=true
-      for requested_type in "${@:2}"; do
-        if [[ "$first" == false ]]; then
-          printf '\n# ---- next requested type ----\n'
-        fi
-        first=false
-        "$0" --jar "$jar" type "$requested_type"
-      done
-      exit 0
-    fi
-    requested_type="$2"
-    if [[ ! "$requested_type" =~ ^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$ ]]; then
-      echo "cdm-source: invalid type name: $requested_type" >&2
-      exit 1
-    fi
-    source_dir="$(mktemp -d "${TMPDIR:-/tmp}/cdm-source.XXXXXX")"
-    cleanup() {
-      [[ -n "${source_dir:-}" && -d "$source_dir" ]] && rm -rf -- "$source_dir"
-    }
-    trap cleanup EXIT
-    unzip -q "$jar" 'cdm/rosetta/*.rosetta' -d "$source_dir"
-    python3 - "$source_dir" "$requested_type" <<'PY'
+    requested_declarations=("${@:2}")
+    for requested_declaration in "${requested_declarations[@]}"; do
+      if [[ ! "$requested_declaration" =~ ^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$ ]]; then
+        echo "cdm-source: invalid declaration name: $requested_declaration" >&2
+        exit 1
+      fi
+    done
+    python3 - "$jar" "${requested_declarations[@]}" <<'PY'
 from __future__ import annotations
 
 import re
 import sys
+import zipfile
 from dataclasses import dataclass
-from pathlib import Path
 
 
 @dataclass(frozen=True)
 class Declaration:
+    kind: str
     namespace: str
     name: str
     base: str | None
     imports: tuple[str, ...]
-    path: Path
+    path: str
     line: int
     block: tuple[str, ...]
 
 
-root = Path(sys.argv[1])
-requested = sys.argv[2]
-files = sorted((root / "cdm" / "rosetta").glob("*.rosetta"))
+jar_path = sys.argv[1]
+requested_declarations = sys.argv[2:]
 declaration_re = re.compile(
-    r"^type\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s+extends\s+([A-Za-z_][A-Za-z0-9_]*))?\s*:"
+    r"^(type|choice|enum)\s+([A-Za-z_][A-Za-z0-9_]*)"
+    r"(?:\s+extends\s+([A-Za-z_][A-Za-z0-9_]*))?\s*:"
 )
 top_level_re = re.compile(r"^(?:type|enum|choice|func|qualification|report|rule)\s+")
 declarations: list[Declaration] = []
 
-for path in files:
-    lines = path.read_text(encoding="utf-8").splitlines()
-    namespace = ""
-    for line in lines:
-        match = re.match(r"^namespace\s+([A-Za-z_][A-Za-z0-9_.]*)\b", line)
-        if match:
-            namespace = match.group(1)
-            break
-    imports = tuple(
-        match.group(1)
-        for line in lines
-        if (match := re.match(r"^import\s+([A-Za-z_][A-Za-z0-9_.]*(?:\.\*)?)\s*$", line))
+with zipfile.ZipFile(jar_path) as archive:
+    source_names = sorted(
+        name
+        for name in archive.namelist()
+        if name.startswith("cdm/rosetta/") and name.endswith(".rosetta")
     )
-    for index, line in enumerate(lines):
-        match = declaration_re.match(line)
-        if not match:
-            continue
-        end = index + 1
-        while end < len(lines) and not top_level_re.match(lines[end]):
-            end += 1
-        while end > index + 1 and not lines[end - 1].strip():
-            end -= 1
-        declarations.append(
-            Declaration(
-                namespace,
-                match.group(1),
-                match.group(2),
-                imports,
-                path,
-                index + 1,
-                tuple(lines[index:end]),
+    for path in source_names:
+        lines = archive.read(path).decode("utf-8").splitlines()
+        namespace = ""
+        for line in lines:
+            match = re.match(r"^namespace\s+([A-Za-z_][A-Za-z0-9_.]*)\b", line)
+            if match:
+                namespace = match.group(1)
+                break
+        imports = tuple(
+            match.group(1)
+            for line in lines
+            if (
+                match := re.match(
+                    r"^import\s+([A-Za-z_][A-Za-z0-9_.]*(?:\.\*)?)\s*$", line
+                )
             )
         )
+        for index, line in enumerate(lines):
+            match = declaration_re.match(line)
+            if not match:
+                continue
+            end = index + 1
+            while end < len(lines) and not top_level_re.match(lines[end]):
+                end += 1
+            while end > index + 1 and not lines[end - 1].strip():
+                end -= 1
+            declarations.append(
+                Declaration(
+                    match.group(1),
+                    namespace,
+                    match.group(2),
+                    match.group(3),
+                    imports,
+                    path,
+                    index + 1,
+                    tuple(lines[index:end]),
+                )
+            )
 
 
 def qualified(declaration: Declaration) -> str:
     return f"{declaration.namespace}.{declaration.name}" if declaration.namespace else declaration.name
 
 
-if "." in requested:
-    requested_namespace, requested_name = requested.rsplit(".", 1)
-    matches = [
-        declaration
-        for declaration in declarations
-        if declaration.name == requested_name and declaration.namespace == requested_namespace
-    ]
-else:
-    requested_name = requested
-    matches = [declaration for declaration in declarations if declaration.name == requested_name]
+def resolve_requested(requested: str) -> Declaration:
+    if "." in requested:
+        requested_namespace, requested_name = requested.rsplit(".", 1)
+        matches = [
+            declaration
+            for declaration in declarations
+            if declaration.name == requested_name
+            and declaration.namespace == requested_namespace
+        ]
+    else:
+        matches = [
+            declaration for declaration in declarations if declaration.name == requested
+        ]
 
-if not matches:
-    raise SystemExit(f"cdm-source: type not found: {requested}")
-if len(matches) > 1:
-    options = "\n  ".join(sorted(qualified(declaration) for declaration in matches))
-    raise SystemExit(
-        f"cdm-source: type name is ambiguous; use a fully qualified name:\n  {options}"
-    )
+    if not matches:
+        raise SystemExit(f"cdm-source: declaration not found: {requested}")
+    if len(matches) > 1:
+        options = "\n  ".join(sorted(qualified(declaration) for declaration in matches))
+        raise SystemExit(
+            "cdm-source: declaration name is ambiguous; use a fully qualified name:"
+            f"\n  {options}"
+        )
+    return matches[0]
 
-target = matches[0]
+
+# Resolve the complete batch before printing, so an invalid later request cannot leave a
+# plausible-looking partial result on stdout.
+targets = [(requested, resolve_requested(requested)) for requested in requested_declarations]
 
 
 def resolve_base(declaration: Declaration) -> Declaration | None:
@@ -403,77 +408,108 @@ def condition_chain(declaration: Declaration) -> list[tuple[Declaration, tuple[s
 
 
 def print_declaration(label: str, declaration: Declaration) -> None:
-    relative = declaration.path.relative_to(root)
     print(f"## {label}: {qualified(declaration)}")
-    print(f"# source={relative}:{declaration.line}")
+    print(f"# source={declaration.path}:{declaration.line}")
     print("\n".join(declaration.block))
 
 
-print(f"# requested={requested}")
-print_declaration("declaration", target)
-seen = {qualified(target)}
-owners = [target]
-base = resolve_base(target)
-direct_base = base
-while base is not None and qualified(base) not in seen:
-    seen.add(qualified(base))
-    owners.append(base)
-    print()
-    print_declaration("inherited", base)
-    base = resolve_base(base)
-
-if direct_base is not None:
-    siblings = sorted(
-        (
-            candidate
-            for candidate in declarations
-            if candidate.base == direct_base.name and candidate.namespace == target.namespace
-        ),
-        key=lambda candidate: candidate.name,
-    )
-    if siblings:
+def print_target(requested: str, target: Declaration) -> None:
+    print(f"# requested={requested}")
+    print(f"# resolved={qualified(target)} kind={target.kind}")
+    print_declaration("declaration", target)
+    seen = {qualified(target)}
+    owners = [target]
+    base = resolve_base(target)
+    direct_base = base
+    while base is not None and qualified(base) not in seen:
+        seen.add(qualified(base))
+        owners.append(base)
         print()
-        print(f"## sibling types extending {qualified(direct_base)}")
-        for sibling in siblings:
-            relative = sibling.path.relative_to(root)
-            print(f"{qualified(sibling)}  # {relative}:{sibling.line}")
-            print(sibling.block[0])
+        print_declaration("inherited", base)
+        base = resolve_base(base)
 
-conditioned_fields: list[
-    tuple[Declaration, str, Declaration, list[tuple[Declaration, tuple[str, ...]]]]
-] = []
-seen_fields: set[tuple[str, str, str]] = set()
-for owner in owners:
-    for line in owner.block:
-        field_match = field_re.match(line)
-        if not field_match:
-            continue
-        field_name, field_type_name = field_match.groups()
-        child = resolve_field_type(owner, field_type_name)
-        if child is None:
-            continue
-        child_conditions = condition_chain(child)
-        key = (qualified(owner), field_name, qualified(child))
-        if child_conditions and key not in seen_fields:
-            seen_fields.add(key)
-            conditioned_fields.append((owner, field_name, child, child_conditions))
+    if direct_base is not None:
+        siblings = sorted(
+            (
+                candidate
+                for candidate in declarations
+                if candidate.base == direct_base.name
+                and candidate.namespace == target.namespace
+            ),
+            key=lambda candidate: candidate.name,
+        )
+        if siblings:
+            print()
+            print(f"## sibling types extending {qualified(direct_base)}")
+            for sibling in siblings:
+                print(
+                    f"{qualified(sibling)}  # {sibling.path}:{sibling.line}"
+                )
+                print(sibling.block[0])
 
-if conditioned_fields:
-    print()
-    print("## conditioned field types (parent validation does not recurse)")
-    for owner, field_name, child, child_conditions in conditioned_fields:
-        print(f"{qualified(owner)}.{field_name} -> {qualified(child)}")
-        for condition_owner, conditions in child_conditions:
-            relative = condition_owner.path.relative_to(root)
-            joined = ", ".join(conditions)
-            print(
-                f"  {qualified(condition_owner)} conditions: {joined}"
-                f"  # {relative}:{condition_owner.line}"
-            )
+    if target.kind == "choice":
+        alternatives: dict[str, Declaration] = {}
+        for line in target.block[1:]:
+            alternative_match = re.match(r"^\s+([A-Z][A-Za-z0-9_]*)\b", line)
+            if not alternative_match:
+                continue
+            alternative = resolve_field_type(target, alternative_match.group(1))
+            if alternative is not None:
+                alternatives[qualified(alternative)] = alternative
+        if alternatives:
+            print()
+            print("## choice alternatives")
+            for alternative in sorted(alternatives.values(), key=qualified):
+                print(
+                    f"{qualified(alternative)}  # {alternative.path}:{alternative.line}"
+                )
+
+    conditioned_fields: list[
+        tuple[
+            Declaration,
+            str,
+            Declaration,
+            list[tuple[Declaration, tuple[str, ...]]],
+        ]
+    ] = []
+    seen_fields: set[tuple[str, str, str]] = set()
+    for owner in owners:
+        for line in owner.block:
+            field_match = field_re.match(line)
+            if not field_match:
+                continue
+            field_name, field_type_name = field_match.groups()
+            child = resolve_field_type(owner, field_type_name)
+            if child is None:
+                continue
+            child_conditions = condition_chain(child)
+            key = (qualified(owner), field_name, qualified(child))
+            if child_conditions and key not in seen_fields:
+                seen_fields.add(key)
+                conditioned_fields.append((owner, field_name, child, child_conditions))
+
+    if conditioned_fields:
+        print()
+        print("## conditioned field types (parent validation does not recurse)")
+        for owner, field_name, child, child_conditions in conditioned_fields:
+            print(f"{qualified(owner)}.{field_name} -> {qualified(child)}")
+            for condition_owner, conditions in child_conditions:
+                joined = ", ".join(conditions)
+                print(
+                    f"  {qualified(condition_owner)} conditions: {joined}"
+                    f"  # {condition_owner.path}:{condition_owner.line}"
+                )
+
+
+for index, (requested, target) in enumerate(targets):
+    if index:
+        print("\n# ---- next requested declaration ----")
+    print_target(requested, target)
 
 print()
-print("# next=make at most one combined cdm-java-api query, then compile a populated slice")
+print("# next=use one cdm-inspect batch, then compile a populated slice")
 PY
+    printf '# artifact-version=%s\n# artifact-jar=%s\n' "$cdm_version" "$jar"
     ;;
 
   show)
