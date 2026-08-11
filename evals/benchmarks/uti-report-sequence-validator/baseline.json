@@ -1,0 +1,195 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "uti-report-sequence-validator",
+  "recorded_at": "2026-08-11",
+  "fixture_version": "7.0.0",
+  "note": "Four isolated single-session arms used local Claude Max or ChatGPT subscription authentication with all API credential overrides removed. Opus control used Claude Code 2.1.226; Opus treatment and the independent review used 2.1.227; both Codex arms used CLI 0.147.0. Every arm received the same checksummed task and CDM 7.0.0 artifacts, controls had no skill directory, runs were sequential, and the identical 14-test evaluator was copied only after every model process exited. All four passed every rubric criterion and evaluator test. A fresh claude-fable-5 review independently rebuilt the evaluator, inspected all sources and traces, and ran six post-hoc probes. It found Codex treatment slightly better than control through exhaustive switches and stronger tests, although 34% slower; Opus treatment was 9% faster and added precise policy-layer documentation plus mutation checks, but was only equal overall because its public ValidationResult record failed to copy a directly supplied mutable list. The run also showed that Opus treatment unnecessarily loaded the DRR guide. The application-owned state-machine routing, public-constructor ownership guard, and generated-API helper added or tightened after these runs are not credited to them. A separate adaptive Sonnet 5 regression below tests the post-revision skill; it is not folded into the original four-arm estimate.",
+  "independent_review": {
+    "reviewer": "claude-fable-5",
+    "claude_code_version": "2.1.227",
+    "recorded_at": "2026-08-11",
+    "wall_seconds": 589,
+    "fresh_suite_rerun": "all four frozen evaluator suites pass 14/14",
+    "reviewed_scores": {
+      "opus-5-with-skill": "100/100 rubric, 8/10 engineering judgment",
+      "opus-5-control": "100/100 rubric, 9/10 engineering judgment",
+      "codex-with-skill": "100/100 rubric, 9/10 engineering judgment",
+      "codex-control": "100/100 rubric, 8/10 engineering judgment"
+    },
+    "posthoc_findings": [
+      "Opus treatment's public ValidationResult record aliases a mutable decisions list when constructed directly; the other three records enforce the copy at their constructor boundary.",
+      "All four accept an absent optional AssignedIdentifier version and reject the expanded malformed-UTI matrix without state change.",
+      "All four give UTI_MISMATCH precedence over action gating after a UTI has been anchored.",
+      "All four preserve a null anchor through an all-rejected sequence and allow a later valid NEW after a rejected leading report.",
+      "Codex treatment uses exhaustive switch arms; Opus control has the deepest authored edge matrix; Opus treatment uniquely mutation-tested two critical policy branches."
+    ],
+    "leakage_verdict": "clean on trace-verifiable dimensions",
+    "leakage_limitations": [
+      "Codex JSONL does not expose a model identifier, so gpt-5.6-sol comes from the recorded invocation.",
+      "The exact model-facing prompts and subscription credential removal are harness-level claims, corroborated by prompt files and observed behavior but not echoed in the event streams.",
+      "The recorded Opus control and treatment used adjacent Claude Code patch versions; this limits strict timing attribution even though the task, skill snapshot, artifacts, and harness shape were fixed."
+    ]
+  },
+  "post_revision_regression": {
+    "classification": "adaptive paired regression; not an independent forward test",
+    "recorded_at": "2026-08-11",
+    "vendor": "claude",
+    "model": "claude-sonnet-5",
+    "claude_code_version": "2.1.227",
+    "effort": "high",
+    "authentication": "local Claude Max subscription; API credential overrides removed",
+    "task_sha256": "5dba26c343f15b3138a5bce8b03395bf8c2e181d471a4f987d004c19c817c1f9",
+    "skill_snapshot_sha256": "14250d9fc79eca8eaa549b6bd14b87f2bea86e270664b4964766f20d2b90e005",
+    "skill_snapshot_hash_method": "SHA-256 of sorted relative-path sha256sum lines for every file under skills/cdm-dev",
+    "control": {
+      "skill": false,
+      "authored_tests": {"passed": 17, "total": 17},
+      "evaluator_probes": "14/14 pass",
+      "combined_suite": "31/31 pass",
+      "posthoc_exactly_one_non_null_identifier": "fail",
+      "posthoc_direct_result_constructor_copy": "fail",
+      "metrics": {
+        "sessions": 1,
+        "turns": 30,
+        "tool_calls": 29,
+        "shell_commands": 19,
+        "tool_calls_before_first_production_write": 23,
+        "wall_seconds": 191
+      }
+    },
+    "updated_skill": {
+      "skill": true,
+      "authored_tests": {"passed": 15, "total": 15},
+      "evaluator_probes": "14/14 pass",
+      "combined_suite": "29/29 pass",
+      "posthoc_exactly_one_non_null_identifier": "pass",
+      "posthoc_direct_result_constructor_copy": "fail",
+      "references_loaded": 0,
+      "metrics": {
+        "sessions": 1,
+        "turns": 16,
+        "tool_calls": 15,
+        "shell_commands": 9,
+        "tool_calls_before_first_production_write": 10,
+        "wall_seconds": 150
+      }
+    },
+    "comparison": [
+      "The updated skill arm was 21% faster, used 48% fewer tool calls and 53% fewer shell commands, and reached its first production write after 10 rather than 23 tool calls.",
+      "The API helper replaced full generated-source extraction and repeated dependency/JAR searches with bounded generated-signature queries; the state-machine fast path loaded no broad reference guide.",
+      "Both arms passed the frozen evaluator, while the skill arm alone honored the literal exactly-one-non-null AssignedIdentifier rule in a post-hoc proxy-backed CDM boundary probe.",
+      "Both arms still allowed a mutable decisions list supplied directly to the public ValidationResult record; tightening prose did not remove the defect, so future evaluation should use an executable constructor-boundary probe rather than relying on another task-specific instruction."
+    ],
+    "discarded_diagnostic": "An earlier treatment snapshot is excluded because the documented CDM_JAVA_JAR-only helper path hit an empty-array/set-u incompatibility on macOS Bash 3.2. The helper was fixed, an environment-only regression test was added, and the recorded treatment was rerun from a fresh isolated seed."
+  },
+  "runs": [
+    {
+      "arm": "opus-5-with-skill",
+      "vendor": "claude",
+      "model": "claude-opus-5",
+      "skill": true,
+      "authored_tests": {"passed": 16, "total": 16},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "100/100",
+        "engineering_judgment_score": "8/10",
+        "evaluator_probes": "14/14 pass",
+        "combined_suite": "30/30 pass",
+        "terminated_cancelled_distinction": "pass",
+        "typed_uti_and_rejection_continuity": "pass",
+        "direct_result_constructor_copy": "fail"
+      },
+      "metrics": {
+        "sessions": 1,
+        "effort": "high",
+        "turns": 25,
+        "tool_calls": 24,
+        "shell_commands": 17,
+        "tool_calls_before_first_production_write": 14,
+        "wall_seconds": 247
+      }
+    },
+    {
+      "arm": "opus-5-control",
+      "vendor": "claude",
+      "model": "claude-opus-5",
+      "skill": false,
+      "authored_tests": {"passed": 26, "total": 26},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "100/100",
+        "engineering_judgment_score": "9/10",
+        "evaluator_probes": "14/14 pass",
+        "combined_suite": "40/40 pass",
+        "terminated_cancelled_distinction": "pass",
+        "typed_uti_and_rejection_continuity": "pass",
+        "direct_result_constructor_copy": "pass"
+      },
+      "metrics": {
+        "sessions": 1,
+        "effort": "high",
+        "turns": 20,
+        "tool_calls": 19,
+        "shell_commands": 16,
+        "tool_calls_before_first_production_write": 12,
+        "wall_seconds": 272
+      }
+    },
+    {
+      "arm": "codex-with-skill",
+      "vendor": "codex",
+      "model": "gpt-5.6-sol",
+      "skill": true,
+      "authored_tests": {"passed": 13, "total": 13},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "100/100",
+        "engineering_judgment_score": "9/10",
+        "evaluator_probes": "14/14 pass",
+        "combined_suite": "27/27 pass",
+        "terminated_cancelled_distinction": "pass",
+        "typed_uti_and_rejection_continuity": "pass",
+        "direct_result_constructor_copy": "pass"
+      },
+      "metrics": {
+        "top_level_turns": 1,
+        "reasoning_effort": "max",
+        "completed_items": 18,
+        "commands": 10,
+        "file_changes": 2,
+        "commands_before_first_production_write": 6,
+        "wall_seconds": 380
+      }
+    },
+    {
+      "arm": "codex-control",
+      "vendor": "codex",
+      "model": "gpt-5.6-sol",
+      "skill": false,
+      "authored_tests": {"passed": 10, "total": 10},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "100/100",
+        "engineering_judgment_score": "8/10",
+        "evaluator_probes": "14/14 pass",
+        "combined_suite": "24/24 pass",
+        "terminated_cancelled_distinction": "pass",
+        "typed_uti_and_rejection_continuity": "pass",
+        "direct_result_constructor_copy": "pass"
+      },
+      "metrics": {
+        "top_level_turns": 1,
+        "reasoning_effort": "max",
+        "completed_items": 18,
+        "commands": 11,
+        "file_changes": 2,
+        "commands_before_first_production_write": 7,
+        "wall_seconds": 284
+      }
+    }
+  ]
+}

@@ -29,8 +29,8 @@ predicate is reachable.
 
 ## Query the exact dependency
 
-Released `cdm-java` JARs embed their `.rosetta` inputs. Read those rather than cloning a
-possibly different CDM branch or copying model prose into the skill.
+Released binary `cdm-java` JARs embed their `.rosetta` inputs. Read those rather than cloning a
+possibly different CDM branch or passing the generated-Java `-sources.jar`.
 
 ```bash
 CDM_SOURCE=/path/to/cdm-dev/scripts/cdm-source
@@ -97,9 +97,21 @@ two roots may reuse a local key, while the same object may have different local 
 
 ## Inspect generated APIs and wire metadata
 
-Search existing compiled usage first. When necessary, inspect the dependency directly with
-`jar`, `javap`, an IDE, or a small compile test. Generated APIs can change between releases;
-do not recall a builder or function signature from another version.
+Search existing compiled usage first. When necessary, batch exact types through the portable
+helper, which prints each public API and matching generated builder in one `javap` pass:
+
+```bash
+CDM_API=/path/to/cdm-dev/scripts/cdm-java-api
+"$CDM_API" --jar path/to/cdm-java.jar \
+  cdm.event.common.TradeState cdm.event.common.Trade
+```
+
+Generated CDM types and `com.rosetta.model.metafields.*` are in the selected binary. A
+`com.rosetta.model.lib.*` support type belongs to the project's resolved Rune runtime; pass that
+existing JAR with `--classpath` rather than scanning caches or guessing a version. An IDE, the
+generated source JAR, or a small compile test remains an alternative when source detail matters.
+Generated APIs can change between releases; do not recall a builder or function signature from
+another version.
 
 Which annotations the generated code carries depends on the release; enumerate them from the
 active JAR instead of assuming. Older releases (4.x) generate only type-level annotations such

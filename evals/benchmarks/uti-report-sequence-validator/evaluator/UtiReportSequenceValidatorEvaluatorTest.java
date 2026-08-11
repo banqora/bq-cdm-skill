@@ -131,13 +131,14 @@ final class UtiReportSequenceValidatorEvaluatorTest {
     @Test
     void positionComponentUsesTheExplicitFocusedAlivePolicy() {
         ValidationResult result = ValidateReportSequence(reports(uti(UTI_A, 1),
-                NEW, POSITION_COMPONENT, TERMINATE, POSITION_COMPONENT));
+                NEW, POSITION_COMPONENT, MARGIN_UPDATE, REVIVE, POSITION_COMPONENT));
 
         assertSequence(result,
                 accepted(ALIVE),
-                accepted(ALIVE),
                 accepted(TERMINATED),
-                rejected(TERMINATED, ACTION_NOT_ALLOWED_IN_STATE));
+                rejected(TERMINATED, ACTION_NOT_ALLOWED_IN_STATE),
+                accepted(ALIVE),
+                accepted(TERMINATED));
 
         ValidationResult first = ValidateReportSequence(List.of(
                 new Report(uti(UTI_A, 1), POSITION_COMPONENT)));

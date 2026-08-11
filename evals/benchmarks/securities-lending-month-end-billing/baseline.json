@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "securities-lending-month-end-billing",
+  "recorded_at": "2026-08-11",
+  "fixture_version": "7.0.0",
+  "note": "Four isolated single-session arms used Claude Code 2.1.226 or Codex CLI 0.147.0 with local Claude Max or ChatGPT subscription authentication and all API credential overrides removed. Every arm received the same checksummed task and CDM 7.0.0 artifacts; controls had no skill directory, runs were sequential, and the identical 14-test evaluator was copied only after every model process exited. All four passed the frozen evaluator. A fresh claude-fable-5 review on Claude Code 2.1.227 independently rebuilt those tests, inspected all production sources and traces, and ran post-hoc probes. It scored Opus treatment 100 versus control 99: the treatment alone rejected a payout choice with both AssetPayout and InterestRatePayout branches populated and authored 28 tests without a correction cycle. It scored both Codex arms 99; treatment added three useful fail-closed guards and finished 27% faster with 40% fewer commands, but authored one fewer test. The review found no leakage. Both treatment traces still spent repeated commands locating generated Java and Rune runtime APIs, so the generated-API helper and binary-versus-sources-JAR clarification added after these runs are not credited to them.",
+  "independent_review": {
+    "reviewer": "claude-fable-5",
+    "claude_code_version": "2.1.227",
+    "recorded_at": "2026-08-11",
+    "wall_seconds": 623,
+    "fresh_suite_rerun": "all four frozen evaluator suites pass 14/14",
+    "reviewed_scores": {
+      "opus-5-with-skill": "100/100 rubric, 96/100 engineering judgment",
+      "opus-5-control": "99/100 rubric, 93/100 engineering judgment",
+      "codex-with-skill": "99/100 rubric, 94/100 engineering judgment",
+      "codex-control": "99/100 rubric, 91/100 engineering judgment"
+    },
+    "posthoc_findings": [
+      "All four aggregate partial returns sharing one settlement date correctly.",
+      "Only Opus treatment rejects a Payout with both assetPayout and interestRatePayout branches populated.",
+      "Both Opus arms apply a pre-open re-rate while both Codex arms silently ignore it; the frozen contract did not specify that case.",
+      "Codex treatment additionally rejects a pre-open settled return, a mixed-unit Money value, and a dual adjustable/relative date choice.",
+      "All four preserve strict T-1 marks, signed rebate accrual, exact rounding, currency-isolated netting, ordering, and immutable output lists."
+    ],
+    "leakage_verdict": "clean on trace-verifiable dimensions",
+    "leakage_limitations": [
+      "Codex JSONL does not expose a model identifier, so gpt-5.6-sol comes from the recorded invocation.",
+      "Credential removal and subscription selection come from the recorded harness invocation, except where a trace explicitly printed an empty filtered environment.",
+      "Codex isolation is supported by complete command/read audits and active startup denials; its inner execution mode itself was danger-full-access for Gradle compatibility."
+    ]
+  },
+  "runs": [
+    {
+      "arm": "opus-5-with-skill",
+      "vendor": "claude",
+      "model": "claude-opus-5",
+      "skill": true,
+      "authored_tests": {"passed": 28, "total": 28},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "100/100",
+        "engineering_judgment_score": "96/100",
+        "evaluator_probes": "14/14 pass",
+        "combined_suite": "42/42 pass",
+        "dual_payout_choice_rejected": "pass",
+        "strict_t1_and_fencepost": "pass",
+        "signed_netting_and_currency_split": "pass"
+      },
+      "metrics": {
+        "sessions": 1,
+        "effort": "high",
+        "turns": 29,
+        "tool_calls": 28,
+        "shell_commands": 22,
+        "tool_calls_before_first_production_write": 20,
+        "wall_seconds": 591
+      }
+    },
+    {
+      "arm": "opus-5-control",
+      "vendor": "claude",
+      "model": "claude-opus-5",
+      "skill": false,
+      "authored_tests": {"passed": 12, "total": 12},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "99/100",
+        "engineering_judgment_score": "93/100",
+        "evaluator_probes": "14/14 pass",
+        "combined_suite": "26/26 pass",
+        "dual_payout_choice_rejected": "fail",
+        "strict_t1_and_fencepost": "pass",
+        "signed_netting_and_currency_split": "pass"
+      },
+      "metrics": {
+        "sessions": 1,
+        "effort": "high",
+        "turns": 34,
+        "tool_calls": 33,
+        "shell_commands": 27,
+        "tool_calls_before_first_production_write": 20,
+        "wall_seconds": 601
+      }
+    },
+    {
+      "arm": "codex-with-skill",
+      "vendor": "codex",
+      "model": "gpt-5.6-sol",
+      "skill": true,
+      "authored_tests": {"passed": 6, "total": 6},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "99/100",
+        "engineering_judgment_score": "94/100",
+        "evaluator_probes": "14/14 pass",
+        "combined_suite": "20/20 pass",
+        "dual_payout_choice_rejected": "fail",
+        "strict_t1_and_fencepost": "pass",
+        "signed_netting_and_currency_split": "pass"
+      },
+      "metrics": {
+        "top_level_turns": 1,
+        "reasoning_effort": "max",
+        "completed_items": 30,
+        "commands": 23,
+        "file_changes": 2,
+        "commands_before_first_production_write": 16,
+        "wall_seconds": 608
+      }
+    },
+    {
+      "arm": "codex-control",
+      "vendor": "codex",
+      "model": "gpt-5.6-sol",
+      "skill": false,
+      "authored_tests": {"passed": 7, "total": 7},
+      "outcomes": {
+        "required_cases": "pass",
+        "fatal_failure": "none",
+        "reviewed_rubric_score": "99/100",
+        "engineering_judgment_score": "91/100",
+        "evaluator_probes": "14/14 pass",
+        "combined_suite": "21/21 pass",
+        "dual_payout_choice_rejected": "fail",
+        "strict_t1_and_fencepost": "pass",
+        "signed_netting_and_currency_split": "pass"
+      },
+      "metrics": {
+        "top_level_turns": 1,
+        "reasoning_effort": "max",
+        "completed_items": 53,
+        "commands": 39,
+        "file_changes": 5,
+        "commands_before_first_production_write": 28,
+        "wall_seconds": 838
+      }
+    }
+  ]
+}

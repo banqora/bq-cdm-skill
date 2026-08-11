@@ -19,6 +19,12 @@ expect_ok "static gate passes on this repository" \
   --stdout 'static contract passed' -- \
   "$check_skill" --static
 
+copy="$(fresh_copy missing-api-helper)"
+rm -- "$copy/skills/cdm-dev/scripts/cdm-java-api"
+expect_fail "static gate requires the generated Java API helper" \
+  --stderr "scripts/cdm-java-api is missing or not executable" -- \
+  "$copy/scripts/check-skill" --static
+
 copy="$(fresh_copy missing-ui-metadata)"
 rm -- "$copy/skills/cdm-dev/agents/openai.yaml"
 expect_fail "static gate requires agents/openai.yaml" \
@@ -89,7 +95,16 @@ expect_fail "static gate rejects unrequested UI fields" \
   "$copy/scripts/check-skill" --static
 
 copy="$(fresh_copy broken-link)"
-printf '\nSee [missing](references/absent.md).\n' >>"$copy/skills/cdm-dev/SKILL.md"
+python3 - "$copy/skills/cdm-dev/SKILL.md" <<'PY'
+import sys
+from pathlib import Path
+
+skill = Path(sys.argv[1])
+skill.write_text(skill.read_text().replace(
+    "[Getting started with CDM](references/onboarding.md)",
+    "[Getting started with CDM](references/absent.md)",
+    1))
+PY
 expect_fail "static gate catches a broken reference link" \
   --stderr "missing Markdown references" -- \
   "$copy/scripts/check-skill" --static

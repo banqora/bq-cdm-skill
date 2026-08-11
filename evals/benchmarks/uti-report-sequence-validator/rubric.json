@@ -77,7 +77,7 @@
       "checks": [
         "VALUATION and MARGIN_UPDATE are accepted only while ALIVE.",
         "TERMINATE is accepted only while ALIVE.",
-        "POSITION_COMPONENT is accepted only while ALIVE and otherwise rejected without changing state; this is the benchmark's explicit focused policy."
+        "POSITION_COMPONENT is accepted only while ALIVE and moves it to TERMINATED; otherwise it is rejected without changing state. This is the benchmark's explicit focused policy."
       ]
     },
     {

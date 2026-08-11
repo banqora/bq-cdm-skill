@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat >&2 <<'USAGE'
+Usage:
+  cdm-java-api [--jar <cdm-java.jar>] [--classpath <path>] <fully.qualified.Type>...
+
+Print the public generated Java API for each requested type. When the selected cdm-java JAR
+contains a matching nested <Type>$<Type>Builder class, print that builder in the same javap pass.
+
+The cdm-java JAR is selected by the adjacent cdm-source helper. Repeat --classpath to add
+project-resolved runtime dependencies, or set CDM_JAVA_CLASSPATH. The helper never downloads or
+guesses a dependency version.
+USAGE
+}
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source_helper="$script_dir/cdm-source"
+jar_args=()
+extra_classpath="${CDM_JAVA_CLASSPATH:-}"
+requested_types=()
+
+append_classpath() {
+  local entry="$1"
+  [[ -n "$entry" ]] || {
+    echo "cdm-java-api: --classpath needs a non-empty path" >&2
+    exit 1
+  }
+  if [[ -n "$extra_classpath" ]]; then
+    extra_classpath+=":$entry"
+  else
+    extra_classpath="$entry"
+  fi
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --jar)
+      [[ $# -ge 2 ]] || {
+        echo "cdm-java-api: --jar needs a path" >&2
+        exit 1
+      }
+      jar_args=(--jar "$2")
+      shift 2
+      ;;
+    --classpath)
+      [[ $# -ge 2 ]] || {
+        echo "cdm-java-api: --classpath needs a path" >&2
+        exit 1
+      }
+      append_classpath "$2"
+      shift 2
+      ;;
+    -h | --help | help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      requested_types+=("$@")
+      break
+      ;;
+    -*)
+      echo "cdm-java-api: unknown option '$1'" >&2
+      usage
+      exit 1
+      ;;
+    *)
+      requested_types+=("$1")
+      shift
+      ;;
+  esac
+done
+
+[[ ${#requested_types[@]} -gt 0 ]] || {
+  echo "cdm-java-api: provide at least one fully qualified Java type" >&2
+  usage
+  exit 1
+}
+
+for required_tool in javap zipinfo rg; do
+  command -v "$required_tool" >/dev/null || {
+    echo "cdm-java-api: required command is not installed: $required_tool" >&2
+    exit 1
+  }
+done
+
+if [[ ${#jar_args[@]} -gt 0 ]]; then
+  jar="$("$source_helper" "${jar_args[@]}" jar)"
+else
+  # Bash 3.2 treats an empty array expansion as unbound under `set -u`.
+  jar="$("$source_helper" jar)"
+fi
+jar_entries="$(zipinfo -1 "$jar")"
+targets=()
+
+add_target() {
+  local candidate="$1"
+  local existing
+  for existing in "${targets[@]:-}"; do
+    [[ "$existing" == "$candidate" ]] && return
+  done
+  targets+=("$candidate")
+}
+
+for requested_type in "${requested_types[@]}"; do
+  if [[ ! "$requested_type" =~ ^[A-Za-z_$][A-Za-z0-9_$]*(\.[A-Za-z_$][A-Za-z0-9_$]*)+$ ]]; then
+    echo "cdm-java-api: invalid fully qualified Java type: $requested_type" >&2
+    exit 1
+  fi
+  add_target "$requested_type"
+
+  if [[ "$requested_type" != *'$'* ]]; then
+    simple_name="${requested_type##*.}"
+    builder_type="${requested_type}\$${simple_name}Builder"
+    builder_entry="${builder_type//.//}.class"
+    if rg -Fx -- "$builder_entry" <<<"$jar_entries" >/dev/null; then
+      add_target "$builder_type"
+    fi
+  fi
+done
+
+classpath="$jar"
+[[ -z "$extra_classpath" ]] || classpath+=":$extra_classpath"
+
+if ! api="$(javap -public -classpath "$classpath" "${targets[@]}" 2>&1)"; then
+  printf '%s\n' "$api" >&2
+  if rg -q 'class not found: com\.rosetta\.model\.lib\.' <<<"$api"; then
+    echo "cdm-java-api: com.rosetta.model.lib runtime support types are not in cdm-java;" >&2
+    echo "cdm-java-api: add the project's resolved rune-runtime JAR with --classpath" >&2
+  else
+    echo "cdm-java-api: add missing project-resolved dependencies with --classpath; do not guess versions" >&2
+  fi
+  exit 1
+fi
+
+printf '%s\n' "$api"

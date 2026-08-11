@@ -47,6 +47,12 @@ expect_fail "a JAR without embedded Rosetta sources is rejected" \
   --stderr "contains no embedded cdm/rosetta sources" -- \
   "$cdm_source" --jar "$no_rosetta_jar" version
 
+sources_named_jar="$work/cdm-java-9.9.9-sources.jar"
+cp "$fixture_jar" "$sources_named_jar"
+expect_fail "an explicit generated-Java sources JAR gets a binary-JAR correction" \
+  --stderr "pass the binary cdm-java JAR" -- \
+  "$cdm_source" --jar "$sources_named_jar" version
+
 expect_fail "a missing --jar path is rejected" \
   --stderr "JAR does not exist" -- \
   "$cdm_source" --jar "$work/absent.jar" version

@@ -11,6 +11,8 @@ these cases require an agent to write and test Java code.
 - [Repo settlement shaping](repo-settlement-shaping/)
 - [CSA margin-call calculator](csa-margin-call-calculator/)
 - [Evergreen repo lifecycle engine](evergreen-repo-lifecycle/)
+- [Securities-lending month-end billing](securities-lending-month-end-billing/)
+- [UTI report-sequence validator](uti-report-sequence-validator/)
 
 ## Contents
 
@@ -19,7 +21,7 @@ these cases require an agent to write and test Java code.
 - `<benchmark>/TASK.md`: the only benchmark-specific file shown to the implementation agent.
 - `<benchmark>/rubric.json`: fixed public and hidden evaluator criteria.
 - `<benchmark>/evaluator/`: evaluator-owned tests copied in only after an arm is sealed, when saved.
-- `<benchmark>/baseline.json`: observed pre-revision runs, including model/skill arms and effort.
+- `<benchmark>/baseline.json`: observed model/skill runs, effort, reviews, and any labelled post-revision regression.
 
 ## Isolation protocol
 

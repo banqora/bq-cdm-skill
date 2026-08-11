@@ -138,6 +138,14 @@ else
   jar="$(discover_jar)"
 fi
 
+case "$(basename -- "$jar")" in
+  cdm-java-*-sources.jar)
+    echo "cdm-source: pass the binary cdm-java JAR, which embeds the Rune .rosetta sources" >&2
+    echo "cdm-source: the -sources.jar contains generated Java source; use cdm-java-api for signatures" >&2
+    exit 1
+    ;;
+esac
+
 if ! jar_entries="$(zipinfo -1 "$jar" 2>/dev/null)"; then
   echo "cdm-source: not a readable JAR/ZIP: $jar" >&2
   exit 1

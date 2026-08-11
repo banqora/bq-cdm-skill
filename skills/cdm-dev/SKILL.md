@@ -34,16 +34,17 @@ If CDM is not installed, its distribution is unclear, or a language must be sele
    builder, typed CDM object, serialization, validation/functions, and downstream storage or
    API behavior. Name any project-specific stages instead of treating them as CDM.
 3. Query version-matched `.rosetta` source with `scripts/cdm-source` resolved from this `SKILL.md`;
-   a matching `cdm-java` JAR can be only the source container. Batch questions, open owning
-   declarations, and use [Rosetta and generated code](references/rosetta.md) only for remaining
-   declaration, generated-API, or runtime ambiguity. An exact caller-supplied path is a confirmation
-   task; do not survey neighboring types.
+   point it at the binary `cdm-java` JAR, which embeds Rune source, not the generated-Java
+   `-sources.jar`. Batch questions and open owning declarations. For Java getter and builder
+   signatures, batch types through `scripts/cdm-java-api`; add the project's resolved
+   `rune-runtime` JAR only for `com.rosetta.model.lib.*` support types. Use [Rosetta and generated
+   code](references/rosetta.md) only for remaining ambiguity. An exact caller-supplied path is a
+   confirmation task; do not survey neighboring types.
 4. Build or compile the smallest typed vertical slice early: exercise at least one production
    getter or builder and the first real branch. Compiling empty directories, records, or signatures
    alone is not evidence. Let errors identify API details that still need inspection.
-5. Add or tighten the smallest test that proves the requested behavior. Assert that meaningful
-   content survived, the changed economic leaf is correct, and a close negative case does not
-   pass accidentally.
+5. Add the smallest test that proves meaningful content, the changed economic leaf, and a close
+   negative case. When fault detection is uncertain, make one reversible mutation and prove it fails.
 6. Change the narrowest owning layer. Keep source-system conversions in the application,
    model semantics in generated CDM code, and explicit business guards labelled as application
    policy.
@@ -55,11 +56,12 @@ contract, and owner. Stop when each claim has one version-matched source and the
 test confirms it. Escalate from typed construction to a rule/function probe or full runtime only when
 the requested behavior depends on it; never make a partial fixture fully qualify as ceremony.
 
-For a typed application-owned calculation with resolved values, use one combined declaration/builder
-query, one real vertical slice, then its test. A product name alone does not require its guide when
-exact paths and rules are supplied. Inspect only members the function reads or rebuilds. To prove a
-single-leaf rebuild, assert untouched neighboring fields or rewind the leaf and compare the whole
-object with the input. Use [Day-to-day workflows](references/workflows.md) only for broader routes.
+For a typed application-owned calculation or supplied state machine, use one combined
+declaration/builder query, one real vertical slice, then its test. A product, lifecycle, or reporting
+label alone does not require its domain, workflow, or DRR guide when the supplied contract owns the
+policy and does not execute or emit those artefacts. Inspect only members the function reads or
+rebuilds. For a single-leaf rebuild, assert untouched neighbors or rewind the leaf and compare the
+whole object. Use [Day-to-day workflows](references/workflows.md) only for broader routes.
 
 ## Load only what the task needs
 
@@ -93,11 +95,12 @@ object with the input. Use [Day-to-day workflows](references/workflows.md) only 
 ## Guard against plausible wrong answers
 
 - A valid document can still be economically wrong. Assert units, conventions, qualification,
-  the exact economic leaf, and any caller-visible signature named by the task; aliases are additive.
+  the exact economic leaf, and named caller-visible contracts. Copy mutable collections in every public
+  constructor or record; test direct construction by mutating the caller's list and returned view.
 - A JSON tree can contain a field that the selected mapper silently drops. Inspect the typed
   object and canonical reserialization before trusting validation or function output.
-- Choices and containment can have multiple economic routes. Before claiming absence, enumerate
-  applicable branches and root paths through payouts, collateral, nested products, and trade lots.
+- Choices and containment can have multiple economic routes. Enumerate applicable root paths and
+  branches before claiming absence; enforce required one-of exclusivity on accepted choices.
 - A declared metadata reference is not absent merely because it did not resolve. When absence
   enables a default, general, or permissive branch, detect declaration presence first and fail
   closed on resolution failure. Resolve each reference inside its owning root, then compare the

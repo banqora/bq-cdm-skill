@@ -5,7 +5,7 @@ Rune source, released language distributions, generated APIs, and the Rune runti
 
 The skill is deliberately application-neutral. It discovers the active project's structure,
 uses that project's tests and build commands, and reads model truth from version-matched Rune
-source. The included helper can use the corresponding `cdm-java` JAR as a source container;
+source. The included helper uses the corresponding binary `cdm-java` JAR as a Rune source container;
 that does not make Java part of a Python, schema, or other application architecture. The skill
 does not require a particular repository, framework, mapping layer, or service architecture.
 
@@ -230,6 +230,83 @@ views, and proves a leaf rebuild with focused neighboring-field or whole-object 
 refinements post-date the table. Controls had no skill directory, and both the original and Fable
 trace audits found no skill, evaluator, rubric, repository, or sibling access before evaluator reveal.
 
+A sixth [four-arm benchmark](evals/benchmarks/securities-lending-month-end-billing/) implemented a
+month-end billing engine over typed CDM 7.0.0 securities loans. It combined strict T-1 marks,
+open-inclusive/return-exclusive accrual, settlement-effective partial returns, signed negative
+rebates, per-loan day-count bases, exact decimal rounding, and currency-isolated counterparty
+netting. The task supplied the exact CDM boundary and kept resolved rates and event history
+application-owned.
+
+| Arm | Agent-authored tests | Evaluator probes | Reviewed rubric | Agent work | Wall time |
+|---|---:|---:|---:|---:|---:|
+| Opus 5 + `cdm-dev` | 28/28 | 14/14 | 100/100 | 29 turns, 28 tool calls | 9m 51s |
+| Opus 5 control | 12/12 | 14/14 | 99/100 | 34 turns, 33 tool calls | 10m 1s |
+| Codex + `cdm-dev` | 6/6 | 14/14 | 99/100 | 30 completed items, 23 commands | 10m 8s |
+| Codex control | 7/7 | 14/14 | 99/100 | 53 completed items, 39 commands | 13m 58s |
+
+The frozen evaluator was a four-way behavioral tie, so a fresh `claude-fable-5` review rebuilt it
+from the sealed sources and probed gaps. Opus treatment was genuinely better at essentially equal
+speed: it alone rejected a malformed choice with both `AssetPayout` and `InterestRatePayout`
+populated, fully satisfying the hidden topology criterion, and its 28-test suite was the strongest.
+Codex treatment was 27% faster with 40% fewer commands than its control and added three useful
+fail-closed guards, although its authored suite was one test smaller. Fable found no fatal arithmetic,
+timing, sign, netting, mutation, or isolation issue in any arm.
+
+This run validates the resolved-input fast path: neither treatment opened a broad domain reference,
+both compiled on their first production attempt, and correctness did not cost extra wall time.
+It also exposed a narrower tooling gap. All four agents—and both treatments despite correct
+routing—spent repeated commands reconstructing generated Java signatures and locating Rune runtime
+support classes. The skill now ships a batched `cdm-java-api` helper, points `cdm-source` at the
+binary rather than generated-source JAR, and explains when the project-resolved `rune-runtime`
+classpath is needed. Those changes post-date the table and are not credited to it.
+
+A seventh [four-arm benchmark](evals/benchmarks/uti-report-sequence-validator/) implemented an
+application-owned regulatory-report sequence validator over a real CDM `TradeIdentifier`. Its
+central trap was preserving separate `TERMINATED` and `CANCELLED` states so `CORRECT` remains legal
+after termination but not after an error, while rejected reports leave the state and anchored UTI
+unchanged and processing continues.
+
+| Arm | Agent-authored tests | Evaluator probes | Reviewed rubric | Agent work | Wall time |
+|---|---:|---:|---:|---:|---:|
+| Opus 5 + `cdm-dev` | 16/16 | 14/14 | 100/100 | 25 turns, 24 tool calls | 4m 7s |
+| Opus 5 control | 26/26 | 14/14 | 100/100 | 20 turns, 19 tool calls | 4m 32s |
+| Codex + `cdm-dev` | 13/13 | 14/14 | 100/100 | 18 completed items, 10 commands | 6m 20s |
+| Codex control | 10/10 | 14/14 | 100/100 | 18 completed items, 11 commands | 4m 44s |
+
+All four implementations were correct. A fresh `claude-fable-5` rebuild and six post-hoc probes
+therefore treated artifact quality separately from the saturated rubric. It rated Codex treatment
+slightly better than control: exhaustive transition switches and stronger direct-constructor and
+malformed-value tests, at 34% more wall time. It rated Opus treatment roughly equal to control:
+the treatment was 9% faster, documented the application/CDM/DRR boundary most precisely, and was
+the only arm to mutation-test its policy, but its public `ValidationResult` record copied the
+decision list only on the main factory path and could alias a list supplied directly.
+
+The useful lesson is about keeping the skill proportional. Both treatment arms correctly avoided
+inventing a CDM action enum or running a DRR engine, but Opus still loaded the full regulatory guide
+even though the task supplied the policy and explicitly disclaimed DRR execution. The fast path now
+covers supplied application state machines, says that reporting or lifecycle vocabulary alone does
+not require a DRR/workflow guide, and places collection ownership at the public constructor boundary.
+Those changes post-date the table and are not credited to it.
+
+The revised skill was then paired with the sealed control in an adaptive `claude-sonnet-5`
+regression, using Claude Code 2.1.227 and the local Max subscription. This is a test of the fix on a
+less-capable model, not another independent estimate: the treatment wording was informed by the
+four-arm result.
+
+| Sonnet 5 arm | Agent-authored tests | Evaluator probes | Turns / tool calls | Shell commands | Wall time |
+|---|---:|---:|---:|---:|---:|
+| Revised `cdm-dev` | 15/15 | 14/14 | 16 / 15 | 9 | 2m 30s |
+| Control | 17/17 | 14/14 | 30 / 29 | 19 | 3m 11s |
+
+The skill arm was 21% faster, used 48% fewer tool calls, and made its first production write after
+10 calls rather than 23. It loaded no broad reference and used the batched API helper; the control
+unpacked generated sources and repeatedly searched Gradle caches and JARs. Correctness was not only
+a frozen-suite tie: a post-hoc probe for the contract's literal “exactly one non-null assigned
+identifier” rule passed with the skill and failed in control. Both implementations still aliased a
+mutable list passed directly to the public result-record constructor. Making that guard more explicit
+in prose did not fix it, so the durable lesson is to add an executable constructor-boundary probe to
+future evaluators rather than keep making the skill more benchmark-specific.
+
 ## Install
 
 The distributable skill is the `skills/cdm-dev/` directory; everything outside it is
@@ -245,10 +322,10 @@ Skill installers that understand the conventional `skills/<name>/` container —
 `npx skills add <this repository's GitHub URL>` or the Codex `$skill-installer` given the
 GitHub tree URL of `skills/cdm-dev` — discover the skill directly.
 
-## Inspect the active CDM model
+## Inspect the active CDM model and Java API
 
-The helper reads `.rosetta` files directly from a released `cdm-java` JAR, including when that
-JAR is used only as the source container for a non-Java integration:
+The source helper reads `.rosetta` files directly from the binary `cdm-java` JAR. Do not pass the
+generated-Java `-sources.jar`; the binary already embeds the Rune source:
 
 ```bash
 skills/cdm-dev/scripts/cdm-source --jar path/to/cdm-java.jar version
@@ -259,6 +336,17 @@ skills/cdm-dev/scripts/cdm-source --jar path/to/cdm-java.jar list 'event.*func'
 `CDM_JAVA_JAR` can supply the path instead. Without either, the helper searches common
 Gradle/Maven distribution and dependency-copy layouts under the active project. It refuses
 an ambiguous match rather than choosing a version silently.
+
+For exact generated Java getters and builders, inspect several types in one pass:
+
+```bash
+skills/cdm-dev/scripts/cdm-java-api --jar path/to/cdm-java.jar \
+  cdm.event.common.TradeState cdm.event.common.Trade
+```
+
+The API helper automatically includes each requested type's generated nested builder. If a
+`com.rosetta.model.lib.*` support type is needed, add the project's already-resolved
+`rune-runtime` JAR with `--classpath`; the helper never guesses or downloads a version.
 
 ## Validate
 
@@ -306,12 +394,13 @@ evals/run-local --vendor all --quality-only --case price-quantity-model-api
 The local runner deliberately ignores API-key environment variables. Live model evals do not run
 in GitHub Actions and require no repository secrets. See [Local skill evaluations](evals/README.md)
 for authentication, focused commands, fixture caching, result review, and baseline promotion.
-The five code-writing use cases are also preserved as leakage-aware
+The seven code-writing use cases are also preserved as leakage-aware
 [implementation forward benchmarks](evals/benchmarks/README.md), with fixed tasks, hidden rubrics,
 observed skill/control baselines, a shared CDM 7.0.0 seed, and `evals/check-benchmarks` validation.
 
-Requirements: Bash, Python 3, `rg`, `zipinfo`, and `unzip`; network access for the live link
-and release checks; local Claude Code and Codex CLIs for live model evals.
+Requirements: Bash, Python 3, `rg`, `zipinfo`, and `unzip`; a JDK for generated Java API checks;
+network access for the live link and release checks; local Claude Code and Codex CLIs for live
+model evals.
 
 ## Supported CDM versions
 
@@ -329,6 +418,7 @@ skills/cdm-dev/          the distributable skill — everything an install ships
   SKILL.md               lean workflow and reference router
   references/            onboarding, product-family, legal, DRR, industry, Rune, workflow, and test guidance
   scripts/cdm-source     query source embedded in an active cdm-java dependency
+  scripts/cdm-java-api   batch generated Java getters and builders with javap
 scripts/check-skill      static and live drift gates (repository tooling)
 scripts/check-links      verify external documentation links and redirects
 tests/                   hermetic per-tool suites (driver: tests/run; shared lib.sh, fixtures.sh)

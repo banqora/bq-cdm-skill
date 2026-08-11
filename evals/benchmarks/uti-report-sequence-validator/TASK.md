@@ -95,7 +95,8 @@ element, in input order. Accepted transitions are:
 | Current state | Action | Resulting state |
 |---|---|---|
 | `NEVER_EXISTED` | `NEW` | `ALIVE` |
-| `ALIVE` | `MODIFY`, `VALUATION`, `MARGIN_UPDATE`, or `POSITION_COMPONENT` | `ALIVE` |
+| `ALIVE` | `MODIFY`, `VALUATION`, or `MARGIN_UPDATE` | `ALIVE` |
+| `ALIVE` | `POSITION_COMPONENT` | `TERMINATED` |
 | `ALIVE` or `TERMINATED` | `CORRECT` | unchanged |
 | `ALIVE` | `TERMINATE` | `TERMINATED` |
 | any established state (`ALIVE`, `TERMINATED`, or `CANCELLED`) | `ERROR` | `CANCELLED` |
@@ -117,11 +118,12 @@ unchanged. In particular:
   trade belongs to the same closed-but-once-existed `TERMINATED` projection for this deliberately
   four-state API; do not add a fifth public state.
 
-For this focused benchmark, an already-alive UTI may receive `POSITION_COMPONENT` and remains
-`ALIVE`. This is an explicit application policy for the miniature, not a claim that every regime
-uses that sequence: real position-component creation, aggregation, and reporting scope require
-facts not supplied by this API. While `NEVER_EXISTED`, the `FIRST_REPORT_MUST_BE_NEW` rule still
-takes precedence; while closed, the action is rejected with `ACTION_NOT_ALLOWED_IN_STATE`.
+For this focused benchmark, `POSITION_COMPONENT` on an alive UTI closes the individual trade-level
+report into the position and therefore produces `TERMINATED`. This is an explicit supplied policy
+for the miniature, not a claim that every regime uses that sequence: real position-component
+creation, aggregation, and reporting scope require facts not supplied by this API. While
+`NEVER_EXISTED`, the `FIRST_REPORT_MUST_BE_NEW` rule still takes precedence; while closed, the
+action is rejected with `ACTION_NOT_ALLOWED_IN_STATE`.
 
 An accepted decision has `RejectionReason.NONE`. A rejected decision has the exact non-`NONE`
 reason above and reports the unchanged state. Continue evaluating later reports after every

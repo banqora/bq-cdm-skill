@@ -43,7 +43,13 @@ case "$mode" in
     ;;
 esac
 
-bash -n "$skill_root/scripts/cdm-source"
+for portable_script in "$skill_root/scripts/cdm-source" "$skill_root/scripts/cdm-java-api"; do
+  if [[ ! -f "$portable_script" || ! -x "$portable_script" ]]; then
+    echo "check-skill: ${portable_script#"$repo_root/"} is missing or not executable" >&2
+    exit 1
+  fi
+  bash -n "$portable_script"
+done
 bash -n "$repo_root/scripts/check-skill"
 
 python3 - "$skill_root" "$repo_root" <<'PY'
@@ -232,9 +238,10 @@ for reference in references:
                          f"{relative_reference}; expected {expected_targets}, got {toc_targets}")
 
 source_helper = skill_dir / "scripts" / "cdm-source"
+api_helper = skill_dir / "scripts" / "cdm-java-api"
 checker = repo_root / "scripts" / "check-skill"
 link_checker = repo_root / "scripts" / "check-links"
-for script in (source_helper, checker, link_checker):
+for script in (source_helper, api_helper, checker, link_checker):
     if not script.is_file() or not os.access(script, os.X_OK):
         raise SystemExit(f"check-skill: {script.relative_to(repo_root)} is missing or not executable")
 try:
@@ -242,7 +249,7 @@ try:
 except SyntaxError as error:
     raise SystemExit(f"check-skill: scripts/check-links has invalid Python: {error}")
 
-portable_resources = [skill, ui_metadata, readme, source_helper, link_checker,
+portable_resources = [skill, ui_metadata, readme, source_helper, api_helper, link_checker,
                       *sorted(references)]
 resource_text = "\n".join(path.read_text() for path in portable_resources)
 forbidden = {
@@ -270,6 +277,7 @@ if [[ "$mode" == "--static" ]]; then
 fi
 
 source_helper="$skill_root/scripts/cdm-source"
+api_helper="$skill_root/scripts/cdm-java-api"
 jar="$("$source_helper" --jar "$jar_path" jar)"
 jar_entries="$(zipinfo -1 "$jar")"
 source_count="$(rg '^cdm/rosetta/.*\.rosetta$' <<<"$jar_entries" | wc -l | tr -d ' ')"
@@ -281,6 +289,9 @@ source_count="$(rg '^cdm/rosetta/.*\.rosetta$' <<<"$jar_entries" | wc -l | tr -d
 
 "$source_helper" --jar "$jar" search '^type TradeState:' >/dev/null
 "$source_helper" --jar "$jar" search 'func Qualify_' >/dev/null
+if rg -Fx 'cdm/event/common/TradeState.class' <<<"$jar_entries" >/dev/null; then
+  "$api_helper" --jar "$jar" cdm.event.common.TradeState | rg 'getTrade\(' >/dev/null
+fi
 
 # The conformance reference depends on this corpus being discoverable; its
 # prefix moves between releases, so match the family path anywhere in the JAR.

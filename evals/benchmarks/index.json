@@ -57,6 +57,26 @@
       "task": "benchmarks/evergreen-repo-lifecycle/TASK.md",
       "rubric": "benchmarks/evergreen-repo-lifecycle/rubric.json",
       "baseline": "benchmarks/evergreen-repo-lifecycle/baseline.json"
+    },
+    {
+      "id": "securities-lending-month-end-billing",
+      "title": "Securities-lending month-end billing",
+      "kind": "implementation-forward-test",
+      "artifact_version": "7.0.0",
+      "language": "java",
+      "task": "benchmarks/securities-lending-month-end-billing/TASK.md",
+      "rubric": "benchmarks/securities-lending-month-end-billing/rubric.json",
+      "baseline": "benchmarks/securities-lending-month-end-billing/baseline.json"
+    },
+    {
+      "id": "uti-report-sequence-validator",
+      "title": "UTI report-sequence validator",
+      "kind": "implementation-forward-test",
+      "artifact_version": "7.0.0",
+      "language": "java",
+      "task": "benchmarks/uti-report-sequence-validator/TASK.md",
+      "rubric": "benchmarks/uti-report-sequence-validator/rubric.json",
+      "baseline": "benchmarks/uti-report-sequence-validator/baseline.json"
     }
   ]
 }
