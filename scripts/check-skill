@@ -44,6 +44,8 @@ case "$mode" in
 esac
 
 for portable_script in \
+  "$skill_root/scripts/cdm-docs" \
+  "$skill_root/scripts/cdm-find" \
   "$skill_root/scripts/cdm-source" \
   "$skill_root/scripts/cdm-java-api" \
   "$skill_root/scripts/cdm-inspect"; do
@@ -252,11 +254,13 @@ for reference in references:
                          f"{relative_reference}; expected {expected_targets}, got {toc_targets}")
 
 source_helper = skill_dir / "scripts" / "cdm-source"
+docs_helper = skill_dir / "scripts" / "cdm-docs"
+find_helper = skill_dir / "scripts" / "cdm-find"
 api_helper = skill_dir / "scripts" / "cdm-java-api"
 inspect_helper = skill_dir / "scripts" / "cdm-inspect"
 checker = repo_root / "scripts" / "check-skill"
 link_checker = repo_root / "scripts" / "check-links"
-for script in (source_helper, api_helper, inspect_helper, checker, link_checker):
+for script in (docs_helper, find_helper, source_helper, api_helper, inspect_helper, checker, link_checker):
     if not script.is_file() or not os.access(script, os.X_OK):
         raise SystemExit(f"check-skill: {script.relative_to(repo_root)} is missing or not executable")
 try:
@@ -264,7 +268,7 @@ try:
 except SyntaxError as error:
     raise SystemExit(f"check-skill: scripts/check-links has invalid Python: {error}")
 
-portable_resources = [skill, ui_metadata, readme, source_helper, api_helper, inspect_helper, link_checker,
+portable_resources = [skill, ui_metadata, readme, docs_helper, find_helper, source_helper, api_helper, inspect_helper, link_checker,
                       *sorted(references)]
 resource_text = "\n".join(path.read_text() for path in portable_resources)
 forbidden = {
@@ -287,11 +291,16 @@ print(
 )
 PY
 
+docs_helper="$skill_root/scripts/cdm-docs"
+"$docs_helper" --limit 1 settlement tokenisation |
+  rg '^references/assets-and-cash-securities\.md[[:space:]]' >/dev/null
+
 if [[ "$mode" == "--static" ]]; then
   exit 0
 fi
 
 source_helper="$skill_root/scripts/cdm-source"
+find_helper="$skill_root/scripts/cdm-find"
 api_helper="$skill_root/scripts/cdm-java-api"
 inspect_helper="$skill_root/scripts/cdm-inspect"
 jar="$("$source_helper" --jar "$jar_path" jar)"
@@ -304,6 +313,7 @@ source_count="$(rg '^cdm/rosetta/.*\.rosetta$' <<<"$jar_entries" | wc -l | tr -d
 }
 
 "$source_helper" --jar "$jar" search '^type TradeState:' >/dev/null
+"$find_helper" --jar "$jar" trade state | rg '^type:.*\.TradeState[[:space:]]' >/dev/null
 "$source_helper" --jar "$jar" type TradeState | rg '^type TradeState:' >/dev/null
 "$source_helper" --jar "$jar" search 'func Qualify_' >/dev/null
 if rg -Fx 'cdm/event/common/TradeState.class' <<<"$jar_entries" >/dev/null; then

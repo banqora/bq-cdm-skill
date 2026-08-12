@@ -34,13 +34,13 @@ If CDM is not installed, its distribution is unclear, or a language must be sele
 1. Read the project's instructions and build files. Identify its CDM artefact and version,
    language/runtime, document root, JSON dialect, and nearest relevant test. Do not assume
    Gradle, Maven, a directory layout, or a local helper class.
-2. Trace the value end to end with `rg`: external input, normalization or mapping, generated
-   builder, typed CDM object, serialization, validation/functions, and downstream storage or
-   API behavior. Name any project-specific stages instead of treating them as CDM.
-3. Start with `scripts/cdm-source members` or `path` for a compact typed outline. Escalate only the
-   owning types, choices, functions, or qualifications to `cdm-inspect` for exact declarations,
-   Java APIs, and validator/meta classes. Both fail boundedly on ambiguity. Use `--help`; never scan
-   `/`, home, or global caches. Keep inspection JARs out of builds; use
+2. Trace the value end to end with `rg`: input, mapping, generated builder, typed object,
+   serialization, validation/functions, and downstream behavior. Name project-owned stages. If the
+   guidance route is unclear, execute—do not read—`scripts/cdm-docs <plain words>` once and read its selected reference completely.
+3. If the declaration is unknown, execute—do not read—`scripts/cdm-find <plain words>` once; it
+   returns at most six ranked TSV candidates. Inspect one candidate with `scripts/cdm-source members`
+   or `path`, then escalate only its owning slice to `cdm-inspect`. All fail boundedly. Use `--help`;
+   never scan `/`, home, or global caches. Keep inspection JARs out of builds; use
    [Rosetta](references/rosetta.md) only for remaining ambiguity.
 4. Build or compile the smallest typed vertical slice early: exercise at least one production
    getter or builder and the first real branch. Compiling empty directories, records, or signatures

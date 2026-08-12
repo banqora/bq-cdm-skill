@@ -1,0 +1,228 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat >&2 <<'USAGE'
+Usage:
+  cdm-docs [--limit <1-8>] <plain search words...>
+
+Route a question to the bundled cdm-dev guidance without loading every reference.
+The fixed search scope is SKILL.md plus references/*.md; repository README, evals,
+reviews, and user files are never searched. Results are guidance, not model proof.
+
+Examples:
+  cdm-docs only exists direction identity
+  cdm-docs --limit 3 settlement tokenisation
+USAGE
+}
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+skill_root="$(cd -- "$script_dir/.." && pwd -P)"
+limit=5
+query_parts=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --limit)
+      [[ $# -ge 2 ]] || {
+        echo "cdm-docs: --limit needs an integer from 1 to 8" >&2
+        exit 1
+      }
+      limit="$2"
+      shift 2
+      ;;
+    -h | --help | help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      while [[ $# -gt 0 ]]; do
+        query_parts+=("$1")
+        shift
+      done
+      ;;
+    -*)
+      echo "cdm-docs: unknown option '$1'" >&2
+      usage
+      exit 1
+      ;;
+    *)
+      query_parts+=("$1")
+      shift
+      ;;
+  esac
+done
+
+if [[ ! "$limit" =~ ^[0-9]+$ ]] || [[ "$limit" -lt 1 || "$limit" -gt 8 ]]; then
+  echo "cdm-docs: --limit must be an integer from 1 to 8; got '$limit'" >&2
+  exit 1
+fi
+if [[ ${#query_parts[@]} -eq 0 ]]; then
+  echo "cdm-docs: provide one or more plain search words" >&2
+  usage
+  exit 1
+fi
+command -v python3 >/dev/null || {
+  echo "cdm-docs: required command is not installed: python3" >&2
+  exit 1
+}
+
+python3 - "$skill_root" "$limit" "${query_parts[@]}" <<'PY'
+from __future__ import annotations
+
+import json
+import re
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass(frozen=True)
+class Document:
+    path: Path
+    relative: str
+    title: str
+    text: str
+    searchable_lines: tuple[tuple[str, str], ...]
+
+
+skill_root = Path(sys.argv[1]).resolve()
+limit = int(sys.argv[2])
+query = " ".join(sys.argv[3:]).strip()
+references_path = skill_root / "references"
+if references_path.is_symlink():
+    raise SystemExit("cdm-docs: refusing a symlinked references directory")
+references_root = references_path.resolve()
+
+
+def words(value: str) -> list[str]:
+    value = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1 \2", value)
+    value = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", value)
+    return re.findall(r"[a-z0-9]+", value.lower())
+
+
+def compact(value: str, maximum: int) -> str:
+    value = re.sub(r"\[([^]]+)]\([^)]+\)", r"\1", value)
+    value = value.replace("`", "")
+    value = re.sub(r"^\s*(?:[-*+]\s+|#+\s*)", "", value)
+    value = " ".join(value.split()).replace("\t", " ")
+    return value[: maximum - 3] + "..." if len(value) > maximum else value
+
+
+query_words = list(dict.fromkeys(words(query)))
+if not query_words:
+    raise SystemExit("cdm-docs: search words contain no letters or digits")
+
+skill_file = skill_root / "SKILL.md"
+if not skill_file.is_file():
+    raise SystemExit(f"cdm-docs: SKILL.md is missing under {skill_root}")
+if skill_file.is_symlink():
+    raise SystemExit("cdm-docs: refusing a symlinked SKILL.md")
+
+paths = [skill_file]
+for path in sorted(references_root.glob("*.md")):
+    if path.is_symlink():
+        raise SystemExit(f"cdm-docs: refusing symlinked reference: {path.name}")
+    resolved = path.resolve()
+    try:
+        resolved.relative_to(references_root)
+    except ValueError as error:
+        raise SystemExit(f"cdm-docs: reference escapes the skill: {path}") from error
+    paths.append(resolved)
+
+documents: list[Document] = []
+heading_re = re.compile(r"^(#{1,3})\s+(.+?)\s*$")
+for path in paths:
+    text = path.read_text(encoding="utf-8")
+    relative = path.relative_to(skill_root).as_posix()
+    title = path.stem
+    current_heading = title
+    in_contents = False
+    searchable_lines: list[tuple[str, str]] = []
+    for line in text.splitlines():
+        heading_match = heading_re.match(line)
+        if heading_match:
+            level = len(heading_match.group(1))
+            heading = compact(heading_match.group(2), 80)
+            if level <= 2:
+                in_contents = heading.lower() == "contents"
+            current_heading = heading
+            if not in_contents:
+                searchable_lines.append((current_heading, heading))
+            continue
+        if in_contents or not line.strip() or line.strip().startswith("```"):
+            continue
+        searchable_lines.append((current_heading, line))
+    documents.append(Document(path, relative, title, text, tuple(searchable_lines)))
+
+
+def best_line(document: Document) -> tuple[int, str, str]:
+    best: tuple[int, int, int, str, str] | None = None
+    normalized_query = " ".join(query_words)
+    for index, (section, line) in enumerate(document.searchable_lines):
+        line_words = words(line)
+        line_word_set = set(line_words)
+        matches = sum(term in line_word_set for term in query_words)
+        phrase = int(normalized_query in " ".join(line_words))
+        complete = int(matches == len(query_words))
+        candidate = (complete, phrase, matches, section, line)
+        if best is None or candidate[:3] > best[:3]:
+            best = candidate
+    if best is None:
+        return 0, document.title, document.title
+    complete, phrase, matches, section, line = best
+    return complete * 250 + phrase * 100 + matches * 25, section, line
+
+
+ranked: list[tuple[int, Document, str, str]] = []
+normalized_query = " ".join(query_words)
+for document in documents:
+    all_words = set(words(f"{document.relative} {document.text}"))
+    if not all(term in all_words for term in query_words):
+        continue
+    route_words = words(f"{document.relative} {document.title}")
+    heading_words = words(" ".join(section for section, _ in document.searchable_lines))
+    line_score, section, hit = best_line(document)
+    score = line_score
+    if normalized_query == " ".join(words(document.title)):
+        score += 1000
+    if all(term in route_words for term in query_words):
+        score += 500
+    if all(term in heading_words for term in query_words):
+        score += 300
+    if normalized_query in " ".join(heading_words):
+        score += 150
+    score += 50 * sum(term in route_words for term in query_words)
+    if document.relative.startswith("references/"):
+        score += 10
+    ranked.append((score, document, section, hit))
+
+ranked.sort(key=lambda item: (-item[0], item[1].relative))
+reference_matches = [item for item in ranked if item[1].relative.startswith("references/")]
+if reference_matches:
+    ranked = reference_matches
+if not ranked:
+    encoded_query = json.dumps(query, ensure_ascii=True)
+    raise SystemExit(
+        f"cdm-docs: no bundled guidance contains every search term in {encoded_query}; "
+        "remove a term or use the reference map in SKILL.md"
+    )
+
+shown = ranked[:limit]
+print(
+    f"# cdm-docs scope=skill-guidance query={json.dumps(query, ensure_ascii=True)} "
+    f"matches={len(ranked)} shown={len(shown)}"
+)
+print("document\tsection\thit")
+for _, document, section, hit in shown:
+    print(f"{document.relative}\t{compact(section, 70)}\t{compact(hit, 140)}")
+if len(ranked) > limit:
+    print("# refine=add a domain term or raise --limit; do not load every reference")
+print("# authority=guidance only; prove model facts with cdm-find/cdm-source")
+next_document = shown[0][1].relative
+if next_document == "SKILL.md":
+    print("# next=use the already-loaded SKILL.md guidance")
+else:
+    print(f"# next=read-completely {next_document}")
+PY

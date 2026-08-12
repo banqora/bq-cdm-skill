@@ -1,0 +1,222 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat >&2 <<'USAGE'
+Usage:
+  cdm-find [--jar <cdm-java.jar>] [--limit <1-12>] <plain search words...>
+
+Find Rune declarations in the selected cdm-java JAR without unpacking it. Results are
+ranked, tab-separated, and capped at six candidates by default so they stay cheap to read.
+Search words are literal terms, not a regular expression.
+
+Examples:
+  cdm-find --jar path/to/cdm-java.jar trade state
+  cdm-find --jar path/to/cdm-java.jar --limit 3 repurchase date
+USAGE
+}
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source_helper="$script_dir/cdm-source"
+jar_args=()
+limit=6
+query_parts=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --jar)
+      [[ $# -ge 2 ]] || {
+        echo "cdm-find: --jar needs a path" >&2
+        exit 1
+      }
+      jar_args=(--jar "$2")
+      shift 2
+      ;;
+    --limit)
+      [[ $# -ge 2 ]] || {
+        echo "cdm-find: --limit needs an integer from 1 to 12" >&2
+        exit 1
+      }
+      limit="$2"
+      shift 2
+      ;;
+    -h | --help | help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      while [[ $# -gt 0 ]]; do
+        query_parts+=("$1")
+        shift
+      done
+      ;;
+    -*)
+      echo "cdm-find: unknown option '$1'" >&2
+      usage
+      exit 1
+      ;;
+    *)
+      query_parts+=("$1")
+      shift
+      ;;
+  esac
+done
+
+if [[ ! "$limit" =~ ^[0-9]+$ ]] || [[ "$limit" -lt 1 || "$limit" -gt 12 ]]; then
+  echo "cdm-find: --limit must be an integer from 1 to 12; got '$limit'" >&2
+  exit 1
+fi
+if [[ ${#query_parts[@]} -eq 0 ]]; then
+  echo "cdm-find: provide one or more plain search words" >&2
+  usage
+  exit 1
+fi
+command -v python3 >/dev/null || {
+  echo "cdm-find: required command is not installed: python3" >&2
+  exit 1
+}
+
+resolution="$($source_helper "${jar_args[@]}" version)"
+version="$(sed -n 's/^version=//p' <<<"$resolution")"
+jar="$(sed -n 's/^jar=//p' <<<"$resolution")"
+if [[ -z "$version" || -z "$jar" ]]; then
+  echo "cdm-find: cdm-source returned an invalid artifact description" >&2
+  exit 1
+fi
+
+python3 - "$jar" "$version" "$limit" "${query_parts[@]}" <<'PY'
+from __future__ import annotations
+
+import json
+import re
+import sys
+import zipfile
+from dataclasses import dataclass
+
+
+@dataclass
+class Candidate:
+    kind: str
+    namespace: str
+    name: str
+    path: str
+    line: int
+    blocks: list[str]
+
+    @property
+    def selector(self) -> str:
+        return f"{self.kind}:{self.namespace}.{self.name}"
+
+
+jar_path, version, encoded_limit, *query_parts = sys.argv[1:]
+limit = int(encoded_limit)
+query = " ".join(query_parts).strip()
+
+
+def words(value: str) -> list[str]:
+    value = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1 \2", value)
+    value = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", value)
+    return re.findall(r"[a-z0-9]+", value.lower())
+
+
+query_words = list(dict.fromkeys(words(query)))
+if not query_words:
+    raise SystemExit("cdm-find: search words contain no letters or digits")
+
+header_re = re.compile(r"^(type|choice|enum|func)\s+([A-Za-z_][A-Za-z0-9_]*)", re.MULTILINE)
+namespace_re = re.compile(r"^namespace\s+([A-Za-z_][A-Za-z0-9_.]*)(?:\s|$)", re.MULTILINE)
+candidates: dict[tuple[str, str, str], Candidate] = {}
+
+with zipfile.ZipFile(jar_path) as archive:
+    source_names = sorted(
+        name
+        for name in archive.namelist()
+        if name.startswith("cdm/rosetta/") and name.endswith(".rosetta")
+    )
+    for path in source_names:
+        source = archive.read(path).decode("utf-8", errors="replace")
+        namespace_match = namespace_re.search(source)
+        if not namespace_match:
+            continue
+        namespace = namespace_match.group(1)
+        headers = list(header_re.finditer(source))
+        for index, header in enumerate(headers):
+            syntax_kind, name = header.groups()
+            end = headers[index + 1].start() if index + 1 < len(headers) else len(source)
+            block = source[header.start():end].rstrip()
+            kind = "qualification" if syntax_kind == "func" and "[qualification" in block else syntax_kind
+            key = (kind, namespace, name)
+            line = source.count("\n", 0, header.start()) + 1
+            if key in candidates:
+                candidates[key].blocks.append(block)
+            else:
+                candidates[key] = Candidate(kind, namespace, name, path, line, [block])
+
+
+def best_hit(candidate: Candidate) -> str:
+    lines = "\n".join(candidate.blocks).splitlines()
+
+    def line_rank(item: tuple[int, str]) -> tuple[int, int, int]:
+        index, line = item
+        line_words = set(words(line))
+        matches = sum(term in line_words for term in query_words)
+        phrase = int(" ".join(query_words) in " ".join(words(line)))
+        return phrase, matches, -index
+
+    _, selected = max(enumerate(lines), key=line_rank)
+    compact = " ".join(selected.strip().split()).replace("\t", " ")
+    return compact[:137] + "..." if len(compact) > 140 else compact
+
+
+ranked: list[tuple[int, Candidate]] = []
+for candidate in candidates.values():
+    block = "\n".join(candidate.blocks)
+    all_words = set(words(f"{candidate.namespace} {candidate.name} {block}"))
+    if not all(term in all_words for term in query_words):
+        continue
+
+    name_words = words(candidate.name)
+    normalized_name = " ".join(name_words)
+    normalized_query = " ".join(query_words)
+    score = 0
+    if normalized_name == normalized_query:
+        score += 1000
+    if all(term in name_words for term in query_words):
+        score += 400
+    score += 80 * sum(term in name_words for term in query_words)
+    if normalized_query in " ".join(words(block)):
+        score += 100
+    score += 10 * sum(block.lower().count(term) for term in query_words)
+    if candidate.namespace.startswith("cdm."):
+        score += 2
+    ranked.append((score, candidate))
+
+kind_order = {"type": 0, "choice": 1, "enum": 2, "qualification": 3, "func": 4}
+ranked.sort(
+    key=lambda item: (
+        -item[0],
+        kind_order.get(item[1].kind, 9),
+        len(item[1].name),
+        item[1].selector,
+    )
+)
+if not ranked:
+    encoded_query = json.dumps(query, ensure_ascii=True)
+    raise SystemExit(
+        f"cdm-find: no declaration contains every search term in {encoded_query}; "
+        "remove a term or use cdm-source search with a narrow source regex"
+    )
+
+shown = ranked[:limit]
+print(
+    f"# cdm-find version={version} query={json.dumps(query, ensure_ascii=True)} "
+    f"matches={len(ranked)} shown={len(shown)}"
+)
+print("selector\tlocation\thit")
+for _, candidate in shown:
+    print(f"{candidate.selector}\t{candidate.path}:{candidate.line}\t{best_hit(candidate)}")
+if len(ranked) > limit:
+    print("# refine=add a model term or raise --limit; do not inspect every candidate")
+print(f"# next=cdm-source members {shown[0][1].selector}")
+PY

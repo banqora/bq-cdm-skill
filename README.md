@@ -502,7 +502,32 @@ Skill installers that understand the conventional `skills/<name>/` container —
 `npx skills add <this repository's GitHub URL>` or the Codex `$skill-installer` given the
 GitHub tree URL of `skills/cdm-dev` — discover the skill directly.
 
+## Route to one bundled guide
+
+Search the distributable guidance without loading all of its references:
+
+```bash
+skills/cdm-dev/scripts/cdm-docs only exists direction identity
+```
+
+`cdm-docs` searches only the active skill's `SKILL.md` and immediate `references/*.md`. It returns
+at most five TSV rows and names one reference to read completely. Its root cannot be overridden, so
+repository README, evals, reviews, and hidden benchmark material cannot enter the results. Treat the
+output as guidance routing; prove version-specific model facts with the artifact helpers below.
+
 ## Inspect the active CDM model and Java API
+
+When the declaration name is unknown, start with a small plain-word lookup:
+
+```bash
+skills/cdm-dev/scripts/cdm-find --jar path/to/cdm-java.jar repurchase date
+```
+
+`cdm-find` reads the embedded Rune source in memory and returns at most six ranked TSV rows: an
+exact kind-qualified selector, its source location, and one matching line. It does not use regular
+expressions, unpack the JAR, or print declaration bodies. Execute the helper rather than reading its
+source; then run `cdm-source members` or `path` on one candidate. This keeps discovery output small
+and prevents broad JAR listings from becoming model context.
 
 For a normal Java task, inspect the complete bounded slice in one command:
 
@@ -511,7 +536,7 @@ skills/cdm-dev/scripts/cdm-inspect --jar path/to/cdm-java.jar \
   TradeState TransferState Money
 ```
 
-`cdm-inspect` reports the exact CDM version, owning Rune type/choice/enum declarations, inheritance,
+`cdm-inspect` reports the exact CDM version, owning Rune declarations and functions, inheritance,
 conditioned children, generated Java getters/builders, and relevant metadata and validator class
 names. It accepts at most eight declarations and refuses output above 1,200 lines rather than
 silently truncating it. The helper reads the embedded Rune files in one in-memory batch; it does not
@@ -527,10 +552,10 @@ skills/cdm-dev/scripts/cdm-source --jar path/to/cdm-java.jar type TradeState Clo
 skills/cdm-dev/scripts/cdm-source --jar path/to/cdm-java.jar list 'event.*func'
 ```
 
-The `type` command accepts a bounded batch of types, choices, and enums and reads the archive once.
-It prints each complete declaration with inherited base declarations, conditions, alternatives,
-and sibling subtypes, avoiding repeated line-window searches and broad FpML ingestion matches. Use
-`search` only for otherwise unrelated declarations.
+The `type` command accepts a bounded batch of types, choices, enums, functions, and qualifications
+and reads the archive once. It prints each complete declaration with inherited base declarations,
+conditions, alternatives, and sibling subtypes, avoiding repeated line-window searches and broad
+FpML ingestion matches. Use raw `search` only when the plain-word finder cannot locate a declaration.
 
 `CDM_JAVA_JAR` can supply the path instead. Without either, the helper searches common
 Gradle/Maven distribution and dependency-copy layouts under the active project. It refuses
@@ -619,6 +644,8 @@ early warning before the next release enters the matrix.
 skills/cdm-dev/          the distributable skill — everything an install ships
   SKILL.md               lean workflow and reference router
   references/            onboarding, product-family, legal, DRR, industry, Rune, workflow, and test guidance
+  scripts/cdm-docs       route plain words to one bundled guidance reference
+  scripts/cdm-find       rank a few declarations from plain search words
   scripts/cdm-inspect    inspect a bounded Rune/Java/validator slice in one command
   scripts/cdm-source     query source embedded in an active cdm-java dependency
   scripts/cdm-java-api   batch generated Java getters and builders with javap

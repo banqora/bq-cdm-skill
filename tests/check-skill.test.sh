@@ -19,6 +19,18 @@ expect_ok "static gate passes on this repository" \
   --stdout 'static contract passed' -- \
   "$check_skill" --static
 
+copy="$(fresh_copy missing-docs-helper)"
+rm -- "$copy/skills/cdm-dev/scripts/cdm-docs"
+expect_fail "static gate requires the bounded guidance router" \
+  --stderr "scripts/cdm-docs is missing or not executable" -- \
+  "$copy/scripts/check-skill" --static
+
+copy="$(fresh_copy missing-find-helper)"
+rm -- "$copy/skills/cdm-dev/scripts/cdm-find"
+expect_fail "static gate requires the compact declaration finder" \
+  --stderr "scripts/cdm-find is missing or not executable" -- \
+  "$copy/scripts/check-skill" --static
+
 copy="$(fresh_copy missing-api-helper)"
 rm -- "$copy/skills/cdm-dev/scripts/cdm-java-api"
 expect_fail "static gate requires the generated Java API helper" \
