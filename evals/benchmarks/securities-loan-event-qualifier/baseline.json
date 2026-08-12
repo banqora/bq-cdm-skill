@@ -6,7 +6,7 @@
   "task_sha256": "c50875ba2f3d53a66310cdce531dedd8e0211ce9b9008d8997ebe1a0f34f2172",
   "rubric_sha256": "8896b27c30d344ad85a24f640b7144e15b95b36965b16a41dbdc18b523d32c08",
   "evaluator_probe_sha256": "22633b1fbb984009daf769d691e5f4a53318b0407f40758d5edd2840a2bc6fbe",
-  "review_sha256": "bbe3906147e4a264d1ce313cea34d641d794e5af6ec150019649d94603e01182",
+  "review_sha256": "e8d1710e4f674219559856e2bf9edf1e4612d18ff88435c6607fb73180c93348",
   "fable_raw_review_sha256": "0fd616b4862e2eeb6c158be1522817b7fec9976398dfe7c26405622a1ecfc3a7",
   "skill_snapshot_commit": "c4edd52907cc5e500c3d0c15e4adf45f0985935d",
   "skill_snapshot_sha256": "eed642d8d07203fb1b078c713e1003e44cd6830462e5d773a1c37cc0398a48d9",
@@ -59,7 +59,143 @@
     "pre_run_snapshot_sha256": "eed642d8d07203fb1b078c713e1003e44cd6830462e5d773a1c37cc0398a48d9",
     "post_run_snapshot_sha256": "3e9a1fc45cf9b0570b54dc3e62baf4ff6114883ab2106cb404e075d5da30dc59",
     "change": "Added a lifecycle evidence triangle across primitive envelope, semantic direction/identity payload, and state delta; clarified only-exists, typed-leaf/unit selection, missing-or-multiple fail-closed behavior, and BigDecimal.compareTo semantics; added 21 catalogue mutation checks. Added bounded members/path views, function and qualification inspection, kind-qualified collision handling, batch-wide preflight, capped in-memory search, imported/aliased/choice traversal, complete real-CDM member grammar cases, safe project discovery, and explicit JDK launcher diagnostics.",
-    "credit": "not credited to any recorded treatment arm; requires a fresh forward benchmark"
+    "credit": "not credited to the original four arms; evaluated by the isolated 2026-08-12 forward rerun recorded below"
+  },
+  "forward_rerun_2026_08_12": {
+    "purpose": "Forward-test the post-run evidence-triangle guidance and bounded cdm-docs/cdm-source/cdm-inspect helpers on the identical frozen benchmark, using the two prior model families plus Claude Opus 5.",
+    "raw_run_root": "/private/tmp/securities-loan-event-qualifier-rerun.ZBk5SH",
+    "skill_commit": "1da57b23d165b4ed10b0b0de552b8cf7b12ab81d",
+    "skill_snapshot_sha256": "da160c64afc548c1c07f3c70a133378ff1c91443172e7cc01fdb40bff5a7d271",
+    "task_sha256": "c50875ba2f3d53a66310cdce531dedd8e0211ce9b9008d8997ebe1a0f34f2172",
+    "rubric_sha256": "8896b27c30d344ad85a24f640b7144e15b95b36965b16a41dbdc18b523d32c08",
+    "evaluator_probe_sha256": "22633b1fbb984009daf769d691e5f4a53318b0407f40758d5edd2840a2bc6fbe",
+    "protocol": "Six counted arms ran sequentially, one session each, in isolated macOS sandboxes. Controls had no skill and could not read this repository, global skills/plugins, sibling arms, the rubric, or evaluator probes. Treatments received only the exact committed task-local skill. Claude ran in safe mode; Codex ignored user configuration and disabled skills, plugins, apps, browsing, MCP, and delegation. API credential/provider overrides were removed and local Claude Max or ChatGPT subscription authentication was used. All candidate processes exited, commits were sealed, and authored suites passed from clean offline copies before evaluator probes were revealed.",
+    "scores": {
+      "sonnet-5-with-skill": 76,
+      "sonnet-5-control": 72,
+      "gpt-5.4-with-skill": 91,
+      "gpt-5.4-control": 76,
+      "opus-5-with-skill": 99,
+      "opus-5-control": 84
+    },
+    "fatal_caps": "none",
+    "score_breakdown": {
+      "criteria": [
+        "quantity deduction and conjunction (18)",
+        "only-exists primitive semantics (18)",
+        "intent as guard only (10)",
+        "re-rate and substitution (20)",
+        "uniqueness and Unqualified (16)",
+        "CDM boundary and validation (12)",
+        "engineering and reproducibility (6)"
+      ],
+      "sonnet-5-with-skill": [15, 14, 10, 16, 10, 6, 5],
+      "sonnet-5-control": [15, 14, 10, 11, 12, 5, 5],
+      "gpt-5.4-with-skill": [17, 18, 10, 18, 14, 9, 5],
+      "gpt-5.4-control": [16, 16, 10, 8, 14, 7, 5],
+      "opus-5-with-skill": [18, 17, 10, 20, 16, 12, 6],
+      "opus-5-control": [16, 14, 10, 16, 14, 9, 5]
+    },
+    "targeted_probe_results": {
+      "note": "Candidate-specific JUnit probes were mechanically adapted from the pre-frozen semantic probe contract after sealing. Counts below cover the focused close-negative additions, not the already-green authored suites or every rubric assertion; scores were assigned criterion by criterion from those tests plus static inspection.",
+      "sonnet-5-with-skill": "1/6 pass; rejects same-direction substitution, but ignores quantity direction and amount, collapses duplicate and empty primitives, and accepts transfer evidence without a collateral state delta",
+      "sonnet-5-control": "0/5 pass; the same quantity/cardinality/state-delta failures, plus its positive substitution carries no payer/receiver direction",
+      "gpt-5.4-with-skill": "0/2 pass; strong quantity and substitution logic, but a scale-equivalent restated rate is rejected and the public diagnostic EnumSet is mutable",
+      "gpt-5.4-control": "0/4 pass; ignores quantity direction and amount, collapses duplicate quantity instructions, and models substitution as quantity-plus-terms rather than actual transfer movements",
+      "opus-5-with-skill": "1/2 pass; immutable carrier and diagnostic view pass; an empty extra PrimitiveInstruction is ignored instead of disqualifying",
+      "opus-5-control": "0/5 pass; ignores quantity direction and amount, collapses duplicate and empty primitives, ignores transfer amounts, and exposes a mutable diagnostic set"
+    },
+    "correctness_effect": {
+      "sonnet-5": "+4 points",
+      "gpt-5.4": "+15 points",
+      "opus-5": "+15 points",
+      "conclusion": "The revised skill improved correctness in all three matched pairs, materially for GPT-5.4 and Opus 5. The Sonnet lift is small because both arms still classified quantity events from state arithmetic without reconciling the primitive payload, and neither represented substitution in the before/after collateral state."
+    },
+    "context_efficiency_effect": {
+      "sonnet-5": "1059.590s vs 713.347s (+48.5%); 111 vs 94 tool calls; 14,318,133 vs 9,816,640 cache-read tokens (+45.9%); 87,516 vs 65,979 output tokens (+32.6%)",
+      "gpt-5.4": "826.129s vs 537.924s (+53.6%); 47 vs 57 commands (-17.5%); first production file change after 40 vs 48 commands; 3,316,171 vs 2,774,553 input tokens (+19.5%); 39,443 vs 25,703 output tokens (+53.5%)",
+      "opus-5": "1771.765s vs 1096.074s (+61.6%); 145 vs 103 tool calls; first typed compile at call 31 vs 40; 21,442,702 vs 8,581,061 cache-read tokens (+149.9%); 135,550 vs 91,058 output tokens (+48.9%)",
+      "conclusion": "The compact helpers improved navigation mechanics in two arms—GPT used fewer commands and both GPT and Opus reached code or a typed compile earlier—but did not improve end-to-end context efficiency. Treatments issued 55, 24, and 39 helper-bearing tool calls respectively, then continued inspecting or over-wiring validation; Sonnet treatment also fell back to raw extraction. A query budget and explicit compile/stop handoff remain necessary."
+    },
+    "runs": [
+      {
+        "arm": "sonnet-5-control-helper-rerun",
+        "vendor": "claude",
+        "model": "claude-sonnet-5",
+        "claude_code_version": "2.1.228",
+        "skill": false,
+        "deliverable_git_commit": "b2d66651d3133dc7bb9d202dff172979b3590d74",
+        "production_tree_sha256": "d006456821529812c0de90c789324f1666923207e44d7c9c359e991fb1e2d0e4",
+        "authored_tests": {"passed": 9, "total": 9},
+        "outcomes": {"fatal_failure": "none", "strict_rubric_score": "72/100", "fresh_clone_offline_build": "pass"},
+        "metrics": {"turns": 95, "tool_calls": 94, "tool_calls_before_first_durable_production_write": 60, "wall_seconds": 713.347, "api_duration_seconds": 688.745, "cache_read_input_tokens": 9816640, "output_tokens": 65979, "production_files": 13, "production_lines": 599}
+      },
+      {
+        "arm": "sonnet-5-with-skill-helper-rerun",
+        "vendor": "claude",
+        "model": "claude-sonnet-5",
+        "claude_code_version": "2.1.228",
+        "skill": true,
+        "deliverable_git_commit": "f98e78aa2cec9b33728d48b4ddc352eca7514984",
+        "production_tree_sha256": "36a845ef1440f595f83ed7663798c25e4e7b5b1339f906ec877e17f4616e568d",
+        "authored_tests": {"passed": 16, "total": 16},
+        "outcomes": {"fatal_failure": "none", "strict_rubric_score": "76/100", "fresh_clone_offline_build": "pass"},
+        "metrics": {"turns": 112, "tool_calls": 111, "helper_bearing_tool_calls": 55, "tool_calls_before_first_durable_production_write": 83, "wall_seconds": 1059.590, "api_duration_seconds": 915.256, "cache_read_input_tokens": 14318133, "output_tokens": 87516, "production_files": 3, "production_lines": 335}
+      },
+      {
+        "arm": "gpt-5.4-control-helper-rerun",
+        "vendor": "codex",
+        "model": "gpt-5.4",
+        "codex_cli_version": "0.147.0",
+        "skill": false,
+        "deliverable_git_commit": "cf7697727b2a11694a6085515891171cec30dfba",
+        "production_tree_sha256": "893a385418829070f529c99e3516ba228324ed91f81044d0b477d6008f176730",
+        "authored_tests": {"passed": 6, "total": 6},
+        "outcomes": {"fatal_failure": "none", "strict_rubric_score": "76/100", "fresh_clone_offline_build": "pass"},
+        "metrics": {"commands": 57, "file_change_events": 3, "commands_before_first_production_write": 48, "wall_seconds": 537.924, "input_tokens": 2774553, "cached_input_tokens": 2632448, "output_tokens": 25703, "reasoning_output_tokens": 10167, "production_files": 3, "production_lines": 433}
+      },
+      {
+        "arm": "gpt-5.4-with-skill-helper-rerun",
+        "vendor": "codex",
+        "model": "gpt-5.4",
+        "codex_cli_version": "0.147.0",
+        "skill": true,
+        "deliverable_git_commit": "af8ee54d8b576009507c1164890232f025623c03",
+        "production_tree_sha256": "c6637e692d94c7dcc2f0ea095b12d395bb033a6810f3c8a6706f9000ce41f6c7",
+        "authored_tests": {"passed": 7, "total": 7},
+        "outcomes": {"fatal_failure": "none", "strict_rubric_score": "91/100", "fresh_clone_offline_build": "pass"},
+        "metrics": {"commands": 47, "file_change_events": 3, "helper_bearing_commands": 24, "commands_before_first_production_write": 40, "wall_seconds": 826.129, "input_tokens": 3316171, "cached_input_tokens": 3171712, "output_tokens": 39443, "reasoning_output_tokens": 18607, "production_files": 3, "production_lines": 673}
+      },
+      {
+        "arm": "opus-5-control-helper-rerun",
+        "vendor": "claude",
+        "model": "claude-opus-5",
+        "claude_code_version": "2.1.228",
+        "skill": false,
+        "deliverable_git_commit": "db8832a9d26bae4dd73c6e23c5d5ecd87980c85c",
+        "production_tree_sha256": "b30138475a6d844c1bd161152c9ec240f33dd49d67ac800450894b79cd1a8aac",
+        "authored_tests": {"passed": 68, "total": 68},
+        "outcomes": {"fatal_failure": "none", "strict_rubric_score": "84/100", "fresh_clone_offline_build": "pass"},
+        "metrics": {"turns": 104, "tool_calls": 103, "first_typed_compile_tool_call": 40, "tool_calls_before_first_durable_production_write": 57, "wall_seconds": 1096.074, "api_duration_seconds": 1059.732, "cache_read_input_tokens": 8581061, "output_tokens": 91058, "production_files": 9, "production_lines": 1209}
+      },
+      {
+        "arm": "opus-5-with-skill-helper-rerun",
+        "vendor": "claude",
+        "model": "claude-opus-5",
+        "claude_code_version": "2.1.228",
+        "skill": true,
+        "deliverable_git_commit": "c6d2d6360e563648d1180bc194af01556880e7e1",
+        "production_tree_sha256": "3a86b6bc601f499135bb1407747613e8c3f9c6ceebdff45dd8cda8c333d87e36",
+        "authored_tests": {"passed": 45, "total": 45},
+        "outcomes": {"fatal_failure": "none", "strict_rubric_score": "99/100", "fresh_clone_offline_build": "pass"},
+        "metrics": {"turns": 146, "tool_calls": 145, "helper_bearing_tool_calls": 39, "first_typed_compile_tool_call": 31, "tool_calls_before_first_durable_production_write": 55, "wall_seconds": 1771.765, "api_duration_seconds": 1629.438, "cache_read_input_tokens": 21442702, "output_tokens": 135550, "production_files": 23, "production_lines": 1502}
+      }
+    ],
+    "harness_notes": [
+      "Two Sonnet-control and two GPT-treatment launcher attempts failed before a model call or candidate write because of wrapper PATH, file-descriptor, stdin, or working-directory mistakes. Their excluded traces are retained and the clean counted arms were rebuilt from the unchanged seed.",
+      "Claude safe mode disables native skill discovery, so treatment tested the exact committed skill content through an explicit task-local read rather than trigger routing.",
+      "Cross-vendor token accounting is not comparable; within-vendor matched pairs and wall time are the supported efficiency comparisons."
+    ]
   },
   "harness_limitations": [
     "Two excluded Sonnet-control wrapper attempts failed before a model process started or the worktree changed: the first omitted the CLI from PATH and the second denied fstat on its own stderr descriptor. Both traces are retained and neither is counted.",

@@ -162,3 +162,92 @@ These changes are not credited to either treatment arm:
 The revised guidance is mechanically guarded and the helpers pass real CDM 7.0.0 smoke tests, but
 the post-run revision has not yet earned forward-model credit. It should be evaluated on a fresh,
 non-securities-loan lifecycle classifier before promotion as proven general lift.
+
+## Forward rerun: compact search helpers and evidence triangle
+
+On 2026-08-12 the identical frozen task, rubric, evaluator contract, Java 21 seed, and CDM 7.0.0
+artifacts were rerun against the revised skill at commit `1da57b2`. The revision includes the
+lifecycle evidence triangle, compact `cdm-docs` search, bounded `members`/`path` views, exact
+function/qualification inspection, and safer generated-API lookup. Claude Sonnet 5 and GPT-5.4 were
+repeated to permit a within-model comparison with the first experiment; Claude Opus 5 was added as
+a third matched pair.
+
+All six candidates ran sequentially in isolated one-session workspaces. Controls had no skill and
+could not read this repository, global skills/plugins, sibling arms, or evaluator material.
+Treatments received only the exact committed task-local skill. Every authored suite and clean-copy
+offline build passed before evaluator probes were revealed. No fatal rubric cap triggered.
+
+### Correctness result
+
+| Criterion | Sonnet + skill | Sonnet control | GPT + skill | GPT control | Opus + skill | Opus control |
+|---|---:|---:|---:|---:|---:|---:|
+| Quantity deduction and conjunction (18) | 15 | 15 | 17 | 16 | 18 | 16 |
+| Only-exists primitive semantics (18) | 14 | 14 | 18 | 16 | 17 | 14 |
+| Intent as guard only (10) | 10 | 10 | 10 | 10 | 10 | 10 |
+| Re-rate and substitution (20) | 16 | 11 | 18 | 8 | 20 | 16 |
+| Uniqueness and Unqualified (16) | 10 | 12 | 14 | 14 | 16 | 14 |
+| CDM boundary and validation (12) | 6 | 5 | 9 | 7 | 12 | 9 |
+| Engineering and reproducibility (6) | 5 | 5 | 5 | 5 | 6 | 5 |
+| **Total** | **76** | **72** | **91** | **76** | **99** | **84** |
+
+The treatment effect is positive in all three pairs: **+4 Sonnet, +15 GPT-5.4, and +15 Opus**.
+That is a real quality result, but not a uniform one.
+
+- Sonnet treatment correctly checks opposite payer/receiver roles for substitution; the control's
+  positive transfer fixture contains no direction at all. Both implementations nevertheless ignore
+  the quantity-change direction and amount, collapse duplicate and empty primitives into a set of
+  field names, and accept transfer evidence without representing the corresponding collateral
+  before/after delta. The skill therefore adds useful CDM semantics but does not make this Sonnet
+  solution production-ready.
+- GPT treatment is the clearest revision win. It reconciles quantity direction, amount, and unit;
+  requires exact primitive cardinality; reads a typed interest-rate payout; and reconciles two real
+  transfer movements against collateral identities, quantities, state delta, and opposite parties.
+  GPT control models substitution as `quantityChange + termsChange` without transfer primitives at
+  all. Treatment's remaining defects are scale-sensitive equality between a restated rate and the
+  after-state rate, a mutable diagnostic `EnumSet`, and no executed generated-validator tier.
+- Opus treatment is the strongest implementation in the benchmark. Its documented evidence table
+  joins exact envelope/cardinality, semantic payload, and state delta; it resolves loan quantity by
+  observable and unit, compares typed rates numerically, reconciles transfer quantities and parties,
+  handles references fail-closed, and runs extensive generated validators plus negative mutations.
+  Its sole focused miss is that an empty extra `PrimitiveInstruction` disappears from the envelope.
+  Opus control is sophisticated and well documented, but it ignores quantity primitive payload,
+  transfer direction and transfer amount; duplicate and empty primitives also collapse, and its
+  public diagnostic set is mutable.
+
+The focused evaluator additions reproduced those claims mechanically: Sonnet treatment passed 1/6
+and control 0/5 close-negative probes; GPT treatment passed 0/2 deliberately selected residual
+probes while control passed 0/4 central semantic probes; Opus treatment passed 1/2 while control
+passed 0/5. Those small counts are not used as raw percentages—the candidate APIs differ and the
+tests intentionally target suspected residual defects. Rubric points were assigned criterion by
+criterion from the frozen contract, authored tests, focused probes, and source inspection.
+
+### Context-efficiency result
+
+| Pair | Score effect | Wall time | Context/navigation evidence |
+|---|---:|---:|---|
+| Sonnet 5 | **+4** | 1,060s vs 713s, **48.5% slower** | 111 vs 94 tool calls; cache-read context +45.9%; output +32.6%; first durable source write after 83 vs 60 calls |
+| GPT-5.4 | **+15** | 826s vs 538s, **53.6% slower** | 47 vs 57 commands and first write after 40 vs 48, but input +19.5% and output +53.5% |
+| Opus 5 | **+15** | 1,772s vs 1,096s, **61.6% slower** | first typed compile at call 31 vs 40, but 145 vs 103 calls, cache-read context +149.9%, and output +48.9% |
+
+The helper feature works mechanically but has not yet produced an end-to-end context-efficiency
+advantage. GPT treatment used fewer commands and reached production earlier. Opus treatment used the
+new compact documentation search immediately and reached a typed compile earlier. Those are useful
+local improvements. They were overwhelmed by continued querying and validation overwork:
+treatments issued 55, 24, and 39 helper-bearing tool calls for Sonnet, GPT, and Opus respectively.
+Sonnet also fell back to raw source extraction; Opus spent a long tail wiring and proving validators
+after its core design was already sound.
+
+The supported conclusion is therefore deliberately split:
+
+1. **Correctness:** the revised skill is useful, with material gains for GPT-5.4 and Opus and a small
+   gain for Sonnet on this task.
+2. **Context efficiency:** not yet demonstrated. Bounded output is not enough when the agent can
+   issue dozens of bounded queries. The next generic improvement should be a small inspection budget
+   and a hard handoff such as “one docs query, one batched model query, one API query, then compile;
+   only inspect again in response to a concrete compiler or validator failure.” Validation guidance
+   likewise needs an explicit stopping tier so a partial typed fixture does not trigger full runtime
+   wiring.
+
+This rerun supersedes the earlier sentence saying the revision lacked forward evidence. It does not
+retroactively alter the original four-arm scores; both experiments remain recorded in
+`baseline.json` so model variance and revision effects are visible rather than averaged away.
