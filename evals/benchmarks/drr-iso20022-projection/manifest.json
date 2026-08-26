@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "drr-iso20022-projection",
+  "status": "sealed-awaiting-arms",
+  "sealed_at": "2026-08-26",
+  "model_facing_file": "TASK.md",
+  "fixture": {
+    "id": "java-21-cdm-7.0.0",
+    "artifact_version": "7.0.0",
+    "java_version": 21,
+    "binary_sha256": "904b6d328584751c3e576994b16c3a2f3e85a7a6cf431134ae5df4275e538342",
+    "sources_sha256": "18525245186d4888a88726e62b011938300f61077260235b332ef6c47bec93dc"
+  },
+  "sealed_files": {
+    "task": {
+      "path": "TASK.md",
+      "sha256": "a53c480c1d0a6a97b1773940ba918d0351688bdc3c8adfc221901096e8cdcb26"
+    },
+    "rubric": {
+      "path": "rubric.json",
+      "sha256": "5f617d0cf8ac83c52704d4ffb189fda135a160293ca27d4f60e5f9e89b68f796"
+    },
+    "pilot": {
+      "path": "PILOT.md",
+      "sha256": "9e4c8f90cb080830b379f5463eebdd149ed0b46527334a7261ded93160248e5f"
+    }
+  },
+  "note": "Task, rubric, and pilot record sealed before any related skill revision, so later skill changes are provably generic guidance rather than edits that shape this benchmark, and the benchmark is provably not rewritten to fit the revised skill. Counted arms must run against these exact digests; the skill snapshot commit used by each arm is recorded in the baseline when arms are run."
+}
