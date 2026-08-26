@@ -70,13 +70,15 @@ positive test plus a close negative control.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/benchmark-summary-dark.svg">
-  <img alt="Dumbbell chart of independently reviewed scores for ten sealed CDM benchmarks: the Claude arm using cdm-dev matched or beat its no-skill control in all ten, with gains up to nine points, alongside headline stats of a nineteen-point GPT-5.4 review gain and 48% fewer tool calls on the revised fast path." src="assets/benchmark-summary-light.svg" width="920">
+  <img alt="Dumbbell chart of independently reviewed scores for eleven sealed CDM benchmarks: the Claude arm using cdm-dev matched or beat its no-skill control in all eleven, with gains up to nine points, alongside headline stats of a nineteen-point GPT-5.4 review gain and 48% fewer tool calls on the revised fast path." src="assets/benchmark-summary-light.svg" width="920">
 </picture>
 
-Across ten sealed four-arm benchmarks — isolated skill and control sessions, hidden rubrics,
+Across eleven sealed four-arm benchmarks — isolated skill and control sessions, hidden rubrics,
 evaluators revealed only after every arm exited — the Claude arm using `cdm-dev` matched or beat
 its control in every independently reviewed pairing, and the open-boundary discovery task produced
-a nineteen-point review gain for the GPT‑5.4 arm. Where the skill wins, it wins on model-semantic
+a nineteen-point review gain for the GPT‑5.4 arm. A six-arm rerun of the event-qualifier benchmark
+on the revised skill then improved all three matched model pairs, including fifteen strict-rubric
+points each for Claude Opus 5 and GPT‑5.4. Where the skill wins, it wins on model-semantic
 correctness: version-correct topology, generated-validator sweeps, and green-but-wrong fixtures
 caught before they ship. The complete run-by-run record — methodology, every table, both vendors'
 arms, and the costs alongside the wins — is in [BENCHMARKS.md](BENCHMARKS.md).

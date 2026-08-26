@@ -14,6 +14,7 @@ ROWS = [
     ("BDT expander, open discovery", 84, 92),
     ("Repo settlement shaping", 86, 93),
     ("Repo fail & mini close-out", 94, 99),
+    ("Securities-loan event qualifier", 90, 95),
     ("CSA margin-call calculator", 97, 100),
     ("Intraday repo interest", 93, 96),
     ("Evergreen repo lifecycle", 98, 100),
@@ -37,12 +38,13 @@ THEMES = {
     },
 }
 
-WIDTH, HEIGHT = 920, 620
+WIDTH = 920
 PLOT_LEFT, PLOT_RIGHT, ROW_TOP, ROW_STEP = 258, 798, 252, 30
+HEIGHT = ROW_TOP + (len(ROWS) - 1) * ROW_STEP + 98
 FONT = "system-ui, -apple-system, 'Segoe UI', sans-serif"
 
 TILES = [
-    ("10/10", "reviewed benchmarks where the Claude arm",
+    ("11/11", "reviewed benchmarks where the Claude arm",
      "with cdm-dev matched or beat its control"),
     ("+19 pts", "largest single review gain — open CDM",
      "boundary discovery (GPT‑5.4 arm)"),
@@ -50,11 +52,11 @@ TILES = [
      "finishing 21% sooner (Sonnet 5)"),
 ]
 
-ARIA = ("Independently reviewed scores for ten sealed CDM benchmarks: the "
-        "Claude arm using cdm-dev matched or beat its control in all ten.")
+ARIA = ("Independently reviewed scores for eleven sealed CDM benchmarks: the "
+        "Claude arm using cdm-dev matched or beat its control in all eleven.")
 
 FOOTER = [
-    "Scores from independent post-run reviews of ten sealed four-arm benchmarks "
+    "Scores from independent post-run reviews of eleven sealed four-arm benchmarks "
     "with frozen tasks and evaluator reveal after every arm exited.",
     "Codex / GPT‑5.4 arm detail, methodology, and every table: BENCHMARKS.md",
 ]

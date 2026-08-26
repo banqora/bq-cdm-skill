@@ -464,3 +464,34 @@ shells; date-scoped policy must remain reconstructible from recorded dates; and 
 amount must prove currency scale and direction. This is the reason to use `cdm-dev`: it can turn
 plausible Java into version-correct CDM and expose model-specific defects a normal suite misses—but
 the benchmark record also makes clear when that benefit does not materialise.
+
+A thirteenth [securities-loan event-qualifier benchmark](evals/benchmarks/securities-loan-event-qualifier/)
+implemented a `QualifyEvent(beforeState, primitiveInstructions, afterState)` decision over typed
+CDM 7.0.0 securities loans, deducing `Increase`, `PartialReturn`, `FullReturn`, `ReRate`,
+`Substitution`, or `Unqualified` purely from what the primitives did and the relevant
+before/after state, never from an event label. Two independent scorings exist: strict pre-frozen
+probes mechanically adapted to each candidate API by the evaluator owners, and a Claude Fable 5
+review that rebuilt and probed all four arms without seeing the strict results.
+
+| Qualifier arm | Agent-authored tests | Strict frozen probes | Fable review |
+|---|---:|---:|---:|
+| Sonnet 5 + `cdm-dev` | 19/19 | 81/100 | 95/100 |
+| Sonnet 5 control | 9/9 | 71/100 | 90/100 |
+| GPT-5.4 + `cdm-dev` | 8/8 | 78/100 | 82/100 |
+| GPT-5.4 control | 6/6 | 89/100 | 84/100 |
+
+The two scorings disagree on levels — the strict evaluator populated contradictory real transfer
+payloads where Fable adapted movement direction to each candidate's fixture vocabulary — but agree
+on direction: on this contract the skill improved Sonnet and regressed GPT-5.4. The post-run
+evidence-triangle, typed-leaf validation, decimal-comparison, compact-inspection,
+function/qualification lookup, and parser-safety changes are recorded in the sealed baseline and
+are not credited to treatment.
+
+A six-arm forward rerun on 2026-08-12 then tested that revised skill on the identical frozen
+benchmark with Sonnet 5, GPT-5.4, and Claude Opus 5. The revised skill improved strict-rubric
+correctness in all three matched pairs — Opus 5 at 99 versus its control's 84, GPT-5.4 at 91
+versus 76, and Sonnet 5 at 76 versus 72 — and every arm passed a fresh-clone offline build. The
+Sonnet lift stayed small because both Sonnet arms classified quantity events from state arithmetic
+without reconciling the primitive payload, and neither represented substitution in the
+before/after collateral state; those gaps remain in the benchmark evaluator rather than being
+taught as a task-specific recipe.
