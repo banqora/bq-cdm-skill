@@ -21,9 +21,9 @@ these cases require an agent to write and test Java code.
 - [Securities-loan event qualifier](securities-loan-event-qualifier/)
 - [DRR ISO 20022 projection seam](drr-iso20022-projection/): the CDM-to-ISO-20022 serialisation
   seam with the four classic break-generators as tests. The recorded baseline is an
-  author-orchestrated, author-scored Sonnet 5 pair with its deviations disclosed in the note;
-  GPT arms and an independent review are open, and these scores stay out of the
-  independent-review summary graphic until then.
+  author-orchestrated Sonnet 5 pair, author-scored and then independently re-scored by a fresh
+  session given only the sealed materials; deviations from the four-arm protocol are disclosed
+  in the baseline note, and GPT arms remain open.
 
 ## Contents
 

@@ -70,10 +70,10 @@ positive test plus a close negative control.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/benchmark-summary-dark.svg">
-  <img alt="Dumbbell chart of independently reviewed scores for eleven sealed CDM benchmarks: the Claude arm using cdm-dev matched or beat its no-skill control in all eleven, with gains up to nine points, alongside headline stats of a nineteen-point GPT-5.4 review gain and 48% fewer tool calls on the revised fast path." src="assets/benchmark-summary-light.svg" width="920">
+  <img alt="Dumbbell chart of independently reviewed scores for twelve sealed CDM benchmarks: the Claude arm using cdm-dev matched or beat its no-skill control in all twelve, with gains up to nine points, alongside headline stats of a nineteen-point GPT-5.4 review gain and 48% fewer tool calls on the revised fast path." src="assets/benchmark-summary-light.svg" width="920">
 </picture>
 
-Across eleven sealed four-arm benchmarks — isolated skill and control sessions, hidden rubrics,
+Across twelve sealed skill-versus-control benchmarks — isolated sessions, hidden rubrics,
 evaluators revealed only after every arm exited — the Claude arm using `cdm-dev` matched or beat
 its control in every independently reviewed pairing, and the open-boundary discovery task produced
 a nineteen-point review gain for the GPT‑5.4 arm. A six-arm rerun of the event-qualifier benchmark

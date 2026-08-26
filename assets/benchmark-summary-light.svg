@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="920" height="650" viewBox="0 0 920 650" role="img" aria-label="Independently reviewed scores for eleven sealed CDM benchmarks: the Claude arm using cdm-dev matched or beat its control in all eleven.">
-<rect x="0.5" y="0.5" width="919" height="649" rx="10" fill="#fcfcfb" stroke="rgba(11,11,11,0.10)"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="680" viewBox="0 0 920 680" role="img" aria-label="Independently reviewed scores for twelve sealed CDM benchmarks: the Claude arm using cdm-dev matched or beat its control in all twelve.">
+<rect x="0.5" y="0.5" width="919" height="679" rx="10" fill="#fcfcfb" stroke="rgba(11,11,11,0.10)"/>
 <text x="28" y="44" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="18" font-weight="600" fill="#0b0b0b" text-anchor="start">Measured lift on sealed CDM benchmarks</text>
 <text x="28" y="66" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">Isolated skill-vs-control agent sessions · hidden rubrics · independent post-run code reviews</text>
-<text x="28" y="122" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="34" font-weight="600" fill="#0b0b0b" text-anchor="start">11/11</text>
+<text x="28" y="122" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="34" font-weight="600" fill="#0b0b0b" text-anchor="start">12/12</text>
 <text x="28" y="144" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">reviewed benchmarks where the Claude arm</text>
 <text x="28" y="160" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">with cdm-dev matched or beat its control</text>
 <text x="330" y="122" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="34" font-weight="600" fill="#0b0b0b" text-anchor="start">+19 pts</text>
@@ -17,16 +17,16 @@
 <text x="651" y="214" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">with cdm-dev</text>
 <circle cx="742" cy="210" r="4.5" fill="#898781"/>
 <text x="753" y="214" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">control</text>
-<line x1="258" y1="234" x2="258" y2="570" stroke="#e1e0d9" stroke-width="1"/>
-<text x="258" y="588" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="middle" style="font-variant-numeric: tabular-nums">80</text>
-<line x1="393" y1="234" x2="393" y2="570" stroke="#e1e0d9" stroke-width="1"/>
-<text x="393" y="588" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="middle" style="font-variant-numeric: tabular-nums">85</text>
-<line x1="528" y1="234" x2="528" y2="570" stroke="#e1e0d9" stroke-width="1"/>
-<text x="528" y="588" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="middle" style="font-variant-numeric: tabular-nums">90</text>
-<line x1="663" y1="234" x2="663" y2="570" stroke="#e1e0d9" stroke-width="1"/>
-<text x="663" y="588" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="middle" style="font-variant-numeric: tabular-nums">95</text>
-<line x1="798" y1="234" x2="798" y2="570" stroke="#e1e0d9" stroke-width="1"/>
-<text x="798" y="588" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="middle" style="font-variant-numeric: tabular-nums">100</text>
+<line x1="258" y1="234" x2="258" y2="600" stroke="#e1e0d9" stroke-width="1"/>
+<text x="258" y="618" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="middle" style="font-variant-numeric: tabular-nums">80</text>
+<line x1="393" y1="234" x2="393" y2="600" stroke="#e1e0d9" stroke-width="1"/>
+<text x="393" y="618" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="middle" style="font-variant-numeric: tabular-nums">85</text>
+<line x1="528" y1="234" x2="528" y2="600" stroke="#e1e0d9" stroke-width="1"/>
+<text x="528" y="618" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="middle" style="font-variant-numeric: tabular-nums">90</text>
+<line x1="663" y1="234" x2="663" y2="600" stroke="#e1e0d9" stroke-width="1"/>
+<text x="663" y="618" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="middle" style="font-variant-numeric: tabular-nums">95</text>
+<line x1="798" y1="234" x2="798" y2="600" stroke="#e1e0d9" stroke-width="1"/>
+<text x="798" y="618" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="middle" style="font-variant-numeric: tabular-nums">100</text>
 <text x="242" y="256" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="end">Manufactured-payment reversal</text>
 <line x1="501" y1="252" x2="744" y2="252" stroke="#c3c2b7" stroke-width="2"/>
 <circle cx="501" cy="252" r="4.5" fill="#898781" stroke="#fcfcfb" stroke-width="2"/>
@@ -67,17 +67,22 @@
 <circle cx="744" cy="462" r="4.5" fill="#898781" stroke="#fcfcfb" stroke-width="2"/>
 <circle cx="798" cy="462" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
 <text x="812" y="466" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" font-weight="600" fill="#006300" text-anchor="start" style="font-variant-numeric: tabular-nums">+2</text>
-<text x="242" y="496" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="end">Month-end billing engine</text>
-<line x1="771" y1="492" x2="798" y2="492" stroke="#c3c2b7" stroke-width="2"/>
-<circle cx="771" cy="492" r="4.5" fill="#898781" stroke="#fcfcfb" stroke-width="2"/>
-<circle cx="798" cy="492" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
-<text x="812" y="496" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" font-weight="600" fill="#006300" text-anchor="start" style="font-variant-numeric: tabular-nums">+1</text>
-<text x="242" y="526" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="end">Regulatory reporting (UTI)</text>
+<text x="242" y="496" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="end">DRR ISO 20022 projection</text>
+<line x1="663" y1="492" x2="717" y2="492" stroke="#c3c2b7" stroke-width="2"/>
+<circle cx="663" cy="492" r="4.5" fill="#898781" stroke="#fcfcfb" stroke-width="2"/>
+<circle cx="717" cy="492" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="812" y="496" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" font-weight="600" fill="#006300" text-anchor="start" style="font-variant-numeric: tabular-nums">+2</text>
+<text x="242" y="526" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="end">Month-end billing engine</text>
+<line x1="771" y1="522" x2="798" y2="522" stroke="#c3c2b7" stroke-width="2"/>
+<circle cx="771" cy="522" r="4.5" fill="#898781" stroke="#fcfcfb" stroke-width="2"/>
 <circle cx="798" cy="522" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
-<text x="812" y="526" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12" font-weight="400" fill="#898781" text-anchor="start">tie · 100</text>
-<text x="242" y="556" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="end">BDT expander, pinned contract</text>
+<text x="812" y="526" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" font-weight="600" fill="#006300" text-anchor="start" style="font-variant-numeric: tabular-nums">+1</text>
+<text x="242" y="556" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="end">Regulatory reporting (UTI)</text>
 <circle cx="798" cy="552" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
 <text x="812" y="556" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12" font-weight="400" fill="#898781" text-anchor="start">tie · 100</text>
-<text x="28" y="616" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="start">Scores from independent post-run reviews of eleven sealed four-arm benchmarks with frozen tasks and evaluator reveal after every arm exited.</text>
-<text x="28" y="632" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="start">Codex / GPT‑5.4 arm detail, methodology, and every table: BENCHMARKS.md</text>
+<text x="242" y="586" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="end">BDT expander, pinned contract</text>
+<circle cx="798" cy="582" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
+<text x="812" y="586" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12" font-weight="400" fill="#898781" text-anchor="start">tie · 100</text>
+<text x="28" y="646" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="start">Scores from independent post-run reviews of twelve sealed skill-versus-control benchmarks with frozen tasks and evaluator reveal after every arm exited.</text>
+<text x="28" y="662" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="start">Codex / GPT‑5.4 arm detail, methodology, and every table: BENCHMARKS.md</text>
 </svg>

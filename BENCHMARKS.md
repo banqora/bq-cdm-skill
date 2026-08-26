@@ -495,3 +495,33 @@ Sonnet lift stayed small because both Sonnet arms classified quantity events fro
 without reconciling the primitive payload, and neither represented substitution in the
 before/after collateral state; those gaps remain in the benchmark evaluator rather than being
 taught as a task-specific recipe.
+
+A fourteenth [DRR ISO 20022 projection benchmark](evals/benchmarks/drr-iso20022-projection/)
+isolated the seam where Refit-era schema rejections and reconciliation breaks concentrate:
+`Project` from typed CDM report values to a bounded auth.030-style XML fragment and `Parse` back,
+with the 100x rate basis, the absent/zero/empty distinction, decimal canonicalisation under
+declared digit facets, and byte-identical round-trip idempotence as the sealed test families. Its
+first recorded pair deviates from the standard protocol and says so: two sequential isolated
+`claude-sonnet-5` sessions (skill at v0.1.5 versus no skill) were orchestrated and first scored
+by the session that authored the task, then independently re-scored by a fresh `claude-fable-5`
+session given only the sealed task, rubric, and the two workspaces.
+
+| Projection arm | Agent-authored tests | Sealed probes | Author-scored | Independent review | Wall time |
+|---|---:|---:|---:|---:|---:|
+| Sonnet 5 + `cdm-dev` | 16/16 | 13/14 | 93/100 | 97/100 | 14m 17s |
+| Sonnet 5 control | 10/10 | 13/14 | 86/100 | 95/100 | 11m 03s |
+
+The two scorings disagree on the margin and agree on the direction. Both arms converted the rate
+basis exactly, kept absence out of zero and empty, canonicalised decimals, and held byte-identical
+round trips; both fail only the unknown-element leniency probe. The skill arm ran the generated
+validator plus the complete data-rule sweep at its boundary and thereby rejected two evaluator
+probe fixtures that were themselves invalid CDM — a `TradeIdentifier` violating the
+issuer/issuerReference required choice and a `Price` violating `UnitOfAmountExists` — which the
+control's cardinality-only validation and the sealed pilot had both accepted; the corrected
+fixtures were applied identically to both arms. The independent review credited the skill arm's
+complete five-report idempotence fixture set and full data-rule execution, and exposed a gap
+shared by both arms and the pilot alike: nobody invoked the generated type-format validators, so
+a negative value inside `NonNegativeQuantity` is emitted unchallenged. That three-tier validation
+lesson is generic skill-improvement material; the task text's quotation of the Rune
+decimal-fraction sentence also weakened the rate-basis discriminator, so a harder successor task
+should withhold it. GPT-5.4 arms remain open.

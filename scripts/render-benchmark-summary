@@ -18,6 +18,7 @@ ROWS = [
     ("CSA margin-call calculator", 97, 100),
     ("Intraday repo interest", 93, 96),
     ("Evergreen repo lifecycle", 98, 100),
+    ("DRR ISO 20022 projection", 95, 97),
     ("Month-end billing engine", 99, 100),
     ("Regulatory reporting (UTI)", 100, 100),
     ("BDT expander, pinned contract", 100, 100),
@@ -44,7 +45,7 @@ HEIGHT = ROW_TOP + (len(ROWS) - 1) * ROW_STEP + 98
 FONT = "system-ui, -apple-system, 'Segoe UI', sans-serif"
 
 TILES = [
-    ("11/11", "reviewed benchmarks where the Claude arm",
+    ("12/12", "reviewed benchmarks where the Claude arm",
      "with cdm-dev matched or beat its control"),
     ("+19 pts", "largest single review gain — open CDM",
      "boundary discovery (GPT‑5.4 arm)"),
@@ -52,11 +53,11 @@ TILES = [
      "finishing 21% sooner (Sonnet 5)"),
 ]
 
-ARIA = ("Independently reviewed scores for eleven sealed CDM benchmarks: the "
-        "Claude arm using cdm-dev matched or beat its control in all eleven.")
+ARIA = ("Independently reviewed scores for twelve sealed CDM benchmarks: the "
+        "Claude arm using cdm-dev matched or beat its control in all twelve.")
 
 FOOTER = [
-    "Scores from independent post-run reviews of eleven sealed four-arm benchmarks "
+    "Scores from independent post-run reviews of twelve sealed skill-versus-control benchmarks "
     "with frozen tasks and evaluator reveal after every arm exited.",
     "Codex / GPT‑5.4 arm detail, methodology, and every table: BENCHMARKS.md",
 ]

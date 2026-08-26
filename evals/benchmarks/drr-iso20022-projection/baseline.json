@@ -4,6 +4,21 @@
   "recorded_at": "2026-08-26",
   "fixture_version": "7.0.0",
   "note": "Two-arm claude-sonnet-5 pair only; GPT arms and an independent review are still open. Both arms ran sequentially in isolated /private/tmp workspaces with the sealed task (digest-verified), pinned CDM 7.0.0 binary and source JARs, Claude Code 2.1.246, local Claude Max subscription with API credential overrides removed, --setting-sources project so user-level settings and global skills were excluded, and --dangerously-skip-permissions. The treatment arm received the committed skill at v0.1.5 inside its workspace; a post-run trace audit found 135 skill-tool events and helper/reference use in the treatment arm, none in control, and no access to this repository, the rubric, or evaluator material from either arm. Protocol deviations from the standard four-arm design are material and disclosed: the arms were orchestrated by the same session that authored the task, rubric, and skill revision, and the scores below are that author's scoring against the sealed rubric, not an independent review; they must not enter the independent-review summary graphic. Both authored suites passed an evaluator rerun from the arm workspace. Sealed probes were adapted mechanically to each arm's public API; during evaluation two probe fixtures proved themselves CDM-invalid (the Identifier issuer/issuerReference required choice and the PriceSchedule UnitOfAmountExists data rule) because the treatment arm rejected them — the corrected fixtures were applied identically to both arms and the correction is itself a finding: the control validates its boundary with generated type validators only and accepted both invalid objects, while the treatment runs the validator plus the full registered data-rule sweep and refused them. Final sealed probes: 13/14 both arms, the shared miss being lenient unknown-element parsing. Author-scored rubric: treatment 93/100 (absence three-way 16/16, boundary fidelity 12/12) versus control 86/100 (absence 12/16 - its optional fact is an enum, so the zero-versus-absent distinction is never demonstrated on a numeric fact; boundary 9/12 for the partial validation); both 18/18 rate basis, 16/16 canonicalisation, 18/18 round-trip, 8/10 failure honesty, 5/10 test quality (neither suite asserts specific refusal messages or includes a deliberate seam mutation). The treatment was 29% slower (857s vs 663s) with 79 vs 51 turns and authored 16 vs 10 tests. The task text quotes the Rune decimal-fraction sentence, which weakens the rate-basis discriminator both arms passed; a harder variant would withhold it.",
+  "independent_review": {
+    "reviewer": "fresh claude-fable-5 session with no access to prior scores, this repository, or the authoring conversation; inputs were the sealed task, sealed rubric, and the two arm workspaces only",
+    "recorded_at": "2026-08-26",
+    "scores": {
+      "sonnet-5-with-skill": 97,
+      "sonnet-5-control": 95
+    },
+    "method": "Read both implementations and suites, reran every authored test and sealed probe, and wrote additional review probes in each workspace covering +00:00 parse normalisation, generated data-rule conformance of parsed objects, failure-message specificity, and negative-value emission.",
+    "key_findings": [
+      "Direction agrees with the author scoring: the skill arm is stronger; the margin is smaller because the review scored the control's absence handling and boundary as rubric-satisfying.",
+      "Decisive difference: the skill arm's authored idempotence fixture set fully satisfies the rubric (five reports including an absent optional fact) where the control's omits the absent-fact fixture, and the skill arm alone executes all generated data rules at the boundary.",
+      "Both arms share one identical gap the author scoring missed: neither invokes the generated type-format validators, so a negative value inside NonNegativeQuantity is emitted; non-negativity lives in NonNegativeQuantityTypeFormatValidator. The evaluator pilot shares this blind spot.",
+      "Both arms fail only the unknown-element probe; both normalise +00:00 inputs to Z."
+    ]
+  },
   "runs": [
     {
       "arm": "sonnet-5-with-skill",
