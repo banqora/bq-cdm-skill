@@ -112,3 +112,39 @@ jobs:
             echo "Canary FAILED against ${{ steps.newest.outputs.version }} — the skill's model assumptions drift on the next CDM release." >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
+
+  tag:
+    # Every push to main that passes the full gate gets an immutable version
+    # tag, so public consumers can pin a validated release. The patch number
+    # auto-increments from the newest vX.Y.Z tag; push a vX.Y.0 tag by hand to
+    # open a new minor/major series and auto-increment continues from it.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [lint, static, test, links, cdm-matrix]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: tag-main
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Tag with the next patch version
+        run: |
+          set -euo pipefail
+          if existing="$(git describe --tags --exact-match --match 'v[0-9]*' HEAD 2>/dev/null)"; then
+            echo "HEAD already tagged as $existing; skipping" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          latest="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)"
+          if [ -z "$latest" ]; then
+            next="v0.1.0"
+          else
+            IFS=. read -r major minor patch <<<"${latest#v}"
+            next="v$major.$minor.$((patch + 1))"
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$next" -m "cdm-dev $next"
+          git push origin "refs/tags/$next"
+          echo "Tagged $next" >> "$GITHUB_STEP_SUMMARY"
