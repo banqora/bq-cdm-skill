@@ -226,7 +226,11 @@ current, production-ready coverage.
 7. Create the correct instruction and reporting side, execute the intended report function,
    validate the typed output, and explain every missing or suppressed field.
 8. Project to the exact regulator or repository message version. Validate the schema and current
-   authority or repository rules; do not treat a DRR JSON object as a submission message.
+   authority or repository rules; do not treat a DRR JSON object as a submission message. The
+   projection seam is where reported values change convention, so apply the
+   [wire-schema projection card](implementation-patterns.md#pat-006-project-model-values-onto-an-external-wire-schema):
+   quote each side's declared basis, unit, and lexical facets from its own authority, keep
+   absence, zero, and empty distinct, and prove the seam with round-trip and over-facet probes.
 9. Schedule, submit, reconcile, correct, and retain acknowledgements under application policy.
    Make retries idempotent and preserve the relationship among original, corrected, cancelled,
    and resubmitted reports.

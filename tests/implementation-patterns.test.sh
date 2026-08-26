@@ -12,7 +12,7 @@ source "$script_dir/lib.sh"
 setup_work
 
 expect_ok "catalogue and sealed forward candidate pass their structural contract" \
-  --stdout '5 patterns and 1 forward candidate.* passed' -- \
+  --stdout '6 patterns and 1 forward candidate.* passed' -- \
   "$checker"
 
 fresh_fixture() {
