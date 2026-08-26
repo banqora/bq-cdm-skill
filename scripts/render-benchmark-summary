@@ -1,0 +1,161 @@
+#!/usr/bin/env python3
+"""Render the README benchmark summary graphic (light and dark SVG variants).
+
+The committed files under assets/ are this script's exact output; the
+render-benchmark-summary test regenerates them and fails on any drift, so a
+data or styling change must go through this script. Scores are the
+independently reviewed 0-100 results recorded in BENCHMARKS.md.
+"""
+import sys
+from pathlib import Path
+
+ROWS = [
+    ("Manufactured-payment reversal", 89, 98),
+    ("BDT expander, open discovery", 84, 92),
+    ("Repo settlement shaping", 86, 93),
+    ("Repo fail & mini close-out", 94, 99),
+    ("CSA margin-call calculator", 97, 100),
+    ("Intraday repo interest", 93, 96),
+    ("Evergreen repo lifecycle", 98, 100),
+    ("Month-end billing engine", 99, 100),
+    ("UTI sequence validator", 100, 100),
+    ("BDT expander, pinned contract", 100, 100),
+]
+
+THEMES = {
+    "light": {
+        "surface": "#fcfcfb", "border": "rgba(11,11,11,0.10)",
+        "primary": "#0b0b0b", "secondary": "#52514e", "muted": "#898781",
+        "grid": "#e1e0d9", "baseline": "#c3c2b7",
+        "skill": "#2a78d6", "control": "#898781", "good": "#006300",
+    },
+    "dark": {
+        "surface": "#1a1a19", "border": "rgba(255,255,255,0.10)",
+        "primary": "#ffffff", "secondary": "#c3c2b7", "muted": "#898781",
+        "grid": "#2c2c2a", "baseline": "#383835",
+        "skill": "#3987e5", "control": "#898781", "good": "#0ca30c",
+    },
+}
+
+WIDTH, HEIGHT = 920, 620
+PLOT_LEFT, PLOT_RIGHT, ROW_TOP, ROW_STEP = 258, 798, 252, 30
+FONT = "system-ui, -apple-system, 'Segoe UI', sans-serif"
+
+TILES = [
+    ("10/10", "reviewed benchmarks where the Claude arm",
+     "with cdm-dev matched or beat its control"),
+    ("+19 pts", "largest single review gain — open CDM",
+     "boundary discovery (GPT‑5.4 arm)"),
+    ("48%", "fewer tool calls on the revised fast path,",
+     "finishing 21% sooner (Sonnet 5)"),
+]
+
+ARIA = ("Independently reviewed scores for ten sealed CDM benchmarks: the "
+        "Claude arm using cdm-dev matched or beat its control in all ten.")
+
+FOOTER = [
+    "Scores from independent post-run reviews of ten sealed four-arm benchmarks "
+    "with frozen tasks and evaluator reveal after every arm exited.",
+    "Codex / GPT‑5.4 arm detail, methodology, and every table: BENCHMARKS.md",
+]
+
+
+def x_for(score):
+    position = PLOT_LEFT + (score - 80) / 20 * (PLOT_RIGHT - PLOT_LEFT)
+    return int(position) if float(position).is_integer() else position
+
+
+def escape(text):
+    return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def render(theme):
+    parts = []
+
+    def text(x, y, content, size=12.5, fill=None, weight=400, anchor="start",
+             tabular=False):
+        style = ' style="font-variant-numeric: tabular-nums"' if tabular else ""
+        parts.append(
+            f'<text x="{x}" y="{y}" font-family="{FONT}" font-size="{size}" '
+            f'font-weight="{weight}" fill="{fill or theme["secondary"]}" '
+            f'text-anchor="{anchor}"{style}>{escape(content)}</text>')
+
+    parts.append(
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{WIDTH}" height="{HEIGHT}" '
+        f'viewBox="0 0 {WIDTH} {HEIGHT}" role="img" aria-label="{ARIA}">')
+    parts.append(
+        f'<rect x="0.5" y="0.5" width="{WIDTH - 1}" height="{HEIGHT - 1}" rx="10" '
+        f'fill="{theme["surface"]}" stroke="{theme["border"]}"/>')
+
+    text(28, 44, "Measured lift on sealed CDM benchmarks", size=18, weight=600,
+         fill=theme["primary"])
+    text(28, 66, "Isolated skill-vs-control agent sessions · hidden rubrics "
+         "· independent post-run code reviews")
+
+    for index, (value, line_one, line_two) in enumerate(TILES):
+        tile_x = 28 + index * 302
+        text(tile_x, 122, value, size=34, weight=600, fill=theme["primary"])
+        text(tile_x, 144, line_one, size=11.5)
+        text(tile_x, 160, line_two, size=11.5)
+    parts.append(f'<line x1="28" y1="184" x2="{WIDTH - 28}" y2="184" '
+                 f'stroke="{theme["grid"]}" stroke-width="1"/>')
+
+    text(28, 214, "Independently reviewed score (0–100) · Claude arm "
+         "(Opus 5 / Sonnet 5)", size=12.5, weight=600, fill=theme["primary"])
+    legend_x = PLOT_RIGHT - 158
+    parts.append(f'<circle cx="{legend_x}" cy="210" r="5" fill="{theme["skill"]}"/>')
+    text(legend_x + 11, 214, "with cdm-dev", size=12)
+    parts.append(f'<circle cx="{legend_x + 102}" cy="210" r="4.5" '
+                 f'fill="{theme["control"]}"/>')
+    text(legend_x + 113, 214, "control", size=12)
+
+    grid_top = ROW_TOP - 18
+    grid_bottom = ROW_TOP + (len(ROWS) - 1) * ROW_STEP + 18
+    for tick in (80, 85, 90, 95, 100):
+        parts.append(f'<line x1="{x_for(tick)}" y1="{grid_top}" x2="{x_for(tick)}" '
+                     f'y2="{grid_bottom}" stroke="{theme["grid"]}" stroke-width="1"/>')
+        text(x_for(tick), grid_bottom + 18, str(tick), size=11,
+             fill=theme["muted"], anchor="middle", tabular=True)
+
+    for index, (name, control, skill) in enumerate(ROWS):
+        row_y = ROW_TOP + index * ROW_STEP
+        control_x, skill_x = x_for(control), x_for(skill)
+        delta = skill - control
+        text(242, row_y + 4, name, anchor="end")
+        if delta > 0:
+            parts.append(f'<line x1="{control_x}" y1="{row_y}" x2="{skill_x}" '
+                         f'y2="{row_y}" stroke="{theme["baseline"]}" stroke-width="2"/>')
+            parts.append(f'<circle cx="{control_x}" cy="{row_y}" r="4.5" '
+                         f'fill="{theme["control"]}" stroke="{theme["surface"]}" '
+                         f'stroke-width="2"/>')
+        parts.append(f'<circle cx="{skill_x}" cy="{row_y}" r="5" '
+                     f'fill="{theme["skill"]}" stroke="{theme["surface"]}" '
+                     f'stroke-width="2"/>')
+        if delta > 0:
+            text(812, row_y + 4, f"+{delta}", weight=600, fill=theme["good"],
+                 tabular=True)
+        else:
+            text(812, row_y + 4, "tie · 100", size=12, fill=theme["muted"])
+
+    text(28, grid_bottom + 46, FOOTER[0], size=11, fill=theme["muted"])
+    text(28, grid_bottom + 62, FOOTER[1], size=11, fill=theme["muted"])
+
+    parts.append("</svg>")
+    return "\n".join(parts) + "\n"
+
+
+def main():
+    if len(sys.argv) != 2:
+        print("usage: render-benchmark-summary <output-directory>", file=sys.stderr)
+        return 2
+    out_dir = Path(sys.argv[1])
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for mode, theme in THEMES.items():
+        target = out_dir / f"benchmark-summary-{mode}.svg"
+        target.write_text(render(theme), encoding="utf-8")
+        print(f"wrote {target}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

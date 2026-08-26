@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Print the release tag the current HEAD should receive: the newest vX.Y.Z tag
+# with its patch number incremented, or v0.1.0 when no release tag exists yet.
+# Exits 3 without printing a version when HEAD already carries a release tag,
+# so callers can skip re-tagging. Run from anywhere inside the repository.
+set -euo pipefail
+
+if existing="$(git describe --tags --exact-match --match 'v[0-9]*' HEAD 2>/dev/null)"; then
+  echo "next-version: HEAD is already tagged as $existing" >&2
+  exit 3
+fi
+
+latest="$(git tag --list 'v[0-9]*' --sort=-v:refname |
+  grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 || true)"
+if [[ -z "$latest" ]]; then
+  echo "v0.1.0"
+else
+  IFS=. read -r major minor patch <<<"${latest#v}"
+  echo "v$major.$minor.$((patch + 1))"
+fi

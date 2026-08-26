@@ -25,9 +25,9 @@ jobs:
           chmod +x "$HOME/.local/bin/shfmt"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: shellcheck
-        run: shellcheck -x skills/cdm-dev/scripts/cdm-source skills/cdm-dev/scripts/cdm-java-api skills/cdm-dev/scripts/cdm-inspect scripts/check-skill tests/run tests/*.sh evals/run-triggers evals/run-quality evals/run-local
+        run: shellcheck -x skills/cdm-dev/scripts/cdm-source skills/cdm-dev/scripts/cdm-java-api skills/cdm-dev/scripts/cdm-inspect scripts/check-skill scripts/next-version tests/run tests/*.sh evals/run-triggers evals/run-quality evals/run-local
       - name: shfmt
-        run: shfmt -d -i 2 -ci skills/cdm-dev/scripts/cdm-source skills/cdm-dev/scripts/cdm-java-api skills/cdm-dev/scripts/cdm-inspect scripts/check-skill tests/run tests/*.sh evals/run-triggers evals/run-quality evals/run-local
+        run: shfmt -d -i 2 -ci skills/cdm-dev/scripts/cdm-source skills/cdm-dev/scripts/cdm-java-api skills/cdm-dev/scripts/cdm-inspect scripts/check-skill scripts/next-version tests/run tests/*.sh evals/run-triggers evals/run-quality evals/run-local
 
   static:
     runs-on: ubuntu-latest
@@ -136,16 +136,13 @@ jobs:
       - name: Tag with the next patch version
         run: |
           set -euo pipefail
-          if existing="$(git describe --tags --exact-match --match 'v[0-9]*' HEAD 2>/dev/null)"; then
-            echo "HEAD already tagged as $existing; skipping" >> "$GITHUB_STEP_SUMMARY"
-            exit 0
-          fi
-          latest="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n1)"
-          if [ -z "$latest" ]; then
-            next="v0.1.0"
-          else
-            IFS=. read -r major minor patch <<<"${latest#v}"
-            next="v$major.$minor.$((patch + 1))"
+          if ! next="$(scripts/next-version)"; then
+            status=$?
+            if [ "$status" -eq 3 ]; then
+              echo "HEAD already carries a release tag; skipping" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            exit "$status"
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
