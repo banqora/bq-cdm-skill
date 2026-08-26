@@ -28,8 +28,16 @@ require a particular repository, framework, mapping layer, or service architectu
 
 ## Quickstart
 
+In Claude Code, install straight from the repository's plugin marketplace — updates then arrive
+with `/plugin marketplace update bq-cdm-skill`:
+
+```text
+/plugin marketplace add banqora/bq-cdm-skill
+/plugin install cdm-dev@bq-cdm-skill
+```
+
 The distributable skill is the `skills/cdm-dev/` directory; everything outside it is repository
-tooling. Place or symlink that directory where your agent discovers skills:
+tooling. For any agent that discovers skills from a directory, place or symlink it there instead:
 
 ```bash
 mkdir -p .claude/skills
@@ -222,9 +230,12 @@ skills/cdm-dev/          the distributable skill — everything an install ships
   scripts/cdm-java-api   batch generated Java getters and builders with javap
 scripts/check-skill      static and live drift gates (repository tooling)
 scripts/check-links      verify external documentation links and redirects
+scripts/next-version     compute the next release tag for the CI tagger
+scripts/render-benchmark-summary  regenerate the README benchmark graphics
 tests/                   hermetic per-tool suites (driver: tests/run; shared lib.sh, fixtures.sh)
 evals/                   local runners, pattern/implementation benchmarks, graders, and baselines
 BENCHMARKS.md            the complete forward-test and benchmark record behind the README summary
 assets/                  README graphics (benchmark summary, light and dark)
+.claude-plugin/          marketplace manifest for /plugin install in Claude Code
 .github/                 hermetic lint/tests, CDM release matrix, links, and upstream canary
 ```

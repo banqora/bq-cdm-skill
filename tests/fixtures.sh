@@ -103,7 +103,7 @@ fresh_copy() {
   local copy="$work/copy-$1"
   rm -rf -- "$copy"
   mkdir -p "$copy/skills" "$copy/evals/benchmarks"
-  cp -R "$repo_root/README.md" "$repo_root/scripts" "$copy/"
+  cp -R "$repo_root/README.md" "$repo_root/scripts" "$repo_root/.claude-plugin" "$copy/"
   cp "$repo_root/evals/README.md" "$copy/evals/README.md"
   cp "$repo_root/evals/benchmarks/README.md" "$copy/evals/benchmarks/README.md"
   cp -R "$skill_dir" "$copy/skills/cdm-dev"

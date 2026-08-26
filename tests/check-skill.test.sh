@@ -174,6 +174,39 @@ expect_fail "static gate catches a hard-coded cdm-java release" \
   --stderr "hard-codes a released cdm-java filename" -- \
   "$copy/scripts/check-skill" --static
 
+copy="$(fresh_copy repo-name-in-skill)"
+printf '\nInstall notes live in the bq-cdm-skill repository.\n' >>"$copy/skills/cdm-dev/references/testing.md"
+expect_fail "static gate keeps the repository name out of the distributable skill" \
+  --stderr "source repository name" -- \
+  "$copy/scripts/check-skill" --static
+
+copy="$(fresh_copy missing-marketplace)"
+rm "$copy/.claude-plugin/marketplace.json"
+expect_fail "static gate requires the marketplace manifest" \
+  --stderr "marketplace.json is missing" -- \
+  "$copy/scripts/check-skill" --static
+
+copy="$(fresh_copy malformed-marketplace)"
+printf '{ not json\n' >"$copy/.claude-plugin/marketplace.json"
+expect_fail "static gate rejects a malformed marketplace manifest" \
+  --stderr "invalid JSON" -- \
+  "$copy/scripts/check-skill" --static
+
+copy="$(fresh_copy wrong-marketplace-source)"
+python3 - "$copy/.claude-plugin/marketplace.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+manifest_path = Path(sys.argv[1])
+manifest = json.loads(manifest_path.read_text())
+manifest["plugins"][0]["source"] = "./skills/cdm-dev"
+manifest_path.write_text(json.dumps(manifest))
+PY
+expect_fail "static gate pins the plugin source to the repository root" \
+  --stderr "plugin source must be ./" -- \
+  "$copy/scripts/check-skill" --static
+
 copy="$(fresh_copy long-description)"
 python3 - "$copy/skills/cdm-dev" <<'PY'
 import sys

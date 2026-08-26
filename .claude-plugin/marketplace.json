@@ -1,0 +1,15 @@
+{
+  "name": "bq-cdm-skill",
+  "description": "Agent skill for engineering with the FINOS Common Domain Model: version-matched Rune source and generated-API inspection, domain guides, and an implementation-pattern catalogue.",
+  "owner": {
+    "name": "Nicholas Holden",
+    "email": "nicholas.holden@banqora.com"
+  },
+  "plugins": [
+    {
+      "name": "cdm-dev",
+      "source": "./",
+      "description": "Develop, debug, test, upgrade, and review FINOS Common Domain Model (CDM) software, Rune source, generated distributions, and Rune runtimes."
+    }
+  ]
+}

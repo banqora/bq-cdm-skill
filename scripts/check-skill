@@ -138,6 +138,34 @@ if "$cdm-dev" not in default_prompt:
 if not re.fullmatch(r"[^.!?]+[.!?]", default_prompt):
     raise SystemExit("check-skill: agents/openai.yaml default_prompt must be one sentence")
 
+marketplace = repo_root / ".claude-plugin" / "marketplace.json"
+if not marketplace.is_file():
+    raise SystemExit("check-skill: .claude-plugin/marketplace.json is missing; Claude Code "
+                     "installs the skill through this marketplace manifest")
+try:
+    manifest = json.loads(marketplace.read_text())
+except json.JSONDecodeError as error:
+    raise SystemExit(f"check-skill: marketplace.json is invalid JSON: {error}")
+if manifest.get("name") != "bq-cdm-skill":
+    raise SystemExit("check-skill: marketplace.json marketplace name must be bq-cdm-skill; "
+                     "installed plugin ids embed it")
+if not str(manifest.get("description", "")).strip():
+    raise SystemExit("check-skill: marketplace.json needs a marketplace description")
+owner = manifest.get("owner")
+if not isinstance(owner, dict) or not str(owner.get("name", "")).strip():
+    raise SystemExit("check-skill: marketplace.json needs an owner with a name")
+plugins = manifest.get("plugins")
+if not isinstance(plugins, list) or len(plugins) != 1:
+    raise SystemExit("check-skill: marketplace.json must list exactly one plugin")
+plugin = plugins[0]
+if not isinstance(plugin, dict) or plugin.get("name") != "cdm-dev":
+    raise SystemExit("check-skill: marketplace.json plugin name must be cdm-dev")
+if plugin.get("source") != "./":
+    raise SystemExit("check-skill: marketplace.json plugin source must be ./ so the plugin root "
+                     "carries the conventional skills/cdm-dev directory")
+if not str(plugin.get("description", "")).strip():
+    raise SystemExit("check-skill: marketplace.json plugin needs a description")
+
 readme = repo_root / "README.md"
 link_re = re.compile(r"\]\(([^)#]+\.md)(?:#[^)]*)?\)")
 missing = []
@@ -271,6 +299,10 @@ except SyntaxError as error:
 portable_resources = [skill, ui_metadata, readme, docs_helper, find_helper, source_helper, api_helper, inspect_helper, link_checker,
                       *sorted(references)]
 resource_text = "\n".join(path.read_text() for path in portable_resources)
+# The README documents this repository and must name it for the marketplace
+# install command, so the repository-name rule covers only what an install
+# ships; every other portability rule still covers the README.
+distributable_text = "\n".join(path.read_text() for path in portable_resources if path != readme)
 forbidden = {
     "absolute user path": r"/Users/",
     "source repository name": r"bq-cdm",
@@ -280,7 +312,8 @@ forbidden = {
     "old repository selector": r"(?:CDM_REPO|--repo)",
 }
 for label, pattern in forbidden.items():
-    if re.search(pattern, resource_text, flags=re.IGNORECASE):
+    text = distributable_text if label == "source repository name" else resource_text
+    if re.search(pattern, text, flags=re.IGNORECASE):
         raise SystemExit(f"check-skill: repository resources contain {label}; keep the skill generic")
 if re.search(r"cdm-java-\d+\.\d+(?:\.\d+)?\.jar", resource_text):
     raise SystemExit("check-skill: an agent resource hard-codes a released cdm-java filename")
