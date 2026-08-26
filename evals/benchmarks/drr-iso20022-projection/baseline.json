@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "drr-iso20022-projection",
+  "recorded_at": "2026-08-26",
+  "fixture_version": "7.0.0",
+  "note": "Two-arm claude-sonnet-5 pair only; GPT arms and an independent review are still open. Both arms ran sequentially in isolated /private/tmp workspaces with the sealed task (digest-verified), pinned CDM 7.0.0 binary and source JARs, Claude Code 2.1.246, local Claude Max subscription with API credential overrides removed, --setting-sources project so user-level settings and global skills were excluded, and --dangerously-skip-permissions. The treatment arm received the committed skill at v0.1.5 inside its workspace; a post-run trace audit found 135 skill-tool events and helper/reference use in the treatment arm, none in control, and no access to this repository, the rubric, or evaluator material from either arm. Protocol deviations from the standard four-arm design are material and disclosed: the arms were orchestrated by the same session that authored the task, rubric, and skill revision, and the scores below are that author's scoring against the sealed rubric, not an independent review; they must not enter the independent-review summary graphic. Both authored suites passed an evaluator rerun from the arm workspace. Sealed probes were adapted mechanically to each arm's public API; during evaluation two probe fixtures proved themselves CDM-invalid (the Identifier issuer/issuerReference required choice and the PriceSchedule UnitOfAmountExists data rule) because the treatment arm rejected them — the corrected fixtures were applied identically to both arms and the correction is itself a finding: the control validates its boundary with generated type validators only and accepted both invalid objects, while the treatment runs the validator plus the full registered data-rule sweep and refused them. Final sealed probes: 13/14 both arms, the shared miss being lenient unknown-element parsing. Author-scored rubric: treatment 93/100 (absence three-way 16/16, boundary fidelity 12/12) versus control 86/100 (absence 12/16 - its optional fact is an enum, so the zero-versus-absent distinction is never demonstrated on a numeric fact; boundary 9/12 for the partial validation); both 18/18 rate basis, 16/16 canonicalisation, 18/18 round-trip, 8/10 failure honesty, 5/10 test quality (neither suite asserts specific refusal messages or includes a deliberate seam mutation). The treatment was 29% slower (857s vs 663s) with 79 vs 51 turns and authored 16 vs 10 tests. The task text quotes the Rune decimal-fraction sentence, which weakens the rate-basis discriminator both arms passed; a harder variant would withhold it.",
+  "runs": [
+    {
+      "arm": "sonnet-5-with-skill",
+      "vendor": "anthropic",
+      "model": "claude-sonnet-5",
+      "skill": true,
+      "authored_tests": {
+        "passed": 16,
+        "total": 16
+      },
+      "outcomes": {
+        "sealed_probes": "13/14",
+        "author_scored_rubric": "93/100",
+        "evaluator_rerun_of_authored_suite": "pass",
+        "boundary_validation": "generated validator plus full data-rule sweep inside Project; rejected the issuer-less TradeIdentifier and perUnitOf-less Price probe fixtures as invalid CDM"
+      },
+      "metrics": {
+        "wall_seconds": 857,
+        "turns": 79,
+        "claude_code_version": "2.1.246",
+        "skill_snapshot_tag": "v0.1.5",
+        "authentication": "local Claude Max subscription; API credential overrides removed"
+      }
+    },
+    {
+      "arm": "sonnet-5-control",
+      "vendor": "anthropic",
+      "model": "claude-sonnet-5",
+      "skill": false,
+      "authored_tests": {
+        "passed": 10,
+        "total": 10
+      },
+      "outcomes": {
+        "sealed_probes": "13/14",
+        "author_scored_rubric": "86/100",
+        "evaluator_rerun_of_authored_suite": "pass",
+        "boundary_validation": "generated type validators only; accepted CDM objects violating the Identifier issuer choice and PriceSchedule UnitOfAmountExists data rules"
+      },
+      "metrics": {
+        "wall_seconds": 663,
+        "turns": 51,
+        "claude_code_version": "2.1.246",
+        "authentication": "local Claude Max subscription; API credential overrides removed"
+      }
+    }
+  ]
+}

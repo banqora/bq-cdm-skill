@@ -19,13 +19,11 @@ these cases require an agent to write and test Java code.
 - [Intraday repo interest calculator](intraday-repo-interest/)
 - [Repo fail and mini close-out engine](repo-fail-mini-closeout/)
 - [Securities-loan event qualifier](securities-loan-event-qualifier/)
-
-## Authored, awaiting counted arms
-
 - [DRR ISO 20022 projection seam](drr-iso20022-projection/): the CDM-to-ISO-20022 serialisation
-  seam with the four classic break-generators as tests. Deliberately not in `index.json` until
-  observed skill/control arms exist; a sealed [pilot](drr-iso20022-projection/PILOT.md) proves
-  the task is executable and discriminating.
+  seam with the four classic break-generators as tests. The recorded baseline is an
+  author-orchestrated, author-scored Sonnet 5 pair with its deviations disclosed in the note;
+  GPT arms and an independent review are open, and these scores stay out of the
+  independent-review summary graphic until then.
 
 ## Contents
 

@@ -137,6 +137,16 @@
       "task": "benchmarks/securities-loan-event-qualifier/TASK.md",
       "rubric": "benchmarks/securities-loan-event-qualifier/rubric.json",
       "baseline": "benchmarks/securities-loan-event-qualifier/baseline.json"
+    },
+    {
+      "id": "drr-iso20022-projection",
+      "title": "DRR ISO 20022 projection seam",
+      "kind": "implementation-forward-test",
+      "artifact_version": "7.0.0",
+      "language": "java",
+      "task": "benchmarks/drr-iso20022-projection/TASK.md",
+      "rubric": "benchmarks/drr-iso20022-projection/rubric.json",
+      "baseline": "benchmarks/drr-iso20022-projection/baseline.json"
     }
   ]
 }
