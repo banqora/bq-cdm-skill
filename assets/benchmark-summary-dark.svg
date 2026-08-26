@@ -72,7 +72,7 @@
 <circle cx="771" cy="492" r="4.5" fill="#898781" stroke="#1a1a19" stroke-width="2"/>
 <circle cx="798" cy="492" r="5" fill="#3987e5" stroke="#1a1a19" stroke-width="2"/>
 <text x="812" y="496" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" font-weight="600" fill="#0ca30c" text-anchor="start" style="font-variant-numeric: tabular-nums">+1</text>
-<text x="242" y="526" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" font-weight="400" fill="#c3c2b7" text-anchor="end">UTI sequence validator</text>
+<text x="242" y="526" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" font-weight="400" fill="#c3c2b7" text-anchor="end">Regulatory reporting (UTI)</text>
 <circle cx="798" cy="522" r="5" fill="#3987e5" stroke="#1a1a19" stroke-width="2"/>
 <text x="812" y="526" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12" font-weight="400" fill="#898781" text-anchor="start">tie · 100</text>
 <text x="242" y="556" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" font-weight="400" fill="#c3c2b7" text-anchor="end">BDT expander, pinned contract</text>

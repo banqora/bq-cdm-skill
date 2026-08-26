@@ -19,7 +19,7 @@ ROWS = [
     ("Intraday repo interest", 93, 96),
     ("Evergreen repo lifecycle", 98, 100),
     ("Month-end billing engine", 99, 100),
-    ("UTI sequence validator", 100, 100),
+    ("Regulatory reporting (UTI)", 100, 100),
     ("BDT expander, pinned contract", 100, 100),
 ]
 
