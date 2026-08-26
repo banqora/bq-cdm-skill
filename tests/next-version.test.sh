@@ -21,7 +21,7 @@ run_in_sandbox() { (cd "$sandbox" && "$next_version"); }
 expect_ok "an untagged history seeds v0.1.0" \
   --stdout '^v0\.1\.0$' -- run_in_sandbox
 
-git -C "$sandbox" tag -a v0.1.0 -m t
+git -C "$sandbox" -c user.name=t -c user.email=t@example.invalid tag -a v0.1.0 -m t
 expect_fail "an already tagged HEAD is refused" \
   --stderr "already tagged as v0.1.0" -- run_in_sandbox
 (cd "$sandbox" && "$next_version" >/dev/null 2>&1)
@@ -37,9 +37,9 @@ git -C "$sandbox" -c user.name=t -c user.email=t@example.invalid commit -q --all
 expect_ok "the patch number increments from the newest tag" \
   --stdout '^v0\.1\.1$' -- run_in_sandbox
 
-git -C "$sandbox" tag -a v0.2.5 -m t
+git -C "$sandbox" -c user.name=t -c user.email=t@example.invalid tag -a v0.2.5 -m t
 git -C "$sandbox" -c user.name=t -c user.email=t@example.invalid commit -q --allow-empty -m three
-git -C "$sandbox" tag -a v0.10.2 -m t
+git -C "$sandbox" -c user.name=t -c user.email=t@example.invalid tag -a v0.10.2 -m t
 git -C "$sandbox" -c user.name=t -c user.email=t@example.invalid commit -q --allow-empty -m four
 expect_ok "tags sort by version so v0.10 beats v0.2" \
   --stdout '^v0\.10\.3$' -- run_in_sandbox
