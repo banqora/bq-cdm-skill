@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "drr-iso20022-projection",
+  "total_score": 100,
+  "required_entry_points": [
+    "Project",
+    "Parse"
+  ],
+  "fatal_failures": [
+    "production or authored tests do not compile and run from a clean offline copy",
+    "the caller-visible Project or Parse entry point is absent",
+    "the report boundary does not use genuine generated CDM 7.0.0 Price, NonNegativeQuantity, and TradeIdentifier values",
+    "a rate crosses the seam without the 100x basis conversion in either direction",
+    "an absent optional fact is emitted as a zero-valued or empty element",
+    "scientific notation, exponent forms, or digit-limit truncation reach emitted XML",
+    "round-trip idempotence fails on any fixture report",
+    "licensed ISDA DRR rule content or a DRR runtime is embedded, downloaded, or executed"
+  ],
+  "criteria": [
+    {
+      "id": "rate-basis-seam",
+      "visibility": "public",
+      "weight": 18,
+      "description": "Convert the CDM decimal-fraction rate to an ISO percentage and back exactly, preserving zero and sign.",
+      "checks": [
+        "0.0525 projects as 5.25 and parses back to exactly 0.0525.",
+        "A zero rate survives the round trip as an explicit 0 element, not an absence.",
+        "-0.005 projects as -0.5 with its sign intact and parses back to -0.005.",
+        "The conversion is exact decimal arithmetic; no binary-float artefacts appear at any scale."
+      ]
+    },
+    {
+      "id": "absence-three-way",
+      "visibility": "public",
+      "weight": 16,
+      "description": "Distinguish absent, zero, and empty for optional facts in both directions.",
+      "checks": [
+        "An optional CDM fact with no value produces no element at all.",
+        "No absent fact is ever emitted as a zero-valued element.",
+        "No empty element is ever emitted, and Parse rejects an empty element as a schema violation rather than reading it as zero or absent.",
+        "A genuine zero value remains distinguishable from absence after the round trip."
+      ]
+    },
+    {
+      "id": "decimal-canonicalisation",
+      "visibility": "public",
+      "weight": 16,
+      "description": "Emit schema-canonical decimals and fail closed on the declared digit limits.",
+      "checks": [
+        "A value held as 1.23E7 serialises as 12300000 with no exponent regardless of internal representation.",
+        "A value exceeding eighteen total digits or five fraction digits fails Project before any output is produced.",
+        "No silent truncation or rounding occurs on the way to XML.",
+        "Canonical serialisation is stable: the same value always produces the same lexical form."
+      ]
+    },
+    {
+      "id": "round-trip-idempotence",
+      "visibility": "public",
+      "weight": 18,
+      "description": "Prove Project after Parse after Project is byte-identical across a fixture set.",
+      "checks": [
+        "Project(Parse(Project(r))) is byte-identical to Project(r) for every fixture report.",
+        "The fixture set holds at least four distinct reports exercising every mapped enum value and an absent optional fact.",
+        "All timestamps normalise to UTC with the Z designator, and a +00:00 input does not survive as +00:00.",
+        "Every CDM-enum-to-ISO mapping is bijective and a value without a code fails visibly."
+      ]
+    },
+    {
+      "id": "cdm-boundary-fidelity",
+      "visibility": "hidden",
+      "weight": 12,
+      "description": "Use genuine validated generated CDM types at the report boundary.",
+      "checks": [
+        "The rate is a generated Price with priceType InterestRate and a currency unit satisfying CurrencyUnitForInterestRate.",
+        "The notional is a generated NonNegativeQuantity with a currency unit; the UTI is a TradeIdentifier with identifierType UniqueTransactionIdentifier.",
+        "Populated relied-on CDM nodes pass their generated validation in at least one test.",
+        "Values are held as exact decimals end to end; no double conversion sits inside the seam."
+      ]
+    },
+    {
+      "id": "failure-honesty",
+      "visibility": "hidden",
+      "weight": 10,
+      "description": "Fail closed with no partial output and no silently ignored input.",
+      "checks": [
+        "A failed projection emits no partial XML.",
+        "Parse rejects unknown elements and unknown enum codes rather than skipping them.",
+        "Failure messages name the offending fact and limit.",
+        "No error path returns a default or zeroed CDM value."
+      ]
+    },
+    {
+      "id": "test-quality",
+      "visibility": "hidden",
+      "weight": 10,
+      "description": "Tests include close negative controls that would catch the classic breaks.",
+      "checks": [
+        "A test distinguishes the two percentage-family PriceExpressionEnum values across the round trip.",
+        "A test proves the +00:00 offset form is normalised or rejected, not preserved.",
+        "At least one mutation-style check (for example dropping the basis conversion) demonstrably fails the suite.",
+        "Negative tests assert the specific refusal, not merely any exception."
+      ]
+    }
+  ]
+}

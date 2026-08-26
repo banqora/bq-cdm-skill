@@ -20,6 +20,13 @@ these cases require an agent to write and test Java code.
 - [Repo fail and mini close-out engine](repo-fail-mini-closeout/)
 - [Securities-loan event qualifier](securities-loan-event-qualifier/)
 
+## Authored, awaiting counted arms
+
+- [DRR ISO 20022 projection seam](drr-iso20022-projection/): the CDM-to-ISO-20022 serialisation
+  seam with the four classic break-generators as tests. Deliberately not in `index.json` until
+  observed skill/control arms exist; a sealed [pilot](drr-iso20022-projection/PILOT.md) proves
+  the task is executable and discriminating.
+
 ## Contents
 
 - `index.json`: benchmark and pinned-fixture manifest.
