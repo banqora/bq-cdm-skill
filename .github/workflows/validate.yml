@@ -118,7 +118,11 @@ jobs:
     # tag, so public consumers can pin a validated release. The patch number
     # auto-increments from the newest vX.Y.Z tag; push a vX.Y.0 tag by hand to
     # open a new minor/major series and auto-increment continues from it.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # workflow_dispatch is included as the manual lever for a push whose event
+    # was not delivered; an already tagged HEAD is skipped either way.
+    if: >-
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+      && github.ref == 'refs/heads/main'
     needs: [lint, static, test, links, cdm-matrix]
     runs-on: ubuntu-latest
     permissions:
