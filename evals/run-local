@@ -186,7 +186,7 @@ if [[ "$mode" != triggers && -z "$jar" ]]; then
     }
     download="$cache_base/cdm-java-$fixture_version.download.$$"
     sources_download="$cache_base/cdm-java-$fixture_version-sources.download.$$"
-    # shellcheck disable=SC2329  # invoked by the EXIT trap
+    # shellcheck disable=SC2317,SC2329  # invoked by the EXIT trap
     cleanup_download() {
       [[ ! -f "$download" ]] || rm -f -- "$download"
       [[ ! -f "$sources_download" ]] || rm -f -- "$sources_download"

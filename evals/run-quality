@@ -122,7 +122,7 @@ read -r case_count expected_case_version <<<"$case_summary"
 }
 
 workspace="$(mktemp -d "${TMPDIR:-/tmp}/cdm-dev-quality.XXXXXX")"
-# shellcheck disable=SC2329  # invoked by the EXIT trap
+# shellcheck disable=SC2317,SC2329  # invoked by the EXIT trap
 cleanup() { rm -rf -- "$workspace"; }
 trap cleanup EXIT
 mkdir -p "$workspace/lib" "$workspace/results"
