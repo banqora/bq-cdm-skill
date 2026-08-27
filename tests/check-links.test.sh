@@ -19,23 +19,46 @@ links_ok="$work/links-ok.md"
 printf '%s\n' \
   "[working](http://127.0.0.1:$link_port/ok)" \
   "[redirect](http://127.0.0.1:$link_port/redirect)" \
+  "inline code: \`http://127.0.0.1:$link_port/ok\`" \
   "[restricted](http://127.0.0.1:$link_port/restricted)" >"$links_ok"
 links_broken="$work/links-broken.md"
 printf '%s\n' "[missing](http://127.0.0.1:$link_port/missing)" >"$links_broken"
+links_soft_broken="$work/links-soft-broken.md"
+printf '%s\n' "[soft missing](http://127.0.0.1:$link_port/soft-missing)" >"$links_soft_broken"
 links_none="$work/links-none.md"
 printf '# No links here\n\nJust prose.\n' >"$links_none"
+links_offline="$work/links-offline.md"
+printf '%s\n' '[public](https://example.com/docs)' >"$links_offline"
+links_metadata="$work/links-metadata.md"
+printf '%s\n' '[metadata](http://169.254.169.254/latest/meta-data/)' >"$links_metadata"
+
+expect_fail "link checker blocks non-public destinations by default" \
+  --stderr 'non-public destination is not allowed' -- \
+  "$check_links" --retries 0 "$links_ok"
+
+expect_ok "offline mode validates public link syntax without fetching" \
+  --stdout 'without network access; 0 invalid' -- \
+  "$check_links" --offline "$links_offline"
+
+expect_fail "offline mode rejects a literal cloud-metadata target" \
+  --stderr 'non-public destination is not allowed' -- \
+  "$check_links" --offline "$links_metadata"
 
 expect_ok "link checker follows redirects and reports restricted sources" \
   --stdout '0 broken, 1 access/rate warnings' -- \
-  "$check_links" --retries 0 "$links_ok"
+  "$check_links" --allow-private --retries 0 "$links_ok"
 
 expect_fail "link checker rejects a definitive 404" \
   --stderr 'BROKEN.*HTTP 404' -- \
-  "$check_links" --retries 0 "$links_broken"
+  "$check_links" --allow-private --retries 0 "$links_broken"
+
+expect_fail "link checker rejects a redirect to a soft-404 page" \
+  --stderr 'BROKEN.*apparent not-found page.*rosetta_404\.html' -- \
+  "$check_links" --allow-private --retries 0 "$links_soft_broken"
 
 expect_fail "link checker can make restricted sources fatal" \
   --stderr 'restricted.*HTTP 403' -- \
-  "$check_links" --retries 0 --strict-restricted "$links_ok"
+  "$check_links" --allow-private --retries 0 --strict-restricted "$links_ok"
 
 expect_fail "link checker reports when no external links are found" \
   --stderr 'no external HTTP\(S\) links found' -- \

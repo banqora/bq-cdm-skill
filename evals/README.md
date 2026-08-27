@@ -121,13 +121,14 @@ for human review.
 
 ## Run implementation forward benchmarks
 
-Thirteen implementation cases—the tokenisation classifier, locate matcher, repo settlement shaper,
+Fourteen implementation cases—the tokenisation classifier, locate matcher, repo settlement shaper,
 CSA margin calculator, evergreen repo lifecycle engine, securities-lending month-end billing,
 UTI report-sequence validator, two tranche-expander contracts, manufactured-payment reversal,
-intraday repo interest, repo fail/mini close-out, and the securities-loan event qualifier—
+intraday repo interest, repo fail/mini close-out, the securities-loan event qualifier, and the
+DRR ISO 20022 projection seam—
 are preserved under
 [`evals/benchmarks`](benchmarks/README.md). Each package contains a model-facing `TASK.md`, a fixed
-public/hidden rubric, and its observed baseline. All thirteen use the shared minimal Java 21/CDM 7.0.0
+public/hidden rubric, and its observed baseline. All fourteen use the shared minimal Java 21/CDM 7.0.0
 Gradle seed and the same checksummed binary/source fixtures as the quality suite.
 
 Validate the saved benchmark contract without calling a model:

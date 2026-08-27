@@ -28,7 +28,7 @@ owner approve the applicable obligation, interpretation, effective date, and fir
 | Projection and messaging | Transformation from a DRR report object to a regime or trade-repository message such as ISO 20022 XML | Transport acceptance, timeliness, or reconciliation |
 | Submission operations | Scheduling, credentials, transport, acknowledgements, retries, corrections, reconciliation, and audit retention | The legal correctness of the upstream determination |
 
-The [official DRR pipeline](https://drr.docs.rosetta-technology.io/next/docs/using-drr/implement-drr/)
+The [official DRR pipeline](https://drr-docs.isda.org/next/docs/using-drr/implement-drr/)
 uses the stages Ingest, Enrich, Report, and Project. Preserve those boundaries even when an
 application names its stages differently.
 
@@ -307,7 +307,7 @@ transition or reporting history is still wrong.
 | Upgrade | Diff dependencies, report declarations, eligibility rules, code implementations, TODOs, rule references, output types, projections, schemas, and Test Packs before approval |
 
 Use Test Packs to prove conformance to a named DRR release, not legal completeness. The
-[DRR implementation guidance](https://drr.docs.rosetta-technology.io/next/docs/using-drr/implement-drr/)
+[DRR implementation guidance](https://drr-docs.isda.org/next/docs/using-drr/implement-drr/)
 describes comparing firm output with expected Test Pack output. Add firm-owned tests for
 applicability, mappings, reference data, deadlines, destination behavior, and known policy seams.
 
@@ -324,10 +324,10 @@ Apply this evidence order for each implementation or upgrade:
    to the report's effective date. Record publication, update, and retrieval dates.
 2. Use the [ISDA DRR InfoHub](https://www.isda.org/isda-solutions-infohub/isda-digital-regulatory-reporting/)
    for programme, coverage, and adoption context.
-3. Use the current [DRR introduction](https://drr.docs.rosetta-technology.io/next/docs/introduction/),
-   [DRR and CDM boundary](https://drr.docs.rosetta-technology.io/next/docs/get-started/drr-and-cdm/),
-   [scope and report declarations](https://drr.docs.rosetta-technology.io/next/docs/using-drr/scope-and-structure/),
-   and [versioning policy](https://drr.docs.rosetta-technology.io/next/docs/governance/versioning/)
+3. Use the current [DRR introduction](https://drr-docs.isda.org/next/docs/introduction/),
+   [DRR and CDM boundary](https://drr-docs.isda.org/next/docs/get-started/drr-and-cdm/),
+   [scope and report declarations](https://drr-docs.isda.org/next/docs/using-drr/scope-and-structure/),
+   and [versioning policy](https://drr-docs.isda.org/next/docs/governance/versioning/)
    for architecture and release semantics. Record the version shown by the documentation site;
    its examples can lag the artifact repository.
 4. Use the exact selected DRR artifact, embedded Rune source, generated implementation, parent

@@ -20,6 +20,7 @@ The JAR is selected in this order:
 
 The helper never downloads or substitutes a CDM release.
 Use a type:, choice:, enum:, func:, or qualification: prefix only when declarations share a name.
+The type and members commands accept at most eight declarations; type output is capped at 1,200 lines.
 USAGE
 }
 
@@ -168,18 +169,26 @@ if ! rg '^cdm/rosetta/.*\.rosetta$' <<<"$jar_entries" >/dev/null; then
 fi
 
 jar_name="$(basename -- "$jar")"
+filename_version=""
 if [[ "$jar_name" == cdm-java-*.jar ]]; then
-  cdm_version="${jar_name#cdm-java-}"
-  cdm_version="${cdm_version%.jar}"
-else
-  cdm_version="$(
-    (unzip -p "$jar" META-INF/MANIFEST.MF 2>/dev/null || true) |
-      tr -d '\r' |
-      sed -n 's/^Implementation-Version: //p' |
-      head -n 1
-  )"
-  cdm_version="${cdm_version:-unknown}"
+  filename_version="${jar_name#cdm-java-}"
+  filename_version="${filename_version%.jar}"
+  if [[ ! "$filename_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-dev\.[0-9]+)?$ ]]; then
+    filename_version=""
+  fi
 fi
+manifest_version="$(
+  (unzip -p "$jar" META-INF/MANIFEST.MF 2>/dev/null || true) |
+    tr -d '\r' |
+    sed -n 's/^Implementation-Version: //p' |
+    head -n 1
+)"
+if [[ -n "$manifest_version" && -n "$filename_version" &&
+  "$manifest_version" != "$filename_version" ]]; then
+  echo "cdm-source: JAR version mismatch: filename says $filename_version but manifest says $manifest_version" >&2
+  exit 1
+fi
+cdm_version="${manifest_version:-${filename_version:-unknown}}"
 
 case "$command" in
   version)
@@ -290,9 +299,15 @@ PY
         usage
         exit 1
       }
-    elif [[ $# -lt 2 ]]; then
-      usage
-      exit 1
+    else
+      [[ $# -ge 2 ]] || {
+        usage
+        exit 1
+      }
+      if [[ $# -gt 9 ]]; then
+        echo "cdm-source: $command accepts at most eight declarations" >&2
+        exit 1
+      fi
     fi
     python3 - "$jar" "$command" "${@:2}" <<'PY'
 from __future__ import annotations
@@ -955,12 +970,22 @@ def print_path(requested: str, target: Declaration, member_path: str) -> None:
 
 
 if view == "type":
+    reports: list[str] = []
     for index, (requested, target) in enumerate(targets):
-        if index:
-            print("\n# ---- next requested declaration ----")
-        print_target(requested, target)
-    print()
-    print("# next=use one cdm-inspect batch, then compile a populated slice")
+        output = StringIO()
+        with redirect_stdout(output):
+            print_target(requested, target)
+        reports.append(output.getvalue().rstrip())
+    result = "\n\n# ---- next requested declaration ----\n".join(reports)
+    result += "\n\n# next=use one cdm-inspect batch, then compile a populated slice"
+    # Bash appends the artifact-version and artifact-jar metadata after this process exits.
+    line_count = len(result.splitlines()) + 2
+    if line_count > 1200:
+        raise SystemExit(
+            "cdm-source: declaration inspection would emit "
+            f"{line_count} lines (limit 1200); use members or path"
+        )
+    print(result)
 elif view == "members":
     reports: list[str] = []
     for requested, target in targets:
@@ -969,7 +994,8 @@ elif view == "members":
             print_members(requested, target)
         reports.append(output.getvalue().rstrip())
     result = "\n\n# ---- next requested declaration ----\n".join(reports)
-    line_count = len(result.splitlines())
+    # Bash appends the artifact-version and artifact-jar metadata after this process exits.
+    line_count = len(result.splitlines()) + 2
     if line_count > 400:
         raise SystemExit(
             "cdm-source: compact member inspection would emit "

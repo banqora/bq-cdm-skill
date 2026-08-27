@@ -12,8 +12,8 @@
   "skill_snapshot_sha256": "eed642d8d07203fb1b078c713e1003e44cd6830462e5d773a1c37cc0398a48d9",
   "skill_snapshot_hash_method": "SHA-256 of sorted relative-path sha256sum lines for every file under skills/cdm-dev",
   "production_tree_hash_method": "SHA-256 of each sorted repository-relative src/main path, a NUL separator, and that file's SHA-256 digest followed by a newline",
-  "raw_run_root": "/private/tmp/securities-loan-event-qualifier.Gfe2DB",
-  "raw_fable_review_root": "/private/tmp/securities-loan-qualifier-fable.0UG57G",
+  "raw_run_root": "local ephemeral evidence; not included in this repository",
+  "raw_fable_review_root": "local ephemeral evidence; not included in this repository",
   "note": "Four counted, sequential, context-isolated arms used Claude Code 2.1.228 with claude-sonnet-5 or Codex CLI 0.147.0 with gpt-5.4, all at high effort and authenticated through local Claude Max or ChatGPT subscriptions with API credential/provider overrides removed. Each received the identical frozen task and pinned CDM 7.0.0 artifacts; controls could not read cdm-dev, this repository, the rubric, evaluator probes, global skill/plugin roots, or sibling workspaces. All authored suites and clean-copy offline builds passed before evaluators were revealed. Strict frozen-probe scoring found Sonnet treatment/control at 81/71 and GPT-5.4 treatment/control at 78/89. Claude Fable 5 independently rebuilt, probed, and inspected all four without seeing those results and scored them 95/90 and 82/84 respectively. Fable adapted movement direction to candidate fixture vocabulary, while the primary evaluator populated contradictory real transfer payloads; both reviews agree that the skill improves Sonnet and regresses GPT-5.4. Post-run evidence-triangle, typed-leaf, decimal-comparison, compact inspection, function/qualification lookup, and parser-safety changes are not credited to treatment.",
   "strict_evaluation": {
     "scores": {
@@ -63,7 +63,7 @@
   },
   "forward_rerun_2026_08_12": {
     "purpose": "Forward-test the post-run evidence-triangle guidance and bounded cdm-docs/cdm-source/cdm-inspect helpers on the identical frozen benchmark, using the two prior model families plus Claude Opus 5.",
-    "raw_run_root": "/private/tmp/securities-loan-event-qualifier-rerun.ZBk5SH",
+    "raw_run_root": "local ephemeral evidence; not included in this repository",
     "skill_commit": "1da57b23d165b4ed10b0b0de552b8cf7b12ab81d",
     "skill_snapshot_sha256": "da160c64afc548c1c07f3c70a133378ff1c91443172e7cc01fdb40bff5a7d271",
     "task_sha256": "c50875ba2f3d53a66310cdce531dedd8e0211ce9b9008d8997ebe1a0f34f2172",

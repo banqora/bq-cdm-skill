@@ -168,6 +168,26 @@ type ExternalThing:
         "cdm/rosetta/huge-fixture.rosetta",
         f"namespace cdm.huge\n\ntype Huge:\n{huge_fields}\n",
     )
+    exact_type_fields = "\n".join(
+        f"  field{index} string (0..1)" for index in range(1190)
+    )
+    over_type_fields = "\n".join(
+        f"  field{index} string (0..1)" for index in range(1191)
+    )
+    exact_member_fields = "\n".join(
+        f"  field{index} string (0..1)" for index in range(393)
+    )
+    over_member_fields = "\n".join(
+        f"  field{index} string (0..1)" for index in range(394)
+    )
+    jar.writestr(
+        "cdm/rosetta/output-boundary-fixture.rosetta",
+        "namespace cdm.boundary\n\n"
+        f"type ExactTypeBound:\n{exact_type_fields}\n\n"
+        f"type OverTypeBound:\n{over_type_fields}\n\n"
+        f"type ExactMemberBound:\n{exact_member_fields}\n\n"
+        f"type OverMemberBound:\n{over_member_fields}\n",
+    )
 PY
 
 expect_ok "version reports the release parsed from the JAR filename" \
@@ -177,6 +197,18 @@ expect_ok "version reports the release parsed from the JAR filename" \
 expect_ok "version falls back to the MANIFEST when the filename has no release" \
   --stdout '^version=5\.5\.5$' -- \
   "$cdm_source" --jar "$manifest_jar" version
+
+renamed_manifest_jar="$work/cdm-java-canary.jar"
+cp "$manifest_jar" "$renamed_manifest_jar"
+expect_ok "a descriptive cdm-java filename does not override the MANIFEST version" \
+  --stdout '^version=5\.5\.5$' -- \
+  "$cdm_source" --jar "$renamed_manifest_jar" version
+
+mismatched_version_jar="$work/cdm-java-4.4.4.jar"
+cp "$manifest_jar" "$mismatched_version_jar"
+expect_fail "a filename and manifest version disagreement fails closed" \
+  --stderr 'version mismatch: filename says 4\.4\.4 but manifest says 5\.5\.5' -- \
+  "$cdm_source" --jar "$mismatched_version_jar" version
 
 expect_ok "jar prints the canonical path" \
   --stdout 'cdm-java-9\.9\.9\.jar$' -- \
@@ -223,6 +255,12 @@ batch_types() {
 }
 expect_ok "type accepts a bounded batch without a broad source search" \
   --stdout '^# requested=cdm\.event\.common\.ContingentTransfer$' -- batch_types
+
+expect_fail "type rejects more than eight declarations before inspection" \
+  --stderr 'type accepts at most eight declarations' -- \
+  "$cdm_source" --jar "$fixture_jar" type \
+  TradeState TradeState TradeState TradeState TradeState \
+  TradeState TradeState TradeState TradeState
 
 choice_and_enum_batch() {
   local output
@@ -391,6 +429,47 @@ member_bound_is_atomic() {
 }
 expect_ok "the compact view fails atomically and points oversized types to path" \
   --stdout 'use the path command' -- member_bound_is_atomic
+
+exact_type_bound() {
+  local output line_count
+  output="$("$cdm_source" --jar "$fixture_jar" type ExactTypeBound)" || return
+  line_count="$(awk 'END { print NR }' <<<"$output")"
+  [[ "$line_count" -eq 1200 ]] || return 1
+}
+expect_ok "type permits a complete report exactly at the 1200-line bound" -- \
+  exact_type_bound
+
+expect_fail "type counts appended artifact metadata in its output bound" \
+  --stderr 'would emit 1201 lines \(limit 1200\)' -- \
+  "$cdm_source" --jar "$fixture_jar" type OverTypeBound
+
+type_bound_is_atomic() {
+  local stdout_file="$work/type-bound.stdout"
+  local stderr_file="$work/type-bound.stderr"
+  if "$cdm_source" --jar "$fixture_jar" type Huge Huge Huge \
+    >"$stdout_file" 2>"$stderr_file"; then
+    return 1
+  fi
+  [[ ! -s "$stdout_file" ]] || return
+  rg 'would emit .* lines \(limit 1200\); use members or path' \
+    "$stderr_file" >/dev/null || return
+  printf '%s\n' "$(<"$stderr_file")"
+}
+expect_ok "type output fails atomically above its report bound" \
+  --stdout 'use members or path' -- type_bound_is_atomic
+
+exact_member_bound() {
+  local output line_count
+  output="$("$cdm_source" --jar "$fixture_jar" members ExactMemberBound)" || return
+  line_count="$(awk 'END { print NR }' <<<"$output")"
+  [[ "$line_count" -eq 400 ]] || return 1
+}
+expect_ok "members permits a complete report exactly at the 400-line bound" -- \
+  exact_member_bound
+
+expect_fail "members counts appended artifact metadata in its output bound" \
+  --stderr 'would emit 401 lines \(limit 400\)' -- \
+  "$cdm_source" --jar "$fixture_jar" members OverMemberBound
 
 expect_ok "path retrieves one exact member from an otherwise oversized declaration" \
   --stdout '^cdm\.huge\.Huge\.field449 string \(0\.\.1\)  #' -- \

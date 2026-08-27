@@ -416,10 +416,17 @@ output_bound_is_atomic() {
     return 1
   fi
   [[ ! -s "$stdout_file" ]] || return 1
-  rg 'exact inspection would emit .* lines \(limit 1200\)' "$stderr_file"
+  rg 'exact inspection would exceed 1200 lines' "$stderr_file" >/dev/null || return 1
+  rg 'Rune declarations alone would emit .* lines' "$stderr_file"
 }
 expect_ok "the output bound fails without leaking a truncated partial report" \
-  --stdout 'exact inspection would emit .* lines \(limit 1200\)' -- \
+  --stdout 'Rune declarations alone would emit .* lines' -- \
   output_bound_is_atomic
+
+spaced_scripts="$work/skill scripts"
+cp -R "$skill_dir/scripts" "$spaced_scripts"
+expect_ok "inspection works when the installed skill path contains spaces" \
+  --stdout '^# resolved=cdm\.inspect\.Envelope kind=type$' -- \
+  "$spaced_scripts/cdm-inspect" --jar "$fixture_jar" Envelope
 
 finish

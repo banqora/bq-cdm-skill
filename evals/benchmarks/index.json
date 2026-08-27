@@ -15,6 +15,7 @@
       "artifact_version": "7.0.0",
       "language": "java",
       "task": "benchmarks/settlement-tokenisation-classifier/TASK.md",
+      "task_sha256": "1261ad48b99e911393a7be816ddb8bd252dd9dc4ac0397e02485d75508a81a47",
       "rubric": "benchmarks/settlement-tokenisation-classifier/rubric.json",
       "baseline": "benchmarks/settlement-tokenisation-classifier/baseline.json"
     },
@@ -25,6 +26,7 @@
       "artifact_version": "7.0.0",
       "language": "java",
       "task": "benchmarks/locate-matching-engine/TASK.md",
+      "task_sha256": "29590f193c25cf5ec5258985d5de48ebe995556c50f484ddb3d7c40584e666b8",
       "rubric": "benchmarks/locate-matching-engine/rubric.json",
       "baseline": "benchmarks/locate-matching-engine/baseline.json"
     },
@@ -35,6 +37,7 @@
       "artifact_version": "7.0.0",
       "language": "java",
       "task": "benchmarks/repo-settlement-shaping/TASK.md",
+      "task_sha256": "fec439f9a35da451b6eeb7292deafcd71d39b67ee295d6d5b2871014fe607c62",
       "rubric": "benchmarks/repo-settlement-shaping/rubric.json",
       "baseline": "benchmarks/repo-settlement-shaping/baseline.json"
     },
@@ -45,6 +48,7 @@
       "artifact_version": "7.0.0",
       "language": "java",
       "task": "benchmarks/csa-margin-call-calculator/TASK.md",
+      "task_sha256": "6ba94c808cbcd922b16b8ce2c4e600a22c88a7714e40c13cd2ba561ea02117f2",
       "rubric": "benchmarks/csa-margin-call-calculator/rubric.json",
       "baseline": "benchmarks/csa-margin-call-calculator/baseline.json"
     },
@@ -55,6 +59,7 @@
       "artifact_version": "7.0.0",
       "language": "java",
       "task": "benchmarks/evergreen-repo-lifecycle/TASK.md",
+      "task_sha256": "14549f03d34e760349efba613bd320fd141305d060ab948256a94709ed646c43",
       "rubric": "benchmarks/evergreen-repo-lifecycle/rubric.json",
       "baseline": "benchmarks/evergreen-repo-lifecycle/baseline.json"
     },
@@ -65,6 +70,7 @@
       "artifact_version": "7.0.0",
       "language": "java",
       "task": "benchmarks/securities-lending-month-end-billing/TASK.md",
+      "task_sha256": "068b04dac3c3cb9951ef848aaaf8ec837d4bff4ec5c91b941abbca0588e00bf2",
       "rubric": "benchmarks/securities-lending-month-end-billing/rubric.json",
       "baseline": "benchmarks/securities-lending-month-end-billing/baseline.json"
     },
@@ -75,6 +81,7 @@
       "artifact_version": "7.0.0",
       "language": "java",
       "task": "benchmarks/uti-report-sequence-validator/TASK.md",
+      "task_sha256": "5dba26c343f15b3138a5bce8b03395bf8c2e181d471a4f987d004c19c817c1f9",
       "rubric": "benchmarks/uti-report-sequence-validator/rubric.json",
       "baseline": "benchmarks/uti-report-sequence-validator/baseline.json"
     },
@@ -85,6 +92,7 @@
       "artifact_version": "7.0.0",
       "language": "java",
       "task": "benchmarks/bdt-tranche-expander/TASK.md",
+      "task_sha256": "e1b3afc83fcd0eb2ff2880648034ac3e2c51f15342b75634d626da01587de343",
       "rubric": "benchmarks/bdt-tranche-expander/rubric.json",
       "baseline": "benchmarks/bdt-tranche-expander/baseline.json"
     },
@@ -95,6 +103,7 @@
       "artifact_version": "7.0.0",
       "language": "java",
       "task": "benchmarks/bdt-tranche-expander-discovery/TASK.md",
+      "task_sha256": "4d55cdf872e1d1c39efadec4a72162bbbafb846772990fb87750131452bd05f3",
       "rubric": "benchmarks/bdt-tranche-expander-discovery/rubric.json",
       "baseline": "benchmarks/bdt-tranche-expander-discovery/baseline.json"
     },
@@ -105,6 +114,7 @@
       "artifact_version": "7.0.0",
       "language": "java",
       "task": "benchmarks/manufactured-payment-reversal/TASK.md",
+      "task_sha256": "20ba980d2a2f64879ddc0ba92cd57fbcd5e4ac008b144c233f8b7c6ad62cae41",
       "rubric": "benchmarks/manufactured-payment-reversal/rubric.json",
       "baseline": "benchmarks/manufactured-payment-reversal/baseline.json"
     },
@@ -115,6 +125,7 @@
       "artifact_version": "7.0.0",
       "language": "java",
       "task": "benchmarks/intraday-repo-interest/TASK.md",
+      "task_sha256": "fe6f743a0e418b0189655d7afe689bef4c1655353901889886a793131bc90819",
       "rubric": "benchmarks/intraday-repo-interest/rubric.json",
       "baseline": "benchmarks/intraday-repo-interest/baseline.json"
     },
@@ -125,6 +136,7 @@
       "artifact_version": "7.0.0",
       "language": "java",
       "task": "benchmarks/repo-fail-mini-closeout/TASK.md",
+      "task_sha256": "03f6ff6d87eeecc3905b7ff362b02ce1cb62640f4eddc3af07246f1c74c2cdc4",
       "rubric": "benchmarks/repo-fail-mini-closeout/rubric.json",
       "baseline": "benchmarks/repo-fail-mini-closeout/baseline.json"
     },
@@ -135,6 +147,7 @@
       "artifact_version": "7.0.0",
       "language": "java",
       "task": "benchmarks/securities-loan-event-qualifier/TASK.md",
+      "task_sha256": "c50875ba2f3d53a66310cdce531dedd8e0211ce9b9008d8997ebe1a0f34f2172",
       "rubric": "benchmarks/securities-loan-event-qualifier/rubric.json",
       "baseline": "benchmarks/securities-loan-event-qualifier/baseline.json"
     },
@@ -145,6 +158,7 @@
       "artifact_version": "7.0.0",
       "language": "java",
       "task": "benchmarks/drr-iso20022-projection/TASK.md",
+      "task_sha256": "a53c480c1d0a6a97b1773940ba918d0351688bdc3c8adfc221901096e8cdcb26",
       "rubric": "benchmarks/drr-iso20022-projection/rubric.json",
       "baseline": "benchmarks/drr-iso20022-projection/baseline.json"
     }

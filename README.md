@@ -3,6 +3,9 @@
 A portable agent skill for day-to-day engineering with the FINOS Common Domain Model:
 Rune source, released language distributions, generated APIs, and the Rune runtime.
 
+`cdm-dev` is an independent, unofficial project. It is not an official FINOS project and is not
+endorsed by FINOS or ISDA.
+
 Point an agent at any CDM project and the skill gives it:
 
 - **Version-matched model truth** — bounded helpers that query the exact Rune source and
@@ -45,9 +48,9 @@ ln -s /absolute/path/to/this/repository/skills/cdm-dev .claude/skills/cdm-dev
 ```
 
 Use the equivalent location for other compatible agents (for Codex CLI, `.agents/skills/`).
-Skill installers that understand the conventional `skills/<name>/` container — such as
-`npx skills add <this repository's GitHub URL>` or the Codex `$skill-installer` given the
-GitHub tree URL of `skills/cdm-dev` — discover the skill directly.
+Skill installers that understand the conventional `skills/<name>/` container discover the skill
+directly. For example, give the Codex `$skill-installer` the
+[GitHub tree URL](https://github.com/banqora/bq-cdm-skill/tree/main/skills/cdm-dev).
 
 Then ask for CDM work in plain words; the skill routes the rest. The same helpers also run
 standalone against any contemporary `cdm-java` JAR:
@@ -58,8 +61,8 @@ skills/cdm-dev/scripts/cdm-inspect --jar path/to/cdm-java.jar TradeState Transfe
 skills/cdm-dev/scripts/cdm-docs only exists direction identity
 ```
 
-Requirements: Bash, Python 3.10+, `rg`, `zipinfo`, and `unzip`; a JDK for the generated Java API
-helper.
+Supported hosts are macOS, Linux, and Windows through WSL. Requirements: Bash, Python 3.10+, `rg`,
+`zipinfo`, and `unzip`; a JDK for the generated Java API helper.
 
 ## Why use this skill?
 
@@ -70,18 +73,19 @@ positive test plus a close negative control.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/benchmark-summary-dark.svg">
-  <img alt="Dumbbell chart of independently reviewed scores for twelve sealed CDM benchmarks: the Claude arm using cdm-dev matched or beat its no-skill control in all twelve, with gains up to nine points, alongside headline stats of a nineteen-point GPT-5.4 review gain and 48% fewer tool calls on the revised fast path." src="assets/benchmark-summary-light.svg" width="920">
+  <img alt="Dumbbell chart of reviewed scores for twelve later sealed CDM benchmarks: the Claude arm using cdm-dev matched or beat its no-skill control in all twelve, with gains up to nine points, alongside headline stats of a nineteen-point GPT-5.4 review gain and 48% fewer tool calls on the revised fast path." src="assets/benchmark-summary-light.svg" width="920">
 </picture>
 
-Across twelve sealed skill-versus-control benchmarks — isolated sessions, hidden rubrics,
-evaluators revealed only after every arm exited — the Claude arm using `cdm-dev` matched or beat
-its control in every independently reviewed pairing, and the open-boundary discovery task produced
-a nineteen-point review gain for the GPT‑5.4 arm. A six-arm rerun of the event-qualifier benchmark
-on the revised skill then improved all three matched model pairs, including fifteen strict-rubric
-points each for Claude Opus 5 and GPT‑5.4. Where the skill wins, it wins on model-semantic
-correctness: version-correct topology, generated-validator sweeps, and green-but-wrong fixtures
-caught before they ship. The complete run-by-run record — methodology, every table, both vendors'
-arms, and the costs alongside the wins — is in [BENCHMARKS.md](BENCHMARKS.md).
+Across fourteen one-run-per-arm forward tests, twelve later cases have comparable 0–100 reviewed
+Claude treatment/control scores. In those twelve — isolated sessions, hidden rubrics, evaluators
+revealed only after every arm exited — the Claude arm using `cdm-dev` matched or beat its control,
+and the open-boundary discovery task produced a nineteen-point review gain for the GPT‑5.4 arm. A
+six-arm rerun of the event-qualifier benchmark on the revised skill then improved all three matched
+model pairs, including fifteen strict-rubric points each for Claude Opus 5 and GPT‑5.4. The full
+record also contains an early negative reference-resolution case and several GPT regressions, so
+these results are engineering signals rather than a general performance estimate. The published
+run-by-run record — methodology, every table, both vendors' arms, and the costs alongside the wins
+— is in [BENCHMARKS.md](BENCHMARKS.md).
 
 ## Route to one bundled guide
 
@@ -133,10 +137,11 @@ skills/cdm-dev/scripts/cdm-source --jar path/to/cdm-java.jar type TradeState Clo
 skills/cdm-dev/scripts/cdm-source --jar path/to/cdm-java.jar list 'event.*func'
 ```
 
-The `type` command accepts a bounded batch of types, choices, enums, functions, and qualifications
-and reads the archive once. It prints each complete declaration with inherited base declarations,
-conditions, alternatives, and sibling subtypes, avoiding repeated line-window searches and broad
-FpML ingestion matches. Use raw `search` only when the plain-word finder cannot locate a declaration.
+The `type` command accepts at most eight types, choices, enums, functions, or qualifications and
+reads the archive once. It prints each complete declaration with inherited base declarations,
+conditions, alternatives, and sibling subtypes, but refuses a combined report above 1,200 lines.
+This avoids repeated line-window searches and broad FpML ingestion matches. Use raw `search` only
+when the plain-word finder cannot locate a declaration.
 
 `CDM_JAVA_JAR` can supply the path instead. Without either, the helper searches common
 Gradle/Maven distribution and dependency-copy layouts under the active project. It refuses
@@ -152,7 +157,8 @@ skills/cdm-dev/scripts/cdm-java-api --jar path/to/cdm-java.jar \
 For an unambiguous simple name, the helper prints the exact generated Java package; ambiguity lists
 candidates instead of inviting a guessed import. It also includes each type's generated builder. If a
 `com.rosetta.model.lib.*` support type is needed, add the project's already-resolved
-`rune-runtime` JAR with `--classpath`; the helper never guesses or downloads a version.
+`rune-runtime` JAR with `--classpath`; the helper never guesses or downloads a version. A call
+accepts at most eight requested types and fails atomically above 1,200 output lines.
 
 ## Validate
 
@@ -186,10 +192,13 @@ Check every external link in the Markdown resources:
 scripts/check-links
 ```
 
-The checker follows redirects and fails on definitive broken responses such as `404` or
-`410`. It reports `401` and `403` as access warnings because some official association pages
-are member-only or reject CI user agents. The GitHub workflow runs this live check on every
-push to main, every pull request, and in the weekly drift sweep.
+The checker follows redirects and fails on definitive broken responses such as `404` or `410`,
+including redirects to recognisable soft-404 paths. It rejects non-public network destinations on
+the initial request and every redirect. That validation is defence in depth, not DNS pinning: run
+the live checker only on trusted content or in an egress-isolated environment. It reports `401` and
+`403` as access warnings because some official association pages are member-only or reject CI user
+agents. CI validates URL syntax without network access for untrusted fork pull requests; trusted
+pushes, same-repository pull requests, and the weekly drift sweep run the live check.
 
 Run trigger and reviewed answer-quality evals locally through existing Claude Code and Codex
 subscription logins:
@@ -202,7 +211,7 @@ evals/run-local --vendor all --quality-only --case price-quantity-model-api
 The local runner deliberately ignores API-key environment variables. Live model evals do not run
 in GitHub Actions and require no repository secrets. See [Local skill evaluations](evals/README.md)
 for authentication, focused commands, fixture caching, result review, and baseline promotion.
-The twelve code-writing use cases are also preserved as leakage-aware
+The fourteen code-writing use cases are also preserved as leakage-aware
 [implementation forward benchmarks](evals/benchmarks/README.md), with fixed tasks, hidden rubrics,
 observed skill/control baselines, a shared CDM 7.0.0 seed, and `evals/check-benchmarks` validation.
 
@@ -215,14 +224,16 @@ model evals.
 The core workflow reads model truth from the JAR the project supplies. Domain references include
 clearly dated CDM 7.0.0 observations where a concrete trap is useful, but require agents to rerun
 the supplied source queries against the consuming project's version. CI proves the live helper
-contract on the latest release of every supported major — currently 4.3.0, 5.40.0, 6.24.0, and
-7.0.0 — and a weekly canary runs it against the newest published build (including dev builds) as
+contract on the latest release of every supported major — currently 4.3.0, 5.40.0, 6.25.0, and
+7.2.0 — and a weekly canary runs it against the newest published build (including dev builds) as
 early warning before the next release enters the matrix.
 
 ## Layout
 
 ```text
 skills/cdm-dev/          the distributable skill — everything an install ships
+  .claude-plugin/        Claude Code plugin metadata
+  LICENSE                Apache-2.0 terms included in direct installs
   SKILL.md               lean workflow and reference router
   references/            onboarding, product-family, legal, DRR, industry, Rune, workflow, and test guidance
   scripts/cdm-docs       route plain words to one bundled guidance reference
@@ -238,6 +249,20 @@ tests/                   hermetic per-tool suites (driver: tests/run; shared lib
 evals/                   local runners, pattern/implementation benchmarks, graders, and baselines
 BENCHMARKS.md            the complete forward-test and benchmark record behind the README summary
 assets/                  README graphics (benchmark summary, light and dark)
-.claude-plugin/          marketplace manifest for /plugin install in Claude Code
+.claude-plugin/          repository marketplace manifest for /plugin install in Claude Code
 .github/                 hermetic lint/tests, CDM release matrix, links, and upstream canary
 ```
+
+## License and project status
+
+The original code and documentation in this repository are licensed under the
+[Apache License 2.0](LICENSE). Direct skill distributions include the same terms in
+[skills/cdm-dev/LICENSE](skills/cdm-dev/LICENSE). See [CONTRIBUTING.md](CONTRIBUTING.md) for the
+contribution contract and [SECURITY.md](SECURITY.md) for private vulnerability reporting.
+
+This repository does not redistribute the Common Domain Model or its release artefacts. FINOS CDM
+7.0.0—the version used by the saved benchmarks—is separately governed by its upstream
+[Community Specification License 1.0](https://github.com/finos/common-domain-model/blob/7.0.0/LICENSE.md).
+Consult each other CDM or DRR release for its applicable terms. The Apache-2.0 license for this
+repository does not relicense FINOS CDM, ISDA DRR, or other third-party material linked from the
+guides.

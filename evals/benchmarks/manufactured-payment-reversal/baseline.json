@@ -10,7 +10,7 @@
   "skill_snapshot_sha256": "10d134dd546c8045798061f1d377b4ffdd985f1d8994c8ae1406813b7eab1159",
   "skill_snapshot_hash_method": "SHA-256 of sorted relative-path sha256sum lines for every file under skills/cdm-dev",
   "production_tree_hash_method": "SHA-256 of each sorted src/main relative path, a NUL separator, and that file's SHA-256 digest",
-  "raw_run_root": "/private/tmp/manufactured-payment-counted.FDZ5Bo",
+  "raw_run_root": "local ephemeral evidence; not included in this repository",
   "note": "Four counted, isolated, sequential single-session arms used Claude Code 2.1.227 with claude-sonnet-5 or Codex CLI 0.147.0 invoked with gpt-5.4, all at high effort and with local Claude Max or ChatGPT subscription authentication. API credential and provider overrides were removed. Every arm received the same checksummed task and pinned CDM 7.0.0 artifacts; controls could not read cdm-dev, the repository, historical benchmarks, global skills, or sibling workspaces. Every authored suite and fresh-clone offline build passed before adaptive evaluator tests were introduced. The tests were adapted mechanically to each open public API only after all candidate processes exited and their deliverables were committed. Claude Fable 5 independently reviewed the frozen rubric, implementation sources, tests, design notes, traces, and probe outcomes. It scored Sonnet treatment/control 98/89 and GPT-5.4 treatment/control 91/92. The skill gave Sonnet a material model-correctness gain while also reducing calls and wall time. GPT treatment used far fewer commands and had stronger replay identity, but selected the wrong generated transfer branch and omitted inherited Cash/unit and party-identifier invariants; GPT control built the strongest validated CDM object but silently accepted a conflicting replay payload. The type-centric source helper, emitted-object validation gate, and corporate-action cash-movement guide added after the run are not credited to treatment.",
   "independent_review": {
     "reviewer": "Claude Fable 5",
@@ -72,7 +72,7 @@
     "credit": "not credited to any recorded treatment arm"
   },
   "discarded_diagnostic": {
-    "raw_root": "/private/tmp/manufactured-payment-benchmark.LV89X0",
+    "raw_root": "local ephemeral evidence; not included in this repository",
     "reason": "A preliminary environment check was excluded before any production write because its prompt claimed Gradle was on PATH when it was not; the counted harness then supplied the same Java 21 and Gradle 8.10 tools to every arm."
   },
   "runs": [

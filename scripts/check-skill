@@ -138,6 +138,45 @@ if "$cdm-dev" not in default_prompt:
 if not re.fullmatch(r"[^.!?]+[.!?]", default_prompt):
     raise SystemExit("check-skill: agents/openai.yaml default_prompt must be one sentence")
 
+repo_license = repo_root / "LICENSE"
+skill_license = skill_dir / "LICENSE"
+for license_path in (repo_license, skill_license):
+    if not license_path.is_file():
+        raise SystemExit(
+            f"check-skill: {license_path.relative_to(repo_root)} is missing; every distributed "
+            "copy must carry the license"
+        )
+if repo_license.read_bytes() != skill_license.read_bytes():
+    raise SystemExit("check-skill: skills/cdm-dev/LICENSE must exactly match the root LICENSE")
+license_text = repo_license.read_text()
+if "Apache License\n                           Version 2.0, January 2004" not in license_text:
+    raise SystemExit("check-skill: LICENSE is not the canonical Apache License 2.0 text")
+
+plugin_manifest_path = skill_dir / ".claude-plugin" / "plugin.json"
+if not plugin_manifest_path.is_file():
+    raise SystemExit("check-skill: skills/cdm-dev/.claude-plugin/plugin.json is missing")
+try:
+    plugin_manifest = json.loads(plugin_manifest_path.read_text())
+except json.JSONDecodeError as error:
+    raise SystemExit(f"check-skill: plugin.json is invalid JSON: {error}")
+if plugin_manifest.get("name") != "cdm-dev":
+    raise SystemExit("check-skill: plugin.json name must be cdm-dev")
+if plugin_manifest.get("displayName") != "CDM Development (Unofficial)":
+    raise SystemExit("check-skill: plugin.json displayName must make its unofficial status clear")
+if plugin_manifest.get("license") != "Apache-2.0":
+    raise SystemExit("check-skill: plugin.json license must be Apache-2.0")
+for field in ("description", "homepage", "repository"):
+    if not str(plugin_manifest.get(field, "")).strip():
+        raise SystemExit(f"check-skill: plugin.json needs {field} metadata")
+plugin_author = plugin_manifest.get("author")
+if not isinstance(plugin_author, dict) or not str(plugin_author.get("name", "")).strip():
+    raise SystemExit("check-skill: plugin.json needs an author with a name")
+plugin_keywords = plugin_manifest.get("keywords")
+if not isinstance(plugin_keywords, list) or not plugin_keywords or not all(
+    isinstance(keyword, str) and keyword.strip() for keyword in plugin_keywords
+):
+    raise SystemExit("check-skill: plugin.json keywords must be a non-empty string array")
+
 marketplace = repo_root / ".claude-plugin" / "marketplace.json"
 if not marketplace.is_file():
     raise SystemExit("check-skill: .claude-plugin/marketplace.json is missing; Claude Code "
@@ -160,11 +199,18 @@ if not isinstance(plugins, list) or len(plugins) != 1:
 plugin = plugins[0]
 if not isinstance(plugin, dict) or plugin.get("name") != "cdm-dev":
     raise SystemExit("check-skill: marketplace.json plugin name must be cdm-dev")
-if plugin.get("source") != "./":
-    raise SystemExit("check-skill: marketplace.json plugin source must be ./ so the plugin root "
-                     "carries the conventional skills/cdm-dev directory")
+if plugin.get("source") != "./skills/cdm-dev":
+    raise SystemExit("check-skill: marketplace.json plugin source must be ./skills/cdm-dev so "
+                     "installs contain only the distributable skill")
 if not str(plugin.get("description", "")).strip():
     raise SystemExit("check-skill: marketplace.json plugin needs a description")
+for field in (
+    "displayName", "description", "author", "homepage", "repository", "license", "keywords"
+):
+    if plugin.get(field) != plugin_manifest.get(field):
+        raise SystemExit(
+            f"check-skill: marketplace.json plugin {field} must match the packaged plugin.json"
+        )
 
 readme = repo_root / "README.md"
 link_re = re.compile(r"\]\(([^)#]+\.md)(?:#[^)]*)?\)")
@@ -296,19 +342,19 @@ try:
 except SyntaxError as error:
     raise SystemExit(f"check-skill: scripts/check-links has invalid Python: {error}")
 
-portable_resources = [skill, ui_metadata, readme, docs_helper, find_helper, source_helper, api_helper, inspect_helper, link_checker,
+portable_resources = [skill, ui_metadata, plugin_manifest_path, skill_license, readme, docs_helper, find_helper, source_helper, api_helper, inspect_helper, link_checker,
                       *sorted(references)]
 resource_text = "\n".join(path.read_text() for path in portable_resources)
-# The README documents this repository and must name it for the marketplace
-# install command, so the repository-name rule covers only what an install
-# ships; every other portability rule still covers the README.
-distributable_text = "\n".join(path.read_text() for path in portable_resources if path != readme)
+# The README and plugin manifest intentionally name the source repository for installation and
+# provenance, so the repository-name rule excludes only those metadata surfaces; every other
+# portability rule still covers them.
+distributable_text = "\n".join(
+    path.read_text() for path in portable_resources
+    if path not in (readme, plugin_manifest_path)
+)
 forbidden = {
     "absolute user path": r"/Users/",
     "source repository name": r"bq-cdm",
-    "application package": r"com\.banqora",
-    "application build wrapper": r"docker/gradle\.sh",
-    "application path helper": r"\b(?:CdmPathModel|ModelShape|ShapeBuilder|LifecycleService)\b",
     "old repository selector": r"(?:CDM_REPO|--repo)",
 }
 for label, pattern in forbidden.items():

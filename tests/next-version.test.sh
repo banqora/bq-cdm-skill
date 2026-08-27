@@ -48,5 +48,9 @@ git -C "$sandbox" tag v0.10.3-notes HEAD~1
 expect_ok "a non-release suffix tag does not disturb the increment" \
   --stdout '^v0\.10\.3$' -- run_in_sandbox
 
+git -C "$sandbox" tag v0.10.3-rc1 HEAD
+expect_ok "a non-release suffix tag on HEAD is not mistaken for a release" \
+  --stdout '^v0\.10\.3$' -- run_in_sandbox
+
 echo "$suite_name: $passed passed, $failed failed"
 [[ "$failed" -eq 0 ]]

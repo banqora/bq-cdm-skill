@@ -56,8 +56,8 @@ from pathlib import Path
 
 metadata = Path(sys.argv[1])
 metadata.write_text(metadata.read_text().replace(
-    '  display_name: "FINOS CDM Development"',
-    '  display_name: FINOS CDM Development'))
+    '  display_name: "CDM Development (Unofficial)"',
+    '  display_name: CDM Development (Unofficial)'))
 PY
 expect_fail "static gate requires quoted UI strings" \
   --stderr "interface values must be quoted strings" -- \
@@ -200,11 +200,29 @@ from pathlib import Path
 
 manifest_path = Path(sys.argv[1])
 manifest = json.loads(manifest_path.read_text())
-manifest["plugins"][0]["source"] = "./skills/cdm-dev"
+manifest["plugins"][0]["source"] = "./"
 manifest_path.write_text(json.dumps(manifest))
 PY
-expect_fail "static gate pins the plugin source to the repository root" \
-  --stderr "plugin source must be ./" -- \
+expect_fail "static gate limits the plugin source to the distributable skill" \
+  --stderr "plugin source must be ./skills/cdm-dev" -- \
+  "$copy/scripts/check-skill" --static
+
+copy="$(fresh_copy missing-distributable-license)"
+rm "$copy/skills/cdm-dev/LICENSE"
+expect_fail "static gate requires the license in direct skill distributions" \
+  --stderr "skills/cdm-dev/LICENSE is missing" -- \
+  "$copy/scripts/check-skill" --static
+
+copy="$(fresh_copy mismatched-distributable-license)"
+printf '\nmodified\n' >>"$copy/skills/cdm-dev/LICENSE"
+expect_fail "static gate keeps repository and distributed license copies identical" \
+  --stderr "LICENSE must exactly match" -- \
+  "$copy/scripts/check-skill" --static
+
+copy="$(fresh_copy missing-plugin-manifest)"
+rm "$copy/skills/cdm-dev/.claude-plugin/plugin.json"
+expect_fail "static gate requires metadata in the packaged Claude plugin" \
+  --stderr "skills/cdm-dev/.claude-plugin/plugin.json is missing" -- \
   "$copy/scripts/check-skill" --static
 
 copy="$(fresh_copy long-description)"

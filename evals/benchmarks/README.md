@@ -23,11 +23,13 @@ these cases require an agent to write and test Java code.
   seam with the four classic break-generators as tests. The recorded baseline is an
   author-orchestrated Sonnet 5 pair, author-scored and then independently re-scored by a fresh
   session given only the sealed materials; deviations from the four-arm protocol are disclosed
-  in the baseline note, and GPT arms remain open.
+  in the baseline note, and GPT arms remain open. Its frozen task quotes the decimal-fraction
+  example from the [CDM 7.0.0 Rune source](https://github.com/finos/common-domain-model/blob/7.0.0/rosetta-source/src/main/rosetta/base-math-type.rosetta#L42-L44); this citation is kept outside
+  the sealed agent input so its digest remains unchanged.
 
 ## Contents
 
-- `index.json`: benchmark and pinned-fixture manifest.
+- `index.json`: benchmark, sealed-task SHA-256, and pinned-fixture manifest.
 - `fixtures/java-21-cdm-7.0.0/`: shared minimal Gradle seed.
 - `<benchmark>/TASK.md`: the only benchmark-specific file shown to the implementation agent.
 - `<benchmark>/rubric.json`: fixed public and hidden evaluator criteria.
@@ -59,6 +61,12 @@ The historical baseline is evidence from one run, not a threshold to optimise bl
 new baseline only after reviewing raw code and test output and noting which skill revision was under
 test. Never edit a task or rubric in place merely to make a model pass; version the benchmark when
 its contract changes materially.
+
+Raw model workspaces and account traces are not distributed with this repository; a baseline says
+so where only local ephemeral evidence was retained. Benchmark people, organisations, trades, and
+events are synthetic test fixtures unless a public validation vector is explicitly named and
+linked. A checksum-valid identifier that resolves to a real organisation is used only as test data
+and does not imply that organisation's participation in or endorsement of this project.
 
 Validate the manifest, tasks, rubrics, and baselines with:
 

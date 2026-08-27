@@ -1,9 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="920" height="680" viewBox="0 0 920 680" role="img" aria-label="Independently reviewed scores for twelve sealed CDM benchmarks: the Claude arm using cdm-dev matched or beat its control in all twelve.">
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="680" viewBox="0 0 920 680" role="img" aria-label="Reviewed scores for twelve later sealed CDM benchmarks: the Claude arm using cdm-dev matched or beat its control in all twelve.">
 <rect x="0.5" y="0.5" width="919" height="679" rx="10" fill="#fcfcfb" stroke="rgba(11,11,11,0.10)"/>
 <text x="28" y="44" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="18" font-weight="600" fill="#0b0b0b" text-anchor="start">Measured lift on sealed CDM benchmarks</text>
-<text x="28" y="66" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">Isolated skill-vs-control agent sessions · hidden rubrics · independent post-run code reviews</text>
+<text x="28" y="66" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="start">Isolated skill-vs-control agent sessions · hidden rubrics · post-run scoring and review</text>
 <text x="28" y="122" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="34" font-weight="600" fill="#0b0b0b" text-anchor="start">12/12</text>
-<text x="28" y="144" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">reviewed benchmarks where the Claude arm</text>
+<text x="28" y="144" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">later scored cases where the Claude arm</text>
 <text x="28" y="160" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">with cdm-dev matched or beat its control</text>
 <text x="330" y="122" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="34" font-weight="600" fill="#0b0b0b" text-anchor="start">+19 pts</text>
 <text x="330" y="144" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">largest single review gain — open CDM</text>
@@ -12,7 +12,7 @@
 <text x="632" y="144" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">fewer tool calls on the revised fast path,</text>
 <text x="632" y="160" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11.5" font-weight="400" fill="#52514e" text-anchor="start">finishing 21% sooner (Sonnet 5)</text>
 <line x1="28" y1="184" x2="892" y2="184" stroke="#e1e0d9" stroke-width="1"/>
-<text x="28" y="214" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Independently reviewed score (0–100) · Claude arm (Opus 5 / Sonnet 5)</text>
+<text x="28" y="214" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" font-weight="600" fill="#0b0b0b" text-anchor="start">Reviewed score (0–100) · Claude arm (Opus 5 / Sonnet 5)</text>
 <circle cx="640" cy="210" r="5" fill="#2a78d6"/>
 <text x="651" y="214" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12" font-weight="400" fill="#52514e" text-anchor="start">with cdm-dev</text>
 <circle cx="742" cy="210" r="4.5" fill="#898781"/>
@@ -83,6 +83,6 @@
 <text x="242" y="586" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12.5" font-weight="400" fill="#52514e" text-anchor="end">BDT expander, pinned contract</text>
 <circle cx="798" cy="582" r="5" fill="#2a78d6" stroke="#fcfcfb" stroke-width="2"/>
 <text x="812" y="586" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="12" font-weight="400" fill="#898781" text-anchor="start">tie · 100</text>
-<text x="28" y="646" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="start">Scores from independent post-run reviews of twelve sealed skill-versus-control benchmarks with frozen tasks and evaluator reveal after every arm exited.</text>
-<text x="28" y="662" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="start">Codex / GPT‑5.4 arm detail, methodology, and every table: BENCHMARKS.md</text>
+<text x="28" y="646" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="start">Reviewed scores for twelve later sealed skill-versus-control cases with frozen tasks and evaluator reveal after every arm exited.</text>
+<text x="28" y="662" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="11" font-weight="400" fill="#898781" text-anchor="start">Two early cases sit outside this chart; all arms, limitations, and methodology: BENCHMARKS.md</text>
 </svg>

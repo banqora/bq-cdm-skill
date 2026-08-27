@@ -140,4 +140,10 @@ expect_ok "lookup reads the archive in memory without filesystem extraction" \
   --stdout '^type:cdm\.event\.common\.TradeState[[:space:]]' -- \
   find_without_extraction
 
+spaced_scripts="$work/skill scripts"
+cp -R "$skill_dir/scripts" "$spaced_scripts"
+expect_ok "lookup works when the installed skill path contains spaces" \
+  --stdout '^type:cdm\.event\.common\.TradeState[[:space:]]' -- \
+  "$spaced_scripts/cdm-find" --jar "$fixture_jar" trade state
+
 finish

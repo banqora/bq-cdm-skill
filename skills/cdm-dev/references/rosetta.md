@@ -48,8 +48,9 @@ The helper never downloads a replacement.
 
 Use `members` first when you need exact fields, cardinalities, conditions, function inputs/output,
 or generated Java names without a whole declaration. Use `path` for one inherited member route and
-`type` for the complete declaration. All three resolve simple names against the embedded model and
-preflight a batch before emitting a report. If a type and function share a Rune name, use the
+`type` for the complete declaration. `type` and `members` accept at most eight declarations, and
+`type` refuses a combined report above 1,200 lines. All three resolve simple names against the
+embedded model and preflight a batch before emitting a report. If a type and function share a Rune name, use the
 copyable `type:fully.qualified.Name` or `func:fully.qualified.Name` candidate printed by the helper.
 `search` is a capped discovery fallback; refine its regular expression when it prints the
 truncation marker rather than opening a consolidated model file. Record the reported version and

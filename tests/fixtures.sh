@@ -103,7 +103,8 @@ fresh_copy() {
   local copy="$work/copy-$1"
   rm -rf -- "$copy"
   mkdir -p "$copy/skills" "$copy/evals/benchmarks"
-  cp -R "$repo_root/README.md" "$repo_root/scripts" "$repo_root/.claude-plugin" "$copy/"
+  cp -R "$repo_root/README.md" "$repo_root/LICENSE" "$repo_root/scripts" \
+    "$repo_root/.claude-plugin" "$copy/"
   cp "$repo_root/evals/README.md" "$copy/evals/README.md"
   cp "$repo_root/evals/benchmarks/README.md" "$copy/evals/benchmarks/README.md"
   cp -R "$skill_dir" "$copy/skills/cdm-dev"
@@ -131,6 +132,14 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(302)
             self.send_header("Location", "/ok")
             self.end_headers()
+        elif self.path == "/soft-missing":
+            self.send_response(302)
+            self.send_header("Location", "/rosetta_404.html")
+            self.end_headers()
+        elif self.path == "/rosetta_404.html":
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"soft 404")
         elif self.path == "/restricted":
             self.send_response(403)
             self.end_headers()

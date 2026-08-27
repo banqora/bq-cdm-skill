@@ -80,13 +80,33 @@ if [[ ${#requested_declarations[@]} -gt $max_declarations ]]; then
 fi
 
 if [[ -n "$jar_override" ]]; then
-  jar="$($source_helper --jar "$jar_override" jar)"
+  jar="$("$source_helper" --jar "$jar_override" jar)"
 else
-  jar="$($source_helper jar)"
+  jar="$("$source_helper" jar)"
 fi
 
+inspection_dir="$(mktemp -d "${TMPDIR:-/tmp}/cdm-inspect.XXXXXX")"
+cleanup() {
+  [[ -n "${inspection_dir:-}" && -d "$inspection_dir" ]] && rm -rf -- "$inspection_dir"
+}
+trap cleanup EXIT
+source_error="$inspection_dir/source-error.txt"
+
 # cdm-source resolves the complete batch before printing and reads the embedded Rune files once.
-source_output="$($source_helper --jar "$jar" type "${requested_declarations[@]}")"
+if ! source_output="$("$source_helper" --jar "$jar" type "${requested_declarations[@]}" \
+  2>"$source_error")"; then
+  source_line_count="$(
+    sed -n 's/^cdm-source: declaration inspection would emit \([0-9][0-9]*\) lines (limit 1200); use members or path$/\1/p' \
+      "$source_error"
+  )"
+  if [[ -n "$source_line_count" ]]; then
+    echo "cdm-inspect: exact inspection would exceed $max_output_lines lines" >&2
+    echo "cdm-inspect: Rune declarations alone would emit $source_line_count lines; request a smaller vertical slice" >&2
+  else
+    cat "$source_error" >&2
+  fi
+  exit 1
+fi
 artifact_version="$(sed -n 's/^# artifact-version=//p' <<<"$source_output")"
 if [[ -z "$artifact_version" || "$artifact_version" == *$'\n'* ]]; then
   echo "cdm-inspect: internal error reading the selected CDM artifact version" >&2
@@ -107,13 +127,8 @@ api_args=(--jar "$jar")
 for classpath_entry in "${classpath_entries[@]:-}"; do
   [[ -n "$classpath_entry" ]] && api_args+=(--classpath "$classpath_entry")
 done
-api_output="$($api_helper "${api_args[@]}" "${resolved_types[@]}")"
+api_output="$("$api_helper" "${api_args[@]}" "${resolved_types[@]}")"
 
-inspection_dir="$(mktemp -d "${TMPDIR:-/tmp}/cdm-inspect.XXXXXX")"
-cleanup() {
-  [[ -n "${inspection_dir:-}" && -d "$inspection_dir" ]] && rm -rf -- "$inspection_dir"
-}
-trap cleanup EXIT
 source_report="$inspection_dir/source.txt"
 printf '%s\n' "$source_output" >"$source_report"
 

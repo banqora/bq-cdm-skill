@@ -14,7 +14,8 @@ resolved fully qualified Java name is printed before the API. Ambiguous names fa
 
 The cdm-java JAR is selected by the adjacent cdm-source helper. Repeat --classpath to add
 project-resolved runtime dependencies, or set CDM_JAVA_CLASSPATH. The helper never downloads or
-guesses a dependency version.
+guesses a dependency version. A call accepts at most eight requested types and emits at most 1,200
+lines; it fails atomically rather than truncating an exact API.
 USAGE
 }
 
@@ -81,6 +82,11 @@ done
   usage
   exit 1
 }
+if [[ ${#requested_types[@]} -gt 8 ]]; then
+  echo "cdm-java-api: at most 8 Java types are allowed per bounded inspection" >&2
+  echo "cdm-java-api: split the request into a smaller API slice" >&2
+  exit 1
+fi
 
 for required_tool in javap zipinfo rg; do
   command -v "$required_tool" >/dev/null || {
@@ -182,6 +188,14 @@ if ! api="$(javap -public -classpath "$classpath" "${targets[@]}" 2>&1)"; then
   else
     echo "cdm-java-api: add missing project-resolved dependencies with --classpath; do not guess versions" >&2
   fi
+  exit 1
+fi
+
+api_lines="$(awk 'END { print NR }' <<<"$api")"
+line_count=$((api_lines + ${#resolution_notes[@]}))
+if [[ "$line_count" -gt 1200 ]]; then
+  echo "cdm-java-api: exact API inspection would emit $line_count lines (limit 1200)" >&2
+  echo "cdm-java-api: request a smaller type batch; output was not truncated" >&2
   exit 1
 fi
 

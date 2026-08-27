@@ -9,30 +9,35 @@ on:
     - cron: "17 6 * * 1"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   SHFMT_VERSION: v3.13.1
+  SHFMT_SHA256: fb096c5d1ac6beabbdbaa2874d025badb03ee07929f0c9ff67563ce8c75398b1
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install shfmt
         run: |
           mkdir -p "$HOME/.local/bin"
           curl -fsSL --retry 3 -o "$HOME/.local/bin/shfmt" \
             "https://github.com/mvdan/sh/releases/download/${SHFMT_VERSION}/shfmt_${SHFMT_VERSION}_linux_amd64"
+          echo "$SHFMT_SHA256  $HOME/.local/bin/shfmt" | sha256sum -c -
           chmod +x "$HOME/.local/bin/shfmt"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       - name: shellcheck
-        run: shellcheck -x skills/cdm-dev/scripts/cdm-source skills/cdm-dev/scripts/cdm-java-api skills/cdm-dev/scripts/cdm-inspect scripts/check-skill scripts/next-version tests/run tests/*.sh evals/run-triggers evals/run-quality evals/run-local
+        run: shellcheck -x skills/cdm-dev/scripts/cdm-docs skills/cdm-dev/scripts/cdm-find skills/cdm-dev/scripts/cdm-source skills/cdm-dev/scripts/cdm-java-api skills/cdm-dev/scripts/cdm-inspect scripts/check-skill scripts/next-version tests/run tests/*.sh evals/run-triggers evals/run-quality evals/run-local
       - name: shfmt
-        run: shfmt -d -i 2 -ci skills/cdm-dev/scripts/cdm-source skills/cdm-dev/scripts/cdm-java-api skills/cdm-dev/scripts/cdm-inspect scripts/check-skill scripts/next-version tests/run tests/*.sh evals/run-triggers evals/run-quality evals/run-local
+        run: shfmt -d -i 2 -ci skills/cdm-dev/scripts/cdm-docs skills/cdm-dev/scripts/cdm-find skills/cdm-dev/scripts/cdm-source skills/cdm-dev/scripts/cdm-java-api skills/cdm-dev/scripts/cdm-inspect scripts/check-skill scripts/next-version tests/run tests/*.sh evals/run-triggers evals/run-quality evals/run-local
 
   static:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install ripgrep
         run: sudo apt-get update -q && sudo apt-get install -y -q ripgrep
       - name: Static gate
@@ -41,7 +46,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install ripgrep
         run: sudo apt-get update -q && sudo apt-get install -y -q ripgrep
       - name: Script test suite
@@ -50,8 +55,12 @@ jobs:
   links:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Validate external link targets without network access
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        run: scripts/check-links --offline
       - name: Check external documentation links
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         run: scripts/check-links
 
   cdm-matrix:
@@ -62,25 +71,59 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        cdm-version: ["4.3.0", "5.40.0", "6.24.0", "7.0.0"]
+        include:
+          - cdm-version: "4.3.0"
+            sha256: 81725d487d34d332884ea8d4ad78b126087e630e38c90e9866a5991d3c893b39
+          - cdm-version: "5.40.0"
+            sha256: 82cf979d5650d039b464db9e044c463369d0946e53ab32312b33b33575eba675
+          - cdm-version: "6.25.0"
+            sha256: e76afc7e97f0194c0d0aafd91d5c78cc3e60974403ee744dd33f417b0ee55e51
+          - cdm-version: "7.2.0"
+            sha256: 17ef037180ad506070ee9eb8a892c439fbb476fdf207223d9a61be59c5315976
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install ripgrep
         run: sudo apt-get update -q && sudo apt-get install -y -q ripgrep
       - name: Cache cdm-java ${{ matrix.cdm-version }}
         id: cache-jar
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ~/.cache/cdm/cdm-java-${{ matrix.cdm-version }}.jar
-          key: cdm-java-${{ matrix.cdm-version }}
+          key: cdm-java-${{ matrix.cdm-version }}-${{ matrix.sha256 }}
       - name: Download cdm-java ${{ matrix.cdm-version }}
         if: steps.cache-jar.outputs.cache-hit != 'true'
         run: |
           mkdir -p ~/.cache/cdm
           curl -fsSL --retry 3 -o ~/.cache/cdm/cdm-java-${{ matrix.cdm-version }}.jar \
             "https://repo1.maven.org/maven2/org/finos/cdm/cdm-java/${{ matrix.cdm-version }}/cdm-java-${{ matrix.cdm-version }}.jar"
+      - name: Verify cdm-java ${{ matrix.cdm-version }}
+        run: echo "${{ matrix.sha256 }}  $HOME/.cache/cdm/cdm-java-${{ matrix.cdm-version }}.jar" | sha256sum -c -
       - name: Live gate against cdm-java ${{ matrix.cdm-version }}
         run: scripts/check-skill --jar ~/.cache/cdm/cdm-java-${{ matrix.cdm-version }}.jar
+
+  ci-passed:
+    # Stable aggregate required by the main-branch ruleset.
+    if: always()
+    needs: [lint, static, test, links, cdm-matrix]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirm all merge gates passed
+        env:
+          LINT_RESULT: ${{ needs.lint.result }}
+          STATIC_RESULT: ${{ needs.static.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+          LINKS_RESULT: ${{ needs.links.result }}
+          CDM_MATRIX_RESULT: ${{ needs.cdm-matrix.result }}
+        run: |
+          for result in \
+            "$LINT_RESULT" "$STATIC_RESULT" "$TEST_RESULT" \
+            "$LINKS_RESULT" "$CDM_MATRIX_RESULT"; do
+            [[ "$result" == success ]] || {
+              echo "A required merge gate did not succeed: $result" >&2
+              exit 1
+            }
+          done
+          echo "All merge gates passed."
 
   upstream-canary:
     # Early warning, not a merge gate: run the live contract against the newest
@@ -90,7 +133,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install ripgrep
         run: sudo apt-get update -q && sudo apt-get install -y -q ripgrep
       - name: Resolve newest published cdm-java
@@ -99,12 +142,23 @@ jobs:
           version="$(curl -fsSL --retry 3 \
             https://repo1.maven.org/maven2/org/finos/cdm/cdm-java/maven-metadata.xml |
             grep -oE '<latest>[^<]+</latest>' | sed 's/<[^>]*>//g')"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-dev\.[0-9]+)?$ ]] || {
+            echo "invalid latest cdm-java version: $version" >&2
+            exit 1
+          }
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Newest published cdm-java: $version" >> "$GITHUB_STEP_SUMMARY"
       - name: Live gate against ${{ steps.newest.outputs.version }}
         run: |
+          jar_url="https://repo1.maven.org/maven2/org/finos/cdm/cdm-java/${{ steps.newest.outputs.version }}/cdm-java-${{ steps.newest.outputs.version }}.jar"
+          expected_sha="$(curl -fsSL --retry 3 "$jar_url.sha256")"
+          [[ "$expected_sha" =~ ^[0-9a-f]{64}$ ]] || {
+            echo "invalid Maven Central SHA-256: $expected_sha" >&2
+            exit 1
+          }
           curl -fsSL --retry 3 -o /tmp/cdm-java-canary.jar \
-            "https://repo1.maven.org/maven2/org/finos/cdm/cdm-java/${{ steps.newest.outputs.version }}/cdm-java-${{ steps.newest.outputs.version }}.jar"
+            "$jar_url"
+          echo "$expected_sha  /tmp/cdm-java-canary.jar" | sha256sum -c -
           if scripts/check-skill --jar /tmp/cdm-java-canary.jar; then
             echo "Canary passed against ${{ steps.newest.outputs.version }}." >> "$GITHUB_STEP_SUMMARY"
           else
@@ -114,29 +168,38 @@ jobs:
           fi
 
   tag:
-    # Every push to main that passes the full gate gets an immutable version
-    # tag, so public consumers can pin a validated release. The patch number
-    # auto-increments from the newest vX.Y.Z tag; push a vX.Y.0 tag by hand to
-    # open a new minor/major series and auto-increment continues from it.
-    # workflow_dispatch is included as the manual lever for a push whose event
-    # was not delivered; an already tagged HEAD is skipped either way.
+    # The latest main tip that passes the full gate gets an annotated version tag.
+    # Older successful runs skip tagging after a newer push reaches main, avoiding
+    # out-of-order versions when CI durations differ. The patch number auto-increments
+    # from the newest vX.Y.Z tag; push a vX.Y.0 tag by hand to open a new minor/major
+    # series. workflow_dispatch is the manual lever for a missed push event.
     if: >-
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
       && github.ref == 'refs/heads/main'
-    needs: [lint, static, test, links, cdm-matrix]
+    needs: [ci-passed]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     concurrency:
       group: tag-main
+      queue: max
+      cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
       - name: Tag with the next patch version
         run: |
           set -euo pipefail
-          if ! next="$(scripts/next-version)"; then
+          git fetch --force --tags origin \
+            "+refs/heads/main:refs/remotes/origin/main"
+          if [[ "$(git rev-parse HEAD)" != "$(git rev-parse refs/remotes/origin/main)" ]]; then
+            echo "A newer main tip exists; its validated workflow will allocate the next tag." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if next="$(scripts/next-version)"; then
+            :
+          else
             status=$?
             if [ "$status" -eq 3 ]; then
               echo "HEAD already carries a release tag; skipping" >> "$GITHUB_STEP_SUMMARY"

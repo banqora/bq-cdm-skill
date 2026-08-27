@@ -1,0 +1,13 @@
+{
+  "name": "cdm-dev",
+  "displayName": "CDM Development (Unofficial)",
+  "description": "Independent tooling to develop, debug, test, upgrade, and review FINOS Common Domain Model software, Rune source, generated distributions, and Rune runtimes.",
+  "author": {
+    "name": "Nicholas Holden",
+    "url": "https://github.com/banqora"
+  },
+  "homepage": "https://github.com/banqora/bq-cdm-skill",
+  "repository": "https://github.com/banqora/bq-cdm-skill",
+  "license": "Apache-2.0",
+  "keywords": ["finos", "cdm", "rune", "financial-services", "agent-skill"]
+}

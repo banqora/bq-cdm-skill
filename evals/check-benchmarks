@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import re
 import sys
@@ -33,7 +34,14 @@ def load_json(path: Path, errors: list[str]) -> Any:
     return None
 
 
-def contained_path(evals_dir: Path, relative: object, label: str, errors: list[str]) -> Path | None:
+def contained_path(
+    evals_dir: Path,
+    relative: object,
+    label: str,
+    errors: list[str],
+    *,
+    expected_kind: str | None = None,
+) -> Path | None:
     if not isinstance(relative, str) or not relative:
         errors.append(f"{label} must be a non-empty relative path")
         return None
@@ -43,8 +51,17 @@ def contained_path(evals_dir: Path, relative: object, label: str, errors: list[s
     except ValueError:
         errors.append(f"{label} escapes the evals directory: {relative}")
         return None
-    if not candidate.is_file() and not candidate.is_dir():
+    is_file = candidate.is_file()
+    is_directory = candidate.is_dir()
+    if not is_file and not is_directory:
         errors.append(f"{label} does not exist: {relative}")
+        return None
+    if expected_kind == "file" and not is_file:
+        errors.append(f"{label} must be a file: {relative}")
+        return None
+    if expected_kind == "directory" and not is_directory:
+        errors.append(f"{label} must be a directory: {relative}")
+        return None
     return candidate
 
 
@@ -224,7 +241,13 @@ def main() -> int:
         "benchmark fixture",
         errors,
     ):
-        fixture_path = contained_path(evals_dir, fixture["path"], "fixture path", errors)
+        fixture_path = contained_path(
+            evals_dir,
+            fixture["path"],
+            "fixture path",
+            errors,
+            expected_kind="directory",
+        )
         if fixture_path is not None:
             for filename in ("build.gradle.kts", "settings.gradle.kts"):
                 if not (fixture_path / filename).is_file():
@@ -245,6 +268,7 @@ def main() -> int:
         "artifact_version",
         "language",
         "task",
+        "task_sha256",
         "rubric",
         "baseline",
     }
@@ -263,11 +287,37 @@ def main() -> int:
             errors.append(f"benchmark {benchmark_id} has an unsupported kind")
         if benchmark["artifact_version"] != fixture.get("artifact_version"):
             errors.append(f"benchmark {benchmark_id} artifact version differs from fixture")
-        task_path = contained_path(evals_dir, benchmark["task"], f"task {benchmark_id}", errors)
-        rubric_path = contained_path(evals_dir, benchmark["rubric"], f"rubric {benchmark_id}", errors)
-        baseline_path = contained_path(evals_dir, benchmark["baseline"], f"baseline {benchmark_id}", errors)
+        task_path = contained_path(
+            evals_dir,
+            benchmark["task"],
+            f"task {benchmark_id}",
+            errors,
+            expected_kind="file",
+        )
+        rubric_path = contained_path(
+            evals_dir,
+            benchmark["rubric"],
+            f"rubric {benchmark_id}",
+            errors,
+            expected_kind="file",
+        )
+        baseline_path = contained_path(
+            evals_dir,
+            benchmark["baseline"],
+            f"baseline {benchmark_id}",
+            errors,
+            expected_kind="file",
+        )
         task = ""
+        task_sha256 = benchmark["task_sha256"]
+        if not isinstance(task_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", task_sha256):
+            errors.append(f"benchmark {benchmark_id} task_sha256 must be a lowercase SHA-256 digest")
         if task_path is not None and task_path.is_file():
+            actual_task_sha256 = hashlib.sha256(task_path.read_bytes()).hexdigest()
+            if actual_task_sha256 != task_sha256:
+                errors.append(
+                    f"task {benchmark_id} digest differs from the sealed task_sha256"
+                )
             task = task_path.read_text(encoding="utf-8")
             if len(task.split()) < 100:
                 errors.append(f"task {benchmark_id} is too short to preserve the benchmark contract")

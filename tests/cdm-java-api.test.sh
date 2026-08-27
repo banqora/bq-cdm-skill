@@ -32,9 +32,25 @@ printf '%s\n' \
   '    public String evaluate(String input) { return input; }' \
   '  }' \
   '}' >"$work/api-src/cdm/fixture/Calculate.java"
+{
+  printf '%s\n' 'package cdm.fixture;' 'public interface ExactApiBound {'
+  for index in $(seq 1 1197); do
+    printf '  void method%s();\n' "$index"
+  done
+  printf '%s\n' '}'
+} >"$work/api-src/cdm/fixture/ExactApiBound.java"
+{
+  printf '%s\n' 'package cdm.fixture;' 'public interface OverApiBound {'
+  for index in $(seq 1 1198); do
+    printf '  void method%s();\n' "$index"
+  done
+  printf '%s\n' '}'
+} >"$work/api-src/cdm/fixture/OverApiBound.java"
 javac -d "$work/api-classes" \
   "$work/api-src/cdm/fixture/Widget.java" \
-  "$work/api-src/cdm/fixture/Calculate.java"
+  "$work/api-src/cdm/fixture/Calculate.java" \
+  "$work/api-src/cdm/fixture/ExactApiBound.java" \
+  "$work/api-src/cdm/fixture/OverApiBound.java"
 jar --update --file "$fixture_jar" -C "$work/api-classes" .
 
 mkdir -p "$work/api-src/cdm/other"
@@ -135,6 +151,11 @@ expect_fail "at least one Java type is required" \
   --stderr 'provide at least one Java type' -- \
   "$cdm_api" --jar "$fixture_jar"
 
+expect_fail "more than eight requested Java types are rejected before inspection" \
+  --stderr 'at most 8 Java types' -- \
+  "$cdm_api" --jar "$fixture_jar" \
+  Widget Widget Widget Widget Widget Widget Widget Widget Widget
+
 expect_fail "malformed type names are rejected before javap" \
   --stderr 'invalid Java type' -- \
   "$cdm_api" --jar "$fixture_jar" cdm/fixture/Widget
@@ -156,5 +177,29 @@ api_preflight_is_atomic() {
 }
 expect_ok "type preflight reports every bad simple name without partial API output" \
   --stdout 'type batch preflight failed' -- api_preflight_is_atomic
+
+exact_api_bound() {
+  local output line_count
+  output="$("$cdm_api" --jar "$fixture_jar" cdm.fixture.ExactApiBound)" || return
+  line_count="$(awk 'END { print NR }' <<<"$output")"
+  [[ "$line_count" -eq 1200 ]] || return 1
+}
+expect_ok "API inspection permits exact output at the 1200-line bound" -- \
+  exact_api_bound
+
+api_output_bound_is_atomic() {
+  local stdout_file="$work/api-output-bound.stdout"
+  local stderr_file="$work/api-output-bound.stderr"
+  if "$cdm_api" --jar "$fixture_jar" cdm.fixture.OverApiBound \
+    >"$stdout_file" 2>"$stderr_file"; then
+    return 1
+  fi
+  [[ ! -s "$stdout_file" ]] || return 1
+  rg 'exact API inspection would emit 1201 lines \(limit 1200\)' \
+    "$stderr_file" >/dev/null || return 1
+  printf '%s\n' "$(<"$stderr_file")"
+}
+expect_ok "API output above the bound fails without partial output" \
+  --stdout 'output was not truncated' -- api_output_bound_is_atomic
 
 finish

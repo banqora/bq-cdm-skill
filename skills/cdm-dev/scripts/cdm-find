@@ -77,7 +77,7 @@ command -v python3 >/dev/null || {
   exit 1
 }
 
-resolution="$($source_helper "${jar_args[@]}" version)"
+resolution="$("$source_helper" "${jar_args[@]}" version)"
 version="$(sed -n 's/^version=//p' <<<"$resolution")"
 jar="$(sed -n 's/^jar=//p' <<<"$resolution")"
 if [[ -z "$version" || -z "$jar" ]]; then

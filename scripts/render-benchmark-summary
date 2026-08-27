@@ -3,8 +3,8 @@
 
 The committed files under assets/ are this script's exact output; the
 render-benchmark-summary test regenerates them and fails on any drift, so a
-data or styling change must go through this script. Scores are the
-independently reviewed 0-100 results recorded in BENCHMARKS.md.
+data or styling change must go through this script. Scores are the reviewed
+0-100 results recorded in BENCHMARKS.md.
 """
 import sys
 from pathlib import Path
@@ -45,7 +45,7 @@ HEIGHT = ROW_TOP + (len(ROWS) - 1) * ROW_STEP + 98
 FONT = "system-ui, -apple-system, 'Segoe UI', sans-serif"
 
 TILES = [
-    ("12/12", "reviewed benchmarks where the Claude arm",
+    ("12/12", "later scored cases where the Claude arm",
      "with cdm-dev matched or beat its control"),
     ("+19 pts", "largest single review gain — open CDM",
      "boundary discovery (GPT‑5.4 arm)"),
@@ -53,13 +53,13 @@ TILES = [
      "finishing 21% sooner (Sonnet 5)"),
 ]
 
-ARIA = ("Independently reviewed scores for twelve sealed CDM benchmarks: the "
+ARIA = ("Reviewed scores for twelve later sealed CDM benchmarks: the "
         "Claude arm using cdm-dev matched or beat its control in all twelve.")
 
 FOOTER = [
-    "Scores from independent post-run reviews of twelve sealed skill-versus-control benchmarks "
-    "with frozen tasks and evaluator reveal after every arm exited.",
-    "Codex / GPT‑5.4 arm detail, methodology, and every table: BENCHMARKS.md",
+    "Reviewed scores for twelve later sealed skill-versus-control cases with frozen tasks and "
+    "evaluator reveal after every arm exited.",
+    "Two early cases sit outside this chart; all arms, limitations, and methodology: BENCHMARKS.md",
 ]
 
 
@@ -93,7 +93,7 @@ def render(theme):
     text(28, 44, "Measured lift on sealed CDM benchmarks", size=18, weight=600,
          fill=theme["primary"])
     text(28, 66, "Isolated skill-vs-control agent sessions · hidden rubrics "
-         "· independent post-run code reviews")
+         "· post-run scoring and review")
 
     for index, (value, line_one, line_two) in enumerate(TILES):
         tile_x = 28 + index * 302
@@ -103,7 +103,7 @@ def render(theme):
     parts.append(f'<line x1="28" y1="184" x2="{WIDTH - 28}" y2="184" '
                  f'stroke="{theme["grid"]}" stroke-width="1"/>')
 
-    text(28, 214, "Independently reviewed score (0–100) · Claude arm "
+    text(28, 214, "Reviewed score (0–100) · Claude arm "
          "(Opus 5 / Sonnet 5)", size=12.5, weight=600, fill=theme["primary"])
     legend_x = PLOT_RIGHT - 158
     parts.append(f'<circle cx="{legend_x}" cy="210" r="5" fill="{theme["skill"]}"/>')
