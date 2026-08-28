@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "fpml-ingestion-fidelity-audit",
+  "total_score": 100,
+  "required_entry_points": [
+    "benchmark.fpml.FpmlMappingAuditor.AuditTradeState"
+  ],
+  "fatal_failures": [
+    "production or test compilation fails from a clean clone",
+    "the exact public static AuditTradeState(String, Path, Path) entry point or required public support types are absent",
+    "a doctored altered, dropped, or invented pair audits as pass=true, so the auditor blesses the rubbish it exists to catch",
+    "a hollow or wrong-dialect read is reported as DROPPED facts instead of the all-UNAUDITABLE result",
+    "facts are compared as raw JSON or XML text rather than typed content, so semantically equal representations fail or unequal ones pass",
+    "the implementation edits generated CDM model code or replaces the typed TradeState boundary with an untyped tree walk"
+  ],
+  "criteria": [
+    {
+      "id": "caller-contract",
+      "visibility": "public",
+      "weight": 8,
+      "description": "Expose the exact typed audit contract with one finding per fact in declaration order.",
+      "checks": [
+        "Compile and invoke benchmark.fpml.FpmlMappingAuditor.AuditTradeState directly.",
+        "Expose the required fact, verdict, finding, and result types.",
+        "Return exactly one finding per AuditFact in enum declaration order, with pass true only when every finding is PRESERVED.",
+        "Reject null sampleId or paths with IllegalArgumentException; return the all-UNAUDITABLE result for unreadable files."
+      ]
+    },
+    {
+      "id": "faithful-baseline",
+      "visibility": "public",
+      "weight": 10,
+      "description": "Unmodified shipped pairs audit as fully preserved.",
+      "checks": [
+        "At least three vanilla fixed/float pairs from the shipped 5-10 rates pack audit all-PRESERVED with pass true.",
+        "Originals are extracted and copied; doctored variants never overwrite the shipped corpus.",
+        "sourceEvidence and outputEvidence carry the compared values rather than placeholders."
+      ]
+    },
+    {
+      "id": "dialect-and-content-floor",
+      "visibility": "hidden",
+      "weight": 14,
+      "description": "Select the mapper from the document's markers and fail closed on a hollow read.",
+      "checks": [
+        "The claimed output is deserialized as typed cdm.event.common.TradeState using the dialect its markers declare.",
+        "Root type and a conservative content floor are asserted before any fact comparison.",
+        "A marker-stripped or wrong-dialect document yields every finding UNAUDITABLE with pass false.",
+        "No hollow read is ever reported as DROPPED facts."
+      ]
+    },
+    {
+      "id": "exact-decimal-and-basis",
+      "visibility": "hidden",
+      "weight": 14,
+      "description": "Compare numeric facts exactly under each side's declared basis.",
+      "checks": [
+        "A fixed rate multiplied by one hundred is ALTERED, with the CDM side's basis established from version-matched model source rather than assumed.",
+        "A value equal under binary floating point but unequal as exact decimals is detected as ALTERED.",
+        "Notional amount comparison is exact decimal with no tolerance window.",
+        "Canonical lexical differences of the same exact value remain PRESERVED."
+      ]
+    },
+    {
+      "id": "absence-three-way",
+      "visibility": "hidden",
+      "weight": 14,
+      "description": "Keep absent, zero, and empty as three distinct statements for the spread fact.",
+      "checks": [
+        "A source spread of zero omitted by the output is DROPPED.",
+        "An output spread the source never states is INVENTED.",
+        "Source and output both absent is PRESERVED absence, stated explicitly in the finding.",
+        "A zero spread preserved as zero is PRESERVED, not flagged."
+      ]
+    },
+    {
+      "id": "identity-not-strings",
+      "visibility": "hidden",
+      "weight": 12,
+      "description": "Resolve party direction to identities inside each document before comparing.",
+      "checks": [
+        "A doctored payer/receiver swap on the fixed leg is ALTERED.",
+        "The FpML payer reference is resolved to its party and compared with the resolved CDM counterparty identity, not with raw reference strings.",
+        "A re-representation of the same party graph with equal resolved identity stays PRESERVED."
+      ]
+    },
+    {
+      "id": "semantic-not-textual",
+      "visibility": "hidden",
+      "weight": 12,
+      "description": "Audit typed content so equivalent representations pass and unequal content fails.",
+      "checks": [
+        "Reordered elements or restructured but semantically equal representation stays PRESERVED.",
+        "A constant substituted for a mapped value is ALTERED even when document shape and path counts are unchanged.",
+        "The auditor derives its expectations from the source document, never from the claimed output."
+      ]
+    },
+    {
+      "id": "date-and-designation-facts",
+      "visibility": "hidden",
+      "weight": 10,
+      "description": "Preserve the date, index, and day-count facts faithfully.",
+      "checks": [
+        "Doctored effective or termination dates are ALTERED.",
+        "A doctored floating rate index designation is ALTERED and a removed one is DROPPED.",
+        "A doctored fixed-leg day count fraction is ALTERED."
+      ]
+    },
+    {
+      "id": "test-quality",
+      "visibility": "public",
+      "weight": 8,
+      "description": "Author the doctored matrix with close negative controls and contract probes.",
+      "checks": [
+        "The authored suite covers the six required test families with close controls, not only happy paths.",
+        "Result immutability is proven by mutating a caller-visible list and re-checking the result.",
+        "Input files and CDM objects are proven unmutated after an audit."
+      ]
+    }
+  ]
+}

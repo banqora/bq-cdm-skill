@@ -26,6 +26,12 @@ these cases require an agent to write and test Java code.
   in the baseline note, and GPT arms remain open. Its frozen task quotes the decimal-fraction
   example from the [CDM 7.0.0 Rune source](https://github.com/finos/common-domain-model/blob/7.0.0/rosetta-source/src/main/rosetta/base-math-type.rosetta#L42-L44); this citation is kept outside
   the sealed agent input so its digest remains unchanged.
+- [FpML ingestion fidelity audit (designed; arms not yet run)](fpml-ingestion-fidelity-audit/):
+  distills the reported CDM-contribution hazard — count-based FpML expectation assertions that a
+  regenerated expectation file can bless — into an auditable mapping-fidelity seam over the
+  ingest corpus shipped inside the pinned CDM 7.0.0 JAR. The task and rubric are frozen here for
+  a future run; the case stays out of `index.json` until skill and control arms are recorded,
+  because the manifest requires an observed baseline.
 
 ## Contents
 
