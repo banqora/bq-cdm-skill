@@ -1,6 +1,6 @@
 ---
 name: cdm-dev
-description: Develop, debug, test, upgrade, and review FINOS Common Domain Model (CDM) software, Rune source/DSL, generated distributions, and Rune runtimes. Use for CDM onboarding or generated-API upgrades; Java, Python, TypeScript, JSON Schema, or Excel integration; FpML/data mapping, typed objects, dropped fields, serialization, and JSON dialects; lifecycle events, validation, qualification, and functions; derivatives, securities financing, collateral or manufactured payments, DRR/regulatory reporting, or legal-agreement representation; and separating CDM semantics from application policy or ISDA/ISLA/ICMA guidance. Exclude unrelated meanings of "CDM" or "Rune", generic build debugging, CLI lookups, and legal advice.
+description: Develop, debug, test, upgrade, and review FINOS Common Domain Model (CDM) software, Rune source/DSL, generated distributions, and Rune runtimes. Use for CDM onboarding or generated-API upgrades; Java, Python, TypeScript, JSON Schema, or Excel integration; FpML/data mapping, FpML ingestion testing and mapping verification, typed objects, dropped fields, serialization, and JSON dialects; lifecycle events, validation, qualification, and functions; derivatives, securities financing, collateral or manufactured payments, DRR/regulatory reporting, or legal-agreement representation; and separating CDM semantics from application policy or ISDA/ISLA/ICMA guidance. Exclude unrelated meanings of "CDM" or "Rune", generic build debugging, CLI lookups, and legal advice.
 ---
 
 # Develop with CDM
@@ -86,8 +86,8 @@ neighbors or rewind and compare the whole object. Use [Day-to-day workflows](ref
   pruning, round trips, and migration.
 - [Testing CDM code](references/testing.md): use for fixture, mapping, runtime, round-trip, build,
   or corpus uncertainty; a supplied focused function contract can stay on the fast path above.
-- [ISDA corpus conformance](references/conformance.md): discovering shipped scenarios and
-  comparing application execution with reference outputs.
+- [ISDA corpus conformance](references/conformance.md): shipped scenarios and reference outputs;
+  [FpML ingestion](references/fpml-ingestion.md): mapping fidelity, contribution review, test packs.
 - [Getting started with CDM](references/onboarding.md): distributions, language options,
   acquisition, version selection, and installation smoke tests.
 - [Industry-body guidance](references/industry-bodies.md): dated ISDA, ISLA, ICMA, and FpML
