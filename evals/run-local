@@ -9,7 +9,7 @@ Usage:
   run-local [--vendor <claude|codex|all>] [--runs <n>] [--jar <cdm-java.jar>]
             [--sources-jar <cdm-java-sources.jar>]
             [--triggers-only | --quality-only] [--case <quality-case-id>]
-            [--check-auth]
+            [--arm <treatment|control>] [--check-auth]
 
 Runs live skill evals through saved local Claude Code and Codex subscription
 logins. API credential environment variables are deliberately removed before
@@ -25,6 +25,7 @@ jar=""
 sources_jar=""
 mode="all"
 case_filter=""
+arm="treatment"
 check_auth_only=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -64,6 +65,10 @@ while [[ $# -gt 0 ]]; do
       case_filter="${2:?--case needs a value}"
       shift 2
       ;;
+    --arm)
+      arm="${2:?--arm needs a value}"
+      shift 2
+      ;;
     --check-auth)
       check_auth_only=true
       shift
@@ -93,6 +98,17 @@ esac
 }
 [[ -z "$case_filter" || "$mode" != triggers ]] || {
   echo "run-local: --case applies only to quality evals" >&2
+  exit 2
+}
+case "$arm" in
+  treatment | control) ;;
+  *)
+    echo "run-local: --arm must be treatment or control" >&2
+    exit 2
+    ;;
+esac
+[[ "$arm" == treatment || "$mode" != triggers ]] || {
+  echo "run-local: --arm applies only to quality evals" >&2
   exit 2
 }
 if [[ "$mode" != triggers && -n "$jar" && -z "$sources_jar" ]]; then
@@ -237,10 +253,13 @@ for selected in "${vendors[@]}"; do
     fi
   fi
   if [[ "$mode" != triggers ]]; then
+    arm_suffix=""
+    [[ "$arm" == treatment ]] || arm_suffix="-$arm"
     quality_args=(
       --vendor "$selected"
       --jar "$jar"
-      --results "$script_dir/results-quality-$selected.json"
+      --arm "$arm"
+      --results "$script_dir/results-quality-$selected$arm_suffix.json"
     )
     [[ -z "$sources_jar" ]] || quality_args+=(--sources-jar "$sources_jar")
     [[ -z "$case_filter" ]] || quality_args+=(--case "$case_filter")

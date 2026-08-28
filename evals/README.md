@@ -67,8 +67,8 @@ Run one trigger attempt per prompt plus the reviewed quality cases:
 evals/run-local --vendor all --runs 1
 ```
 
-With the current 29-prompt corpus and one quality case, that command starts 60 live sessions:
-29 trigger sessions plus one quality session for each vendor. Use `--vendor claude` or
+With the current 29-prompt corpus and two quality cases, that command starts 62 live sessions:
+29 trigger sessions plus two quality sessions for each vendor. Use `--vendor claude` or
 `--vendor codex` for one CLI. Increase to `--runs 3` only when promoting a baseline; live runs
 consume the normal usage allowance of each local subscription and can hit its plan limits.
 
@@ -104,6 +104,22 @@ Run a single quality case:
 ```bash
 evals/run-local --vendor codex --quality-only --case price-quantity-model-api
 ```
+
+Run a skill/control pair on a case that defines a `control_prompt` (currently
+`fpml-ingestion-fidelity`, which grades whether an agent detects a certified-but-hollow FpML
+securities-lending ingestion against a faithful vanilla-swap control sample):
+
+```bash
+evals/run-local --vendor claude --quality-only --case fpml-ingestion-fidelity
+evals/run-local --vendor claude --quality-only --case fpml-ingestion-fidelity --arm control
+```
+
+The control arm runs the same evidence bundle and deterministic checks with no skill installed
+and no skill invocation in the prompt; its results default to
+`results-quality-<vendor>-control.json`. Compare both arms' captured answers, not only the
+check counts. The case's `notes` field records the sample provenance and a leakage disclosure:
+the skill's FpML reference documents the securities-lending trap, so part of any treatment
+advantage is documentation routing rather than raw discovery.
 
 The lower-level runners remain available for debugging:
 

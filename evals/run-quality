@@ -10,11 +10,13 @@ usage() {
 Usage:
   run-quality --vendor <claude|codex> --jar <cdm-java.jar>
               --sources-jar <cdm-java-sources.jar>
-              [--case <id>] [--results <file>]
+              [--case <id>] [--arm <treatment|control>] [--results <file>]
 
-Runs reviewed answer-quality cases with cdm-dev explicitly invoked. The runner
-uses the CLI's saved local login and deliberately removes API-key environment
-variables from child processes. It never uploads credentials or calls from CI.
+Runs reviewed answer-quality cases. The treatment arm installs cdm-dev and
+invokes it explicitly; the control arm runs the same case from its
+control_prompt with no skill installed. The runner uses the CLI's saved local
+login and deliberately removes API-key environment variables from child
+processes. It never uploads credentials or calls from CI.
 USAGE
 }
 
@@ -22,6 +24,7 @@ vendor=""
 jar_path=""
 sources_jar_path=""
 case_filter=""
+arm="treatment"
 results_file=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -39,6 +42,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --case)
       case_filter="${2:?--case needs a value}"
+      shift 2
+      ;;
+    --arm)
+      arm="${2:?--arm needs a value}"
       shift 2
       ;;
     --results)
@@ -61,6 +68,13 @@ case "$vendor" in
   claude | codex) ;;
   *)
     usage
+    exit 2
+    ;;
+esac
+case "$arm" in
+  treatment | control) ;;
+  *)
+    echo "run-quality: --arm must be treatment or control" >&2
     exit 2
     ;;
 esac
@@ -101,13 +115,19 @@ sources_jar="$sources_dir/$(basename -- "$sources_jar_path")"
 }
 
 case_summary="$(
-  python3 - "$script_dir/quality.json" "$case_filter" <<'PY'
+  python3 - "$script_dir/quality.json" "$case_filter" "$arm" <<'PY'
 import json, sys
 cases = json.load(open(sys.argv[1]))
 selected = [c for c in cases if not sys.argv[2] or c["id"] == sys.argv[2]]
 versions = {c.get("artifact_version") for c in selected}
 if len(versions) > 1:
     raise SystemExit("run-quality: selected cases require different artifact versions")
+if sys.argv[3] == "control":
+    missing = [c["id"] for c in selected if not c.get("control_prompt")]
+    if missing:
+        raise SystemExit(
+            "run-quality: control arm needs a control_prompt; missing in: " + ", ".join(missing)
+        )
 print(len(selected), next(iter(versions), ""))
 PY
 )"
@@ -130,80 +150,112 @@ ln -s "$jar" "$workspace/lib/cdm-java-$version.jar"
 ln -s "$sources_jar" "$workspace/lib/cdm-java-$version-sources.jar"
 
 # Give the agent a small, exact evidence surface instead of making every run rediscover
-# entries across two large ZIPs. These files are extracted from the caller-supplied,
-# version-checked artifacts; they are not hand-authored expected answers.
-model_evidence=(
-  cdm/rosetta/base-math-type.rosetta
-  cdm/rosetta/observable-asset-type.rosetta
-  cdm/rosetta/observable-common-func.rosetta
-)
-mkdir -p "$workspace/evidence/model"
-if ! unzip -q "$jar" "${model_evidence[@]}" -d "$workspace/evidence/model"; then
-  echo "run-quality: binary JAR is missing required model evidence for $version" >&2
-  exit 2
-fi
-for entry in "${model_evidence[@]}"; do
-  if ! rg -Fq "version \"$version\"" "$workspace/evidence/model/$entry"; then
-    echo "run-quality: binary JAR model evidence does not match version $version" >&2
+# entries across two large ZIPs. The entries come from each selected case's declared
+# evidence lists; they are extracted from the caller-supplied, version-checked artifacts
+# and are not hand-authored expected answers.
+list_evidence() {
+  python3 - "$script_dir/quality.json" "$case_filter" "$1" <<'PY'
+import json, sys
+cases = json.load(open(sys.argv[1]))
+selected = [c for c in cases if not sys.argv[2] or c["id"] == sys.argv[2]]
+seen = []
+for case in selected:
+    if sys.argv[3] == "generated_probes":
+        entries = case.get("generated_evidence", [])[:1]
+    else:
+        entries = case.get(sys.argv[3], [])
+    for entry in entries:
+        if entry not in seen:
+            seen.append(entry)
+            print(entry)
+PY
+}
+# bash 3.2 compatible array fill (no readarray/mapfile on the stock macOS shell)
+model_evidence=()
+while IFS= read -r entry; do
+  [[ -z "$entry" ]] || model_evidence+=("$entry")
+done < <(list_evidence model_evidence)
+generated_evidence=()
+while IFS= read -r entry; do
+  [[ -z "$entry" ]] || generated_evidence+=("$entry")
+done < <(list_evidence generated_evidence)
+generated_probes=()
+while IFS= read -r entry; do
+  [[ -z "$entry" ]] || generated_probes+=("$entry")
+done < <(list_evidence generated_probes)
+resource_evidence=()
+while IFS= read -r entry; do
+  [[ -z "$entry" ]] || resource_evidence+=("$entry")
+done < <(list_evidence resource_evidence)
+
+if [[ ${#model_evidence[@]} -gt 0 ]]; then
+  mkdir -p "$workspace/evidence/model"
+  if ! unzip -q "$jar" "${model_evidence[@]}" -d "$workspace/evidence/model"; then
+    echo "run-quality: binary JAR is missing required model evidence for $version" >&2
     exit 2
   fi
-done
-
-generated_evidence=(
-  cdm/observable/asset/PriceQuantity.java
-  cdm/observable/asset/meta/PriceQuantityMeta.java
-  cdm/observable/asset/functions/InterestRateObservableCondition.java
-  cdm/observable/asset/validation/PriceQuantityTypeFormatValidator.java
-  cdm/observable/asset/validation/PriceQuantityValidator.java
-  cdm/observable/asset/validation/datarule/PriceQuantityArithmeticOperator.java
-  cdm/observable/asset/validation/datarule/PriceQuantityInterestRateObservable.java
-  cdm/observable/asset/validation/datarule/PriceQuantityNonCurrencyQuantities.java
-  cdm/observable/asset/validation/datarule/PriceQuantityPriceQuantityTriangulation.java
-  cdm/observable/common/functions/PriceQuantityTriangulation.java
-  cdm/base/math/Schedule.java
-  cdm/base/math/QuantitySchedule.java
-  cdm/base/math/NonNegativeQuantitySchedule.java
-  cdm/base/math/meta/NonNegativeQuantityScheduleMeta.java
-  cdm/base/math/metafields/FieldWithMetaNonNegativeQuantitySchedule.java
-  cdm/base/math/validation/ScheduleTypeFormatValidator.java
-  cdm/base/math/validation/QuantityScheduleTypeFormatValidator.java
-  cdm/base/math/validation/NonNegativeQuantityScheduleTypeFormatValidator.java
-  cdm/base/math/validation/NonNegativeQuantityScheduleValidator.java
-  cdm/base/math/validation/datarule/ScheduleValueExists.java
-)
-mkdir -p "$workspace/evidence/generated"
-if ! unzip -q "$sources_jar" "${generated_evidence[@]}" -d "$workspace/evidence/generated"; then
-  echo "run-quality: sources JAR is missing required generated evidence for $version" >&2
-  exit 2
-fi
-if ! rg -Fq "version=\"$version\"" \
-  "$workspace/evidence/generated/cdm/observable/asset/PriceQuantity.java"; then
-  echo "run-quality: sources JAR generated evidence does not match version $version" >&2
-  exit 2
+  for entry in "${model_evidence[@]}"; do
+    if ! rg -Fq "version \"$version\"" "$workspace/evidence/model/$entry"; then
+      echo "run-quality: binary JAR model evidence does not match version $version" >&2
+      exit 2
+    fi
+  done
 fi
 
-case "$vendor" in
-  claude)
-    mkdir -p "$workspace/.claude/skills"
-    cp -R "$skill_root" "$workspace/.claude/skills/cdm-dev"
-    ;;
-  codex)
-    mkdir -p "$workspace/.agents/skills"
-    cp -R "$skill_root" "$workspace/.agents/skills/cdm-dev"
-    ;;
-esac
+if [[ ${#generated_evidence[@]} -gt 0 ]]; then
+  mkdir -p "$workspace/evidence/generated"
+  if ! unzip -q "$sources_jar" "${generated_evidence[@]}" -d "$workspace/evidence/generated"; then
+    echo "run-quality: sources JAR is missing required generated evidence for $version" >&2
+    exit 2
+  fi
+  if [[ ${#generated_probes[@]} -gt 0 ]]; then
+    for entry in "${generated_probes[@]}"; do
+      if ! rg -Fq "version=\"$version\"" "$workspace/evidence/generated/$entry"; then
+        echo "run-quality: sources JAR generated evidence does not match version $version" >&2
+        exit 2
+      fi
+    done
+  fi
+fi
+
+if [[ ${#resource_evidence[@]} -gt 0 ]]; then
+  mkdir -p "$workspace/evidence/resources"
+  if ! unzip -q "$jar" "${resource_evidence[@]}" -d "$workspace/evidence/resources"; then
+    echo "run-quality: binary JAR is missing required resource evidence for $version" >&2
+    exit 2
+  fi
+fi
+
+if [[ "$arm" == treatment ]]; then
+  case "$vendor" in
+    claude)
+      mkdir -p "$workspace/.claude/skills"
+      cp -R "$skill_root" "$workspace/.claude/skills/cdm-dev"
+      ;;
+    codex)
+      mkdir -p "$workspace/.agents/skills"
+      cp -R "$skill_root" "$workspace/.agents/skills/cdm-dev"
+      ;;
+  esac
+fi
+
+claude_tools="Read,Grep,Glob,Skill"
+[[ "$arm" == treatment ]] || claude_tools="Read,Grep,Glob"
 
 status=0
 for ((index = 0; index < case_count; index++)); do
   case_data="$(
-    python3 - "$script_dir/quality.json" "$case_filter" "$index" <<'PY'
+    python3 - "$script_dir/quality.json" "$case_filter" "$index" "$arm" <<'PY'
 import json, sys
 cases = json.load(open(sys.argv[1]))
 selected = [c for c in cases if not sys.argv[2] or c["id"] == sys.argv[2]]
 case = selected[int(sys.argv[3])]
+prompt = case["prompt"] if sys.argv[4] == "treatment" else case.get("control_prompt")
+if not prompt:
+    raise SystemExit(f"run-quality: case {case['id']} has no control_prompt")
 print(case["id"])
 print(case["artifact_version"])
-print(case["prompt"])
+print(prompt)
 PY
   )"
   case_id="$(sed -n '1p' <<<"$case_data")"
@@ -238,8 +290,8 @@ PY
             --verbose \
             --setting-sources project \
             --permission-mode dontAsk \
-            --tools "Read,Grep,Glob,Skill" \
-            --allowedTools "Read,Grep,Glob,Skill" \
+            --tools "$claude_tools" \
+            --allowedTools "$claude_tools" \
             --strict-mcp-config --mcp-config '{"mcpServers":{}}'
       ) >"$stream" 2>"$error_log"; then
         echo "run-quality: claude failed while running $case_id" >&2
@@ -322,16 +374,20 @@ PY
   fi
 done
 
-results_file="${results_file:-$script_dir/results-quality-$vendor.json}"
-python3 - "$workspace/results" "$vendor" "$results_file" <<'PY'
+if [[ -z "$results_file" ]]; then
+  arm_suffix=""
+  [[ "$arm" == treatment ]] || arm_suffix="-$arm"
+  results_file="$script_dir/results-quality-$vendor$arm_suffix.json"
+fi
+python3 - "$workspace/results" "$vendor" "$arm" "$results_file" <<'PY'
 import json, sys
 from pathlib import Path
 
-result_dir, vendor, output = Path(sys.argv[1]), sys.argv[2], Path(sys.argv[3])
+result_dir, vendor, arm, output = Path(sys.argv[1]), sys.argv[2], sys.argv[3], Path(sys.argv[4])
 cases = [json.loads(path.read_text()) for path in sorted(result_dir.glob("*.json"))]
-summary = {"vendor": vendor, "passed": all(case["passed"] for case in cases), "cases": cases}
+summary = {"vendor": vendor, "arm": arm, "passed": all(case["passed"] for case in cases), "cases": cases}
 output.parent.mkdir(parents=True, exist_ok=True)
 output.write_text(json.dumps(summary, indent=2) + "\n")
-print(f"run-quality: {vendor} {sum(c['passed'] for c in cases)}/{len(cases)} cases passed -> {output}")
+print(f"run-quality: {vendor} {arm} {sum(c['passed'] for c in cases)}/{len(cases)} cases passed -> {output}")
 PY
 exit "$status"

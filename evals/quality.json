@@ -1,86 +1,269 @@
 [
-  {
-    "id": "price-quantity-model-api",
-    "artifact_version": "7.0.0",
-    "prompt": "Use $cdm-dev to answer this engineering question from the version installed in this project: We build PriceQuantity objects. What does the exact Rune/Rosetta model say about the quantity field's cardinality and applicable conditions, including inherited constraints on the quantity type; what does the generated Java API expose; and which focused positive and negative tests should our integration add? The exact binary and matching sources JAR are available under lib/. Include the concrete source and generated-artifact evidence you used. Do not modify the project.",
-    "minimum_words": 220,
-    "checks": [
-      {
-        "id": "exact-cardinality",
-        "description": "states the exact quantity type and cardinality",
-        "all": [
-          "NonNegativeQuantitySchedule",
-          "0\\.\\.1"
-        ]
-      },
-      {
-        "id": "generated-api",
-        "description": "distinguishes the metadata wrapper and scalar builder API",
-        "all": [
-          "FieldWithMetaNonNegativeQuantitySchedule",
-          "setQuantityValue|getOrCreateQuantity"
-        ],
-        "any": [
-          "not (?:a )?list",
-          "no (?:List|addQuantity)",
-          "scalar",
-          "singleton"
-        ]
-      },
-      {
-        "id": "price-quantity-rules",
-        "description": "reads the owning conditions and called function",
-        "all": [
-          "NonCurrencyQuantities",
-          "PriceQuantityTriangulation",
-          "ArithmeticOperator",
-          "InterestRateObservable"
-        ]
-      },
-      {
-        "id": "commodity-cardinality-trap",
-        "description": "notices that a second commodity quantity is not representable",
-        "all": [
-          "commodit|NonCurrencyQuantities"
-        ],
-        "any": [
-          "(?:cannot|can't|not) (?:be )?represent",
-          "unrepresentable",
-          "redundant",
-          "(?:always|automatically) (?:passes|satisfied|true)",
-          "vacuous",
-          "cannot fail",
-          "unfalsifiable"
-        ]
-      },
-      {
-        "id": "nested-validation",
-        "description": "follows inherited quantity constraints",
-        "all": [
-          "unit",
-          "non[- ]?negativ(?:e|ity)|minimum (?:of )?0|zero is valid",
-          "datedValue|dated value|ScheduleValueExists"
-        ]
-      },
-      {
-        "id": "non-vacuous-tests",
-        "description": "proposes meaningful positive and close negative tests",
-        "all": [
-          "positive",
-          "negative",
-          "derived quantity|derivedQuantity",
-          "recursive|fully wired|runtime wiring|nested (?:type|validator)|PriceQuantityMeta"
-        ]
-      },
-      {
-        "id": "versioned-evidence",
-        "description": "records the version and concrete source/generated evidence",
-        "all": [
-          "7\\.0\\.0",
-          "observable-asset-type\\.rosetta|cdm-source",
-          "generated|javap|PriceQuantity\\.java"
-        ]
-      }
+ {
+  "id": "price-quantity-model-api",
+  "artifact_version": "7.0.0",
+  "prompt": "Use $cdm-dev to answer this engineering question from the version installed in this project: We build PriceQuantity objects. What does the exact Rune/Rosetta model say about the quantity field's cardinality and applicable conditions, including inherited constraints on the quantity type; what does the generated Java API expose; and which focused positive and negative tests should our integration add? The exact binary and matching sources JAR are available under lib/. Include the concrete source and generated-artifact evidence you used. Do not modify the project.",
+  "minimum_words": 220,
+  "checks": [
+   {
+    "id": "exact-cardinality",
+    "description": "states the exact quantity type and cardinality",
+    "all": [
+     "NonNegativeQuantitySchedule",
+     "0\\.\\.1"
     ]
-  }
+   },
+   {
+    "id": "generated-api",
+    "description": "distinguishes the metadata wrapper and scalar builder API",
+    "all": [
+     "FieldWithMetaNonNegativeQuantitySchedule",
+     "setQuantityValue|getOrCreateQuantity"
+    ],
+    "any": [
+     "not (?:a )?list",
+     "no (?:List|addQuantity)",
+     "scalar",
+     "singleton"
+    ]
+   },
+   {
+    "id": "price-quantity-rules",
+    "description": "reads the owning conditions and called function",
+    "all": [
+     "NonCurrencyQuantities",
+     "PriceQuantityTriangulation",
+     "ArithmeticOperator",
+     "InterestRateObservable"
+    ]
+   },
+   {
+    "id": "commodity-cardinality-trap",
+    "description": "notices that a second commodity quantity is not representable",
+    "all": [
+     "commodit|NonCurrencyQuantities"
+    ],
+    "any": [
+     "(?:cannot|can't|not) (?:be )?represent",
+     "unrepresentable",
+     "redundant",
+     "(?:always|automatically) (?:passes|satisfied|true)",
+     "vacuous",
+     "cannot fail",
+     "unfalsifiable"
+    ]
+   },
+   {
+    "id": "nested-validation",
+    "description": "follows inherited quantity constraints",
+    "all": [
+     "unit",
+     "non[- ]?negativ(?:e|ity)|minimum (?:of )?0|zero is valid",
+     "datedValue|dated value|ScheduleValueExists"
+    ]
+   },
+   {
+    "id": "non-vacuous-tests",
+    "description": "proposes meaningful positive and close negative tests",
+    "all": [
+     "positive",
+     "negative",
+     "derived quantity|derivedQuantity",
+     "recursive|fully wired|runtime wiring|nested (?:type|validator)|PriceQuantityMeta"
+    ]
+   },
+   {
+    "id": "versioned-evidence",
+    "description": "records the version and concrete source/generated evidence",
+    "all": [
+     "7\\.0\\.0",
+     "observable-asset-type\\.rosetta|cdm-source",
+     "generated|javap|PriceQuantity\\.java"
+    ]
+   }
+  ],
+  "model_evidence": [
+   "cdm/rosetta/base-math-type.rosetta",
+   "cdm/rosetta/observable-asset-type.rosetta",
+   "cdm/rosetta/observable-common-func.rosetta"
+  ],
+  "generated_evidence": [
+   "cdm/observable/asset/PriceQuantity.java",
+   "cdm/observable/asset/meta/PriceQuantityMeta.java",
+   "cdm/observable/asset/functions/InterestRateObservableCondition.java",
+   "cdm/observable/asset/validation/PriceQuantityTypeFormatValidator.java",
+   "cdm/observable/asset/validation/PriceQuantityValidator.java",
+   "cdm/observable/asset/validation/datarule/PriceQuantityArithmeticOperator.java",
+   "cdm/observable/asset/validation/datarule/PriceQuantityInterestRateObservable.java",
+   "cdm/observable/asset/validation/datarule/PriceQuantityNonCurrencyQuantities.java",
+   "cdm/observable/asset/validation/datarule/PriceQuantityPriceQuantityTriangulation.java",
+   "cdm/observable/common/functions/PriceQuantityTriangulation.java",
+   "cdm/base/math/Schedule.java",
+   "cdm/base/math/QuantitySchedule.java",
+   "cdm/base/math/NonNegativeQuantitySchedule.java",
+   "cdm/base/math/meta/NonNegativeQuantityScheduleMeta.java",
+   "cdm/base/math/metafields/FieldWithMetaNonNegativeQuantitySchedule.java",
+   "cdm/base/math/validation/ScheduleTypeFormatValidator.java",
+   "cdm/base/math/validation/QuantityScheduleTypeFormatValidator.java",
+   "cdm/base/math/validation/NonNegativeQuantityScheduleTypeFormatValidator.java",
+   "cdm/base/math/validation/NonNegativeQuantityScheduleValidator.java",
+   "cdm/base/math/validation/datarule/ScheduleValueExists.java"
+  ]
+ },
+ {
+  "id": "fpml-ingestion-fidelity",
+  "artifact_version": "7.0.0",
+  "prompt": "Use $cdm-dev to answer this engineering question from the version installed in this project: Our team consumes the FpML ingestion shipped with CDM. Under evidence/resources/ you have two certified FpML-to-CDM ingestion pairs extracted from the exact cdm-java artifact under lib/: for each, the source FpML confirmation, the certified expected TradeState output, and the test-pack configuration holding the per-sample assertions the build enforces. Under evidence/model/ you have the relevant Rune mapping and model source. For each pair, assess whether the certified output faithfully preserves the business content of the FpML source. State plainly which pair is trustworthy and which is not; name the specific business facts that are preserved, lost, or altered; explain what the pack's per-sample assertions actually prove and what they tolerate; and identify the root cause in the shipped mapping source for any content loss. Cite the concrete evidence files and values you used. Do not modify anything.",
+  "control_prompt": "Answer this engineering question: Our team consumes the FpML ingestion shipped with CDM. Under evidence/resources/ you have two certified FpML-to-CDM ingestion pairs extracted from the exact cdm-java artifact under lib/: for each, the source FpML confirmation, the certified expected TradeState output, and the test-pack configuration holding the per-sample assertions the build enforces. Under evidence/model/ you have the relevant Rune mapping and model source. For each pair, assess whether the certified output faithfully preserves the business content of the FpML source. State plainly which pair is trustworthy and which is not; name the specific business facts that are preserved, lost, or altered; explain what the pack's per-sample assertions actually prove and what they tolerate; and identify the root cause in the shipped mapping source for any content loss. Cite the concrete evidence files and values you used. Do not modify anything.",
+  "notes": "Paired good/bad certified ingestion samples chosen from a 2026-08-28 corpus audit: ird-ex01-vanilla-swap (fpml-5-12-products-rates; zero tolerated validation failures, facts preserved) versus sbl-ex01-term-egrn-cash (fpml-5-12-products-repo; economically empty output, 8 tolerated validation failures, no fpml.SecurityLending route in MapNonTransferableProduct). Leakage disclosure: as of the same date the skill's references/fpml-ingestion.md documents the sbl trap explicitly, so a treatment arm's advantage includes routing to that documentation; a control arm has only the evidence bundle. Checks reward values quoted from the bundle so pure recall without verification cannot pass. Check calibration 2026-08-28: after the first paired live run, bad-pair-verdict was widened to accept an anaphoric verdict ('sbl-ex01 ... is not.'); the widened check was re-applied identically to both arms' already-captured answers, and no check was narrowed.",
+  "minimum_words": 240,
+  "model_evidence": [
+   "cdm/rosetta/ingest-fpml-confirmation-tradestate-func.rosetta",
+   "cdm/rosetta/product-template-type.rosetta",
+   "cdm/rosetta/event-common-type.rosetta"
+  ],
+  "resource_evidence": [
+   "ingest/input/fpml-5-12-products-rates/ird-ex01-vanilla-swap.xml",
+   "ingest/output/fpml-confirmation-to-trade-state/fpml-5-12-products-rates/ird-ex01-vanilla-swap.json",
+   "ingest/config/test-pack-translate-fpml-confirmation-to-trade-state-fpml-5-12-products-rates.json",
+   "ingest/input/fpml-5-12-products-repo/sbl-ex01-term-egrn-cash.xml",
+   "ingest/output/fpml-confirmation-to-trade-state/fpml-5-12-products-repo/sbl-ex01-term-egrn-cash.json",
+   "ingest/config/test-pack-translate-fpml-confirmation-to-trade-state-fpml-5-12-products-repo.json"
+  ],
+  "checks": [
+   {
+    "id": "bad-pair-verdict",
+    "description": "says the securities-lending pair cannot be trusted",
+    "all": [
+     "sbl-ex01|security ?lending"
+    ],
+    "any": [
+     "not trustworthy",
+     "untrustworthy",
+     "unfaithful",
+     "(?:not|isn't|is not) faithful",
+     "misleading",
+     "broken",
+     "(?:cannot|can't|should not|must not) (?:be )?(?:trust|reli)",
+     "sbl[^.\\n]{0,90}\\bis not\\b",
+     "unusable",
+     "useless",
+     "worthless"
+    ]
+   },
+   {
+    "id": "hollow-product",
+    "description": "identifies the missing product, trade lot, and counterparty in the certified output",
+    "all": [
+     "counterpart",
+     "tradeLot|trade lot"
+    ],
+    "any": [
+     "no product",
+     "without (?:a |any )?product",
+     "product[^.]{0,80}(?:missing|absent|dropped|omitted|not populated|does not exist|never)",
+     "missing[^.]{0,40}product",
+     "identity shell",
+     "hollow",
+     "empty shell"
+    ]
+   },
+   {
+    "id": "dropped-economics",
+    "description": "names the dropped loan economics with values from the source",
+    "all": [
+     "0\\.012|rebate"
+    ],
+    "any": [
+     "5,?826,?000",
+     "notional",
+     "nominal"
+    ]
+   },
+   {
+    "id": "dropped-collateral-roles",
+    "description": "names the dropped collateral and lender/borrower facts",
+    "all": [
+     "collateral"
+    ],
+    "any": [
+     "lender",
+     "borrower"
+    ]
+   },
+   {
+    "id": "root-cause-route",
+    "description": "traces the loss to the missing SecurityLending route in the mapping source",
+    "all": [
+     "MapNonTransferableProduct|tradestate-func"
+    ],
+    "any": [
+     "SecurityLending.{0,160}(?:no|not|never|missing|absent|unmapped|unhandled|falls?|lacks)",
+     "(?:no|not|never|missing|absent|unmapped|unhandled|lacks).{0,160}SecurityLending"
+    ]
+   },
+   {
+    "id": "count-assertion-critique",
+    "description": "explains that the pack's count assertions do not prove content fidelity",
+    "all": [
+     "inputPathCount|outputPathCount|path ?counts?"
+    ],
+    "any": [
+     "(?:do(?:es)?(?: no|n'|n\u2019)t| not) (?:prove|guarantee|establish|show|verify)",
+     "only[^.]{0,40}(?:counts?|volume)",
+     "says? nothing",
+     "not[^.]{0,50}(?:semantic|content|fidelity|correct)",
+     "tolerat"
+    ]
+   },
+   {
+    "id": "validation-debt",
+    "description": "connects the tolerated validation failures to required model fields",
+    "all": [
+     "modelValidationFailures",
+     "required"
+    ],
+    "any": [
+     "\\b8\\b",
+     "eight"
+    ]
+   },
+   {
+    "id": "good-pair-verified",
+    "description": "verifies the vanilla swap's fixed rate against the source",
+    "all": [
+     "ird-ex01|vanilla"
+    ],
+    "any": [
+     "0\\.06",
+     "6 ?%",
+     "six per ?cent"
+    ]
+   },
+   {
+    "id": "good-pair-facts",
+    "description": "verifies further preserved swap facts",
+    "all": [
+     "EUR-LIBOR|LIBOR"
+    ],
+    "any": [
+     "50,?000,?000",
+     "50 ?million",
+     "EUR ?50"
+    ]
+   },
+   {
+    "id": "versioned-evidence",
+    "description": "records the version and the concrete evidence route",
+    "all": [
+     "7\\.0\\.0"
+    ],
+    "any": [
+     "evidence/",
+     "tradestate-func",
+     "ingest-fpml"
+    ]
+   }
+  ]
+ }
 ]
